@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script>
+
+function p2( x, y ) { return { x:x, y:y }; }
+function add( a, b ) { return p2( a.x + b.x, a.y + b.y ); }
+function sub( a, b ) { return p2( a.x - b.x, a.y - b.y ); }
+function mul( a, f ) { return p2( a.x * f, a.y * f ); }
+function dot( a, b ) { return a.x * b.x + a.y * b.y; }
+function len2( a ) { return dot(a,a); }
+function dist( a, b ) { return Math.sqrt( len2( sub( a, b ) ) ); }
+function assign( a, b ) { a.x = b.x; a.y = b.y; }
+function normalize( a ) { return mul( a, 1 / Math.sqrt( len2( a ) ) ); }
+function mul_complex( a, b ) { return p2( a.x * b.x - a.y * b.y, a.y * b.x + a.x * b.y ); }
+function div_complex( a, b ) { return p2( ( a.x * b.x + a.y * b.y ) / len2( b ), ( a.y * b.x - a.x * b.y ) / len2( b ) ); }
+function mobius( z, a, b, c, d ) { return div_complex( add( mul_complex( a, z ), b ), add( mul_complex( c, z ), d ) ); }
+
+function getMousePos(canvas, evt) {
+    var rect = canvas.getBoundingClientRect();
+    return p2( evt.clientX - rect.left, evt.clientY - rect.top );
+}
+
+function onMouseMove( evt ) {
+    var pos = getMousePos( canvas, evt );
+}
+
+function onMouseDown( evt ) {
+    var pos = getMousePos( canvas, evt );
+}
+
+function onMouseUp( evt ) {
+    draw();
+}
+function init() {
+    canvas = document.getElementById('canvas');
+    ctx = canvas.getContext('2d');
+
+    canvas.addEventListener( 'mousemove', onMouseMove, false );
+    canvas.addEventListener( 'mousedown',  onMouseDown, false );
+    canvas.addEventListener( 'mouseup',  onMouseUp, false );
+    canvas.addEventListener( 'mouseout',  onMouseUp, false );
+    
+    a = p2( 100, 100 );
+    b = p2( 200, 100 );
+    c = p2( 100, 200 );
+    d = p2( 200, 200 );
+    
+    draw();
+}
+
+function point( p, r, t, t_offset ) { 
+    ctx.beginPath(); 
+    ctx.arc( p.x, p.y, r, 0, 2.0 * Math.PI ); 
+    ctx.fillText( t, p.x + 3 + t_offset.x, p.y - 3 + t_offset.y );
+    ctx.fill(); 
+}
+
+function draw() {
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font="14px Arial";
+    
+    point( a, 4, "a", p2(0,0) );
+    point( b, 4, "b", p2(0,0) );
+    point( c, 4, "c", p2(0,0) );
+    point( d, 4, "d", p2(0,0) );
+}
+
+window.onload = init;
+</script>
+
+<noscript>
+<p>For full functionality of this site it is necessary to enable JavaScript.
+Here are the <a href="http://www.enable-javascript.com/" target="_blank">
+instructions how to enable JavaScript in your web browser</a>.
+</p></noscript>
+
+</head>
+
+<body>
+
+<p align="center"><canvas id="canvas" width="1500" height="600">(Canvas drawing not supported by your browser.)</canvas></p>
+
+<p>Instructions</p>
+
+</html>
