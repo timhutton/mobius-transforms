@@ -22,9 +22,6 @@ function flip_y( p ) { return p2( p.x, -p.y ); }
 function toScreen( p ) { return add( origin_screen, flip_y( mul( p, scale ) ) ); }
 function fromScreen( p ) { return mul( flip_y( sub( p, origin_screen ) ), 1.0 / scale ); }
 
-test_pos = p2(0,0);
-touch_radius = 50;
-
 function getMousePos(canvas, evt) {
     var rect = canvas.getBoundingClientRect();
     return p2( evt.clientX - rect.left, evt.clientY - rect.top );
@@ -41,12 +38,8 @@ function onTouchMove( evt ) {
 }
 
 function onMove( pos ) {
-    // debug:
-    test_pos = pos;
-    draw();
-    
     if( point_is_being_dragged ) {
-        control_points[ i_point ] = fromScreen( pos );
+        control_points[ i_point ] = fromScreen( add( pos, drag_offset ) );
         draw();
     }
     else {
@@ -97,6 +90,7 @@ function onDown( pos ) {
         point_is_being_dragged = true;
         point_is_highlighted = false;
         i_point = iClosest;
+        drag_offset = sub( toScreen( control_points[ i_point ] ), pos );
         draw();
     }
     else if( point_is_being_dragged ) {
@@ -159,7 +153,10 @@ function init() {
     point_is_highlighted = false;
     point_is_being_dragged = false;
     i_point = -1;
+    grab_offset = p2( 0, 0 );
     
+    touch_radius = 50;
+
     draw();
 }
 
@@ -242,13 +239,6 @@ function draw() {
             ctx.fillStyle = ctx.strokeStyle = rest_color;
         point( toScreen( control_points[ i ] ), 4, "abcd"[i], p2(0,0) );
     }
-    
-    // debugging touch issues
-    ctx.strokeStyle = "rgb(0,0,0)";
-    ctx.beginPath(); 
-    ctx.arc( test_pos.x, test_pos.y, touch_radius, 0, 2.0 * Math.PI ); 
-    ctx.stroke(); 
-    point( test_pos, 3, "t", p2(0,0) );
 }
 
 window.onload = init;
@@ -264,13 +254,11 @@ instructions how to enable JavaScript in your web browser</a>.
 
 <body>
 
-<p>test</p>
-
-<p><canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas></p>
 
 <p>The <b><a href="https://en.wikipedia.org/wiki/M%C3%B6bius_transformation">Möbius transformation</a></b> is <b>f( z ) = ( az + b ) / ( cz + d )</b> where <b>z</b>, <b>a</b>,
-<b>b</b>, <b>c</b> and <b>d</b> are complex numbers.</p>
+<b>b</b>, <b>c</b> and <b>d</b> are complex numbers. Drag the points to change the transformation.</p>
 
-<p>Drag the points to change the transformation.</p>
+<p><canvas id="canvas" width="1000" height="600">(Canvas drawing not supported by your browser.)</canvas></p>
+
 
 </html>
