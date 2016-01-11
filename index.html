@@ -33,7 +33,8 @@ function onMouseMove( evt ) {
 }
 
 function onTouchMove( evt ) {
-    evt.preventDefault();
+    if( point_is_being_dragged )
+        evt.preventDefault();
     onMove( fixTouch( evt.changedTouches[0] ) );
 }
 
@@ -258,7 +259,7 @@ instructions how to enable JavaScript in your web browser</a>.
 <p>The <b><a href="https://en.wikipedia.org/wiki/M%C3%B6bius_transformation">Möbius transformation</a></b> is <b>f( z ) = ( az + b ) / ( cz + d )</b> where <b>z</b>, <b>a</b>,
 <b>b</b>, <b>c</b> and <b>d</b> are complex numbers. Drag the points to change the transformation.</p>
 
-<p><canvas id="canvas" width="1000" height="600">(Canvas drawing not supported by your browser.)</canvas></p>
+<p><canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas></p>
 
 
 </html>
