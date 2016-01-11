@@ -72,7 +72,6 @@ function onMouseDown( evt ) {
 }
 
 function onTouchStart( evt ) {
-    evt.preventDefault();
     onDown( fixTouch( evt.changedTouches[0] ) );
 }
 
