@@ -10,7 +10,8 @@ function sub( a, b ) { return p2( a.x - b.x, a.y - b.y ); }
 function mul( a, f ) { return p2( a.x * f, a.y * f ); }
 function dot( a, b ) { return a.x * b.x + a.y * b.y; }
 function len2( a ) { return dot(a,a); }
-function dist( a, b ) { return Math.sqrt( len2( sub( a, b ) ) ); }
+function dist2( a, b ) { return len2( sub( a, b ) ); }
+function dist( a, b ) { return Math.sqrt( dist2( a, b ) ); }
 function assign( a, b ) { a.x = b.x; a.y = b.y; }
 function normalize( a ) { return mul( a, 1 / Math.sqrt( len2( a ) ) ); }
 function mul_complex( a, b ) { return p2( a.x * b.x - a.y * b.y, a.y * b.x + a.x * b.y ); }
@@ -28,14 +29,66 @@ function getMousePos(canvas, evt) {
 
 function onMouseMove( evt ) {
     var pos = getMousePos( canvas, evt );
+    if( point_is_being_dragged ) {
+        control_points[ i_point ] = fromScreen( pos );
+        draw();
+    }
+    else {
+        // find the closest point, if within an minimum radius
+        var iClosest = -1;
+        var closest_dist2 = 10 * 10;
+        for( var i = 0; i < 4; i++ ) {
+            var d2 = dist2( pos, toScreen( control_points[ i ] ) );
+            if( d2 < closest_dist2 ) {
+                cloest_dist2 = d2;
+                iClosest = i;
+            }
+        }
+        if( iClosest >= 0 ) {
+            point_is_highlighted = true;
+            i_point = iClosest;
+            draw();
+        }
+        else if( point_is_highlighted ) {
+            point_is_highlighted = false;
+            draw();
+        }    
+    }
 }
 
 function onMouseDown( evt ) {
     var pos = getMousePos( canvas, evt );
+    // find the closest point, if within an minimum radius
+    var iClosest = -1;
+    var closest_dist2 = 10 * 10;
+    for( var i = 0; i < 4; i++ ) {
+        var d2 = dist2( pos, toScreen( control_points[ i ] ) );
+        if( d2 < closest_dist2 ) {
+            cloest_dist2 = d2;
+            iClosest = i;
+        }
+    }
+    if( iClosest >= 0 ) {
+        point_is_being_dragged = true;
+        point_is_highlighted = false;
+        i_point = iClosest;
+        draw();
+    }
+    else if( point_is_being_dragged ) {
+        point_is_being_dragged = false;
+        draw();
+    }    
+    else if( point_is_highlighted ) {
+        point_is_highlighted = false;
+        draw();
+    }    
 }
 
 function onMouseUp( evt ) {
-    draw();
+    if( point_is_highlighted || point_is_being_dragged ) {
+        point_is_highlighted = point_is_being_dragged = false;
+        draw();
+    }
 }
 
 function init() {
@@ -47,15 +100,21 @@ function init() {
     canvas.addEventListener( 'mouseup',  onMouseUp, false );
     canvas.addEventListener( 'mouseout',  onMouseUp, false );
     
-    a = p2( 1.0, 0.0 );
-    b = p2( 0.2, 0.1 );
-    c = p2( 0.3, 0.4 );
-    d = p2( 1.1, -0.1 );
+    control_points = [ p2( 1.0, 0.0 ), p2( 0.2, 0.1 ), p2( 0.3, 0.4 ), p2( 1.1, -0.1 ) ];
     
     origin_screen = p2( canvas.width/2, canvas.height/2 );
     scale = Math.min( canvas.width, canvas.height ) / 2;
     
+    point_is_highlighted = false;
+    point_is_being_dragged = false;
+    i_point = -1;
+    
     draw();
+}
+
+function pointInRect( p, rect ) {
+    return p.x > rect.x && p.x < ( rect.x + rect.width ) &&
+           p.y > rect.y && p.y < ( rect.y + rect.height );
 }
 
 function point( p, r, t, t_offset ) { 
@@ -74,26 +133,21 @@ function canvas_arrow(context, fromx, fromy, tox, toy, draw_arrow) {
     fromy += end_gap * Math.sin(angle);
     tox -= end_gap * Math.cos(angle);
     toy -= end_gap * Math.sin(angle);
-    context.beginPath();
     context.moveTo(fromx, fromy);
     context.lineTo(tox, toy);
-    context.stroke();
     if( draw_arrow ) {
-        context.beginPath();
         context.moveTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
         context.lineTo(tox, toy);
         context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
-        context.stroke();
     }
 }
 
 function draw() {
 
+    ctx.strokeStyle = "rgb(0,0,0)";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
-    ctx.font="14px Arial";
-    
     // draw the axes
     ctx.strokeStyle = "rgba(0,0,0,0.5)";
     ctx.beginPath();
@@ -109,24 +163,36 @@ function draw() {
     
     // draw arrows showing the transform
     ctx.strokeStyle = "rgba(0,0,0,0.2)";
-    var spacing = 20;
-    for( var x = 0; x < canvas.width; x += spacing ) {
-        for( var y = 0; y < canvas.height; y += spacing ) {
+    var spacing = 40;
+    var sample_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
+    var canvas_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
+    ctx.beginPath();
+    for( var x = sample_rect.x + spacing / 2; x < sample_rect.x + sample_rect.width; x += spacing ) {
+        for( var y = sample_rect.y + spacing / 2; y < sample_rect.y + sample_rect.height; y += spacing ) {
             sp = p2( x, y );
             p = fromScreen( sp );
-            q = mobius( p, a, b, c, d );
+            q = mobius( p, control_points[0], control_points[1], control_points[2], control_points[3] );
             sq = toScreen( q );
-            canvas_arrow( ctx, sp.x, sp.y, sq.x, sq.y, true );
+            if( pointInRect( sp, canvas_rect ) || pointInRect( sq, canvas_rect ) )
+                canvas_arrow( ctx, sp.x, sp.y, sq.x, sq.y, true );
         }
     }
+    ctx.stroke();
     
     // draw the four control points
-    ctx.fillStyle = "rgb(0,0,0)";
-    ctx.strokeStyle = "rgb(0,0,0)";
-    point( toScreen( a ), 4, "a", p2(0,0) );
-    point( toScreen( b ), 4, "b", p2(0,0) );
-    point( toScreen( c ), 4, "c", p2(0,0) );
-    point( toScreen( d ), 4, "d", p2(0,0) );
+    ctx.font="14px Arial";
+    var rest_color = "rgb(0,0,0)";
+    var highlighted_color = "rgb(0,255,255)";
+    var dragging_color = "rgb(255,0,255)";
+    for( var i = 0; i < 4; i++ ) {
+        if( point_is_highlighted && i_point == i )
+            ctx.fillStyle = ctx.strokeStyle = highlighted_color;
+        else if( point_is_being_dragged && i_point == i )
+            ctx.fillStyle = ctx.strokeStyle = dragging_color;
+        else
+            ctx.fillStyle = ctx.strokeStyle = rest_color;
+        point( toScreen( control_points[ i ] ), 4, "abcd"[i], p2(0,0) );
+    }
 }
 
 window.onload = init;
