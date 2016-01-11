@@ -197,21 +197,54 @@ function draw() {
     ctx.stroke();
     
     // draw arrows showing the transform
-    ctx.strokeStyle = "rgba(0,0,0,0.4)";
-    var spacing = 40;
-    var sample_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
-    var canvas_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
-    ctx.beginPath();
-    for( var x = sample_rect.x + spacing / 2; x < sample_rect.x + sample_rect.width; x += spacing ) {
-        for( var y = sample_rect.y + spacing / 2; y < sample_rect.y + sample_rect.height; y += spacing ) {
-            sp = p2( x, y );
-            p = fromScreen( sp );
-            q = mobius( p, control_points[0], control_points[1], control_points[2], control_points[3] );
-            sq = toScreen( q );
-            canvas_arrow( ctx, sp.x, sp.y, sq.x, sq.y );
+    var draw_arrows = false;
+    if( draw_arrows ) {
+        ctx.strokeStyle = "rgba(0,0,0,0.4)";
+        var spacing = 40;
+        var sample_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
+        var canvas_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
+        ctx.beginPath();
+        for( var x = sample_rect.x + spacing / 2; x < sample_rect.x + sample_rect.width; x += spacing ) {
+            for( var y = sample_rect.y + spacing / 2; y < sample_rect.y + sample_rect.height; y += spacing ) {
+                sp = p2( x, y );
+                p = fromScreen( sp );
+                q = mobius( p, control_points[0], control_points[1], control_points[2], control_points[3] );
+                sq = toScreen( q );
+                canvas_arrow( ctx, sp.x, sp.y, sq.x, sq.y );
+            }
         }
+        ctx.stroke();
     }
-    ctx.stroke();
+    
+    // draw a distorted grid to show the transform
+    var draw_grid = true;
+    if( draw_grid ) {
+        ctx.strokeStyle = "rgba(0,0,0,0.4)";
+        var spacing = 40;
+        var sample_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
+        var canvas_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
+        ctx.beginPath();
+        for( var x = sample_rect.x; x < sample_rect.x + sample_rect.width; x += spacing ) {
+            for( var y = sample_rect.y; y < sample_rect.y + sample_rect.height; y += spacing ) {
+                sp1 = p2( x, y );
+                wp1 = fromScreen( sp1 );
+                sp2 = p2( x + spacing, y );
+                wp2 = fromScreen( sp2 );
+                sp3 = p2( x, y + spacing );
+                wp3 = fromScreen( sp3 );
+                q1 = mobius( wp1, control_points[0], control_points[1], control_points[2], control_points[3] );
+                q2 = mobius( wp2, control_points[0], control_points[1], control_points[2], control_points[3] );
+                q3 = mobius( wp3, control_points[0], control_points[1], control_points[2], control_points[3] );
+                sq1 = toScreen( q1 );
+                sq2 = toScreen( q2 );
+                sq3 = toScreen( q3 );
+                ctx.moveTo( sq2.x, sq2.y );
+                ctx.lineTo( sq1.x, sq1.y );
+                ctx.lineTo( sq3.x, sq3.y );
+            }
+        }
+        ctx.stroke();
+    }
     
     // draw the four control points
     ctx.font="22px Arial";
