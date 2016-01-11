@@ -130,7 +130,8 @@ function fixTouch (touch) {
         x = touch.pageX - winPageX;
         y = touch.pageY - winPageY;
     }
-    return { x:x, y:y };
+    var rect = canvas.getBoundingClientRect();
+    return { x: x - rect.left, y:y - rect.top };
 }
 
 function init() {
