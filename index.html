@@ -29,6 +29,10 @@ function getMousePos(canvas, evt) {
 
 function onMouseMove( evt ) {
     var pos = getMousePos( canvas, evt );
+    onMove( pos );
+}
+
+function onMove( pos ) {
     if( point_is_being_dragged ) {
         control_points[ i_point ] = fromScreen( pos );
         draw();
@@ -56,8 +60,22 @@ function onMouseMove( evt ) {
     }
 }
 
+function onTouchMove( evt ) {
+    evt.preventDefault();
+    onMove( p2( evt.changedTouches[0].clientX, evt.changedTouches[0].clientY ) );
+}
+
 function onMouseDown( evt ) {
     var pos = getMousePos( canvas, evt );
+    onDown( pos );
+}
+
+function onTouchStart( evt ) {
+    evt.preventDefault();
+    onDown( p2( evt.changedTouches[0].clientX, evt.changedTouches[0].clientY ) );
+}
+
+function onDown( pos ) {    
     // find the closest point, if within an minimum radius
     var iClosest = -1;
     var closest_dist2 = 10 * 10;
@@ -96,7 +114,9 @@ function init() {
     ctx = canvas.getContext('2d');
 
     canvas.addEventListener( 'mousemove', onMouseMove, false );
+    canvas.addEventListener( 'touchmove', onTouchMove, false );
     canvas.addEventListener( 'mousedown',  onMouseDown, false );
+    canvas.addEventListener( 'touchstart',  onTouchStart, false );
     canvas.addEventListener( 'mouseup',  onMouseUp, false );
     canvas.addEventListener( 'mouseout',  onMouseUp, false );
     
@@ -125,7 +145,7 @@ function point( p, r, t, t_offset ) {
 }
 
 // adapted from http://stackoverflow.com/a/6333775/126823
-function canvas_arrow(context, fromx, fromy, tox, toy, draw_arrow) { 
+function canvas_arrow( context, fromx, fromy, tox, toy ) { 
     var headlen = 5; // length of head in pixels
     var end_gap = 0; // distance of head and tail from requested positions
     var angle = Math.atan2(toy-fromy,tox-fromx);
@@ -135,11 +155,9 @@ function canvas_arrow(context, fromx, fromy, tox, toy, draw_arrow) {
     toy -= end_gap * Math.sin(angle);
     context.moveTo(fromx, fromy);
     context.lineTo(tox, toy);
-    if( draw_arrow ) {
-        context.moveTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
-        context.lineTo(tox, toy);
-        context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
-    }
+    context.moveTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
+    context.lineTo(tox, toy);
+    context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
 }
 
 function draw() {
@@ -149,7 +167,7 @@ function draw() {
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
     // draw the axes
-    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+    ctx.strokeStyle = "rgba(0,0,0,0.2)";
     ctx.beginPath();
     sp1 = toScreen( p2( -100, 0 ) );
     sp2 = toScreen( p2( 100, 0 ) );
@@ -162,7 +180,7 @@ function draw() {
     ctx.stroke();
     
     // draw arrows showing the transform
-    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+    ctx.strokeStyle = "rgba(0,0,0,0.4)";
     var spacing = 40;
     var sample_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
     var canvas_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
@@ -174,16 +192,16 @@ function draw() {
             q = mobius( p, control_points[0], control_points[1], control_points[2], control_points[3] );
             sq = toScreen( q );
             if( pointInRect( sp, canvas_rect ) || pointInRect( sq, canvas_rect ) )
-                canvas_arrow( ctx, sp.x, sp.y, sq.x, sq.y, true );
+                canvas_arrow( ctx, sp.x, sp.y, sq.x, sq.y );
         }
     }
     ctx.stroke();
     
     // draw the four control points
-    ctx.font="14px Arial";
+    ctx.font="18px Arial";
     var rest_color = "rgb(0,0,0)";
     var highlighted_color = "rgb(0,255,255)";
-    var dragging_color = "rgb(255,0,255)";
+    var dragging_color = "rgb(0,255,0)";
     for( var i = 0; i < 4; i++ ) {
         if( point_is_highlighted && i_point == i )
             ctx.fillStyle = ctx.strokeStyle = highlighted_color;
@@ -213,6 +231,6 @@ instructions how to enable JavaScript in your web browser</a>.
 <p>The <b><a href="https://en.wikipedia.org/wiki/M%C3%B6bius_transformation">Möbius transformation</a></b> is <b>f( z ) = ( az + b ) / ( cz + d )</b> where <b>z</b>, <b>a</b>,
 <b>b</b>, <b>c</b> and <b>d</b> are complex numbers.</p>
 
-<p>Drag the points to change the transform.</p>
+<p>Drag the points to change the transformation.</p>
 
 </html>
