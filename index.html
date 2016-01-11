@@ -41,7 +41,7 @@ function onMove( pos ) {
         draw();
     }
     else {
-        // find the closest point, if within an minimum radius
+        // find the closest point, if within a minimum radius
         var iClosest = -1;
         var closest_dist2 = touch_radius * touch_radius;
         for( var i = 0; i < 4; i++ ) {
@@ -73,7 +73,7 @@ function onTouchStart( evt ) {
 }
 
 function onDown( pos ) {    
-    // find the closest point, if within an minimum radius
+    // find the closest point, if within a minimum radius
     var iClosest = -1;
     var closest_dist2 = touch_radius * touch_radius;
     for( var i = 0; i < 4; i++ ) {
@@ -141,6 +141,8 @@ function init() {
     canvas.addEventListener( 'touchstart',  onTouchStart, false );
     canvas.addEventListener( 'mouseup',  onMouseUp, false );
     canvas.addEventListener( 'mouseout',  onMouseUp, false );
+    canvas.addEventListener( 'touchend',  onMouseUp, false );
+    canvas.addEventListener( 'touchcancel',  onMouseUp, false );
     
     control_points = [ p2( 1.0, 0.0 ), p2( 0.2, 0.1 ), p2( 0.3, 0.4 ), p2( 1.1, -0.1 ) ];
     
