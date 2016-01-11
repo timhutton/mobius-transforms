@@ -32,6 +32,11 @@ function onMouseMove( evt ) {
     onMove( pos );
 }
 
+function onTouchMove( evt ) {
+    evt.preventDefault();
+    onMove( fixTouch( evt.changedTouches[0] ) );
+}
+
 function onMove( pos ) {
     if( point_is_being_dragged ) {
         control_points[ i_point ] = fromScreen( pos );
@@ -40,7 +45,7 @@ function onMove( pos ) {
     else {
         // find the closest point, if within an minimum radius
         var iClosest = -1;
-        var closest_dist2 = 10 * 10;
+        var closest_dist2 = 20 * 20;
         for( var i = 0; i < 4; i++ ) {
             var d2 = dist2( pos, toScreen( control_points[ i ] ) );
             if( d2 < closest_dist2 ) {
@@ -60,11 +65,6 @@ function onMove( pos ) {
     }
 }
 
-function onTouchMove( evt ) {
-    evt.preventDefault();
-    onMove( p2( evt.changedTouches[0].clientX, evt.changedTouches[0].clientY ) );
-}
-
 function onMouseDown( evt ) {
     var pos = getMousePos( canvas, evt );
     onDown( pos );
@@ -72,7 +72,8 @@ function onMouseDown( evt ) {
 
 function onTouchStart( evt ) {
     evt.preventDefault();
-    onDown( p2( evt.changedTouches[0].clientX, evt.changedTouches[0].clientY ) );
+    
+    onDown( fixTouch( evt.changedTouches[0] ) );
 }
 
 function onDown( pos ) {    
@@ -107,6 +108,29 @@ function onMouseUp( evt ) {
         point_is_highlighted = point_is_being_dragged = false;
         draw();
     }
+}
+
+// thanks to: http://stackoverflow.com/a/12714084/126823
+function fixTouch (touch) {
+    var winPageX = window.pageXOffset,
+        winPageY = window.pageYOffset,
+        x = touch.clientX,
+        y = touch.clientY;
+
+    if (touch.pageY === 0 && Math.floor(y) > Math.floor(touch.pageY) ||
+        touch.pageX === 0 && Math.floor(x) > Math.floor(touch.pageX)) {
+        // iOS4 clientX/clientY have the value that should have been
+        // in pageX/pageY. While pageX/page/ have the value 0
+        x = x - winPageX;
+        y = y - winPageY;
+    } else if (y < (touch.pageY - winPageY) || x < (touch.pageX - winPageX) ) {
+        // Some Android browsers have totally bogus values for clientX/Y
+        // when scrolling/zooming a page. Detectable since clientX/clientY
+        // should never be smaller than pageX/pageY minus page scroll
+        x = touch.pageX - winPageX;
+        y = touch.pageY - winPageY;
+    }
+    return { x:x, y:y };
 }
 
 function init() {
