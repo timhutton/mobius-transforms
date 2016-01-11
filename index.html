@@ -17,6 +17,9 @@ function mul_complex( a, b ) { return p2( a.x * b.x - a.y * b.y, a.y * b.x + a.x
 function div_complex( a, b ) { return p2( ( a.x * b.x + a.y * b.y ) / len2( b ), ( a.y * b.x - a.x * b.y ) / len2( b ) ); }
 function mobius( z, a, b, c, d ) { return div_complex( add( mul_complex( a, z ), b ), add( mul_complex( c, z ), d ) ); }
 
+function toScreen( p ) { return add( origin_screen, mul( p, scale ) ); }
+function fromScreen( p ) { return mul( sub( p, origin_screen ), 1.0 / scale ); }
+
 function getMousePos(canvas, evt) {
     var rect = canvas.getBoundingClientRect();
     return p2( evt.clientX - rect.left, evt.clientY - rect.top );
@@ -42,10 +45,13 @@ function init() {
     canvas.addEventListener( 'mouseup',  onMouseUp, false );
     canvas.addEventListener( 'mouseout',  onMouseUp, false );
     
-    a = p2( 100, 100 );
-    b = p2( 200, 100 );
-    c = p2( 100, 200 );
-    d = p2( 200, 200 );
+    a = p2( 1.0, 0.0 );
+    b = p2( 1.0, 0.0 );
+    c = p2( 1.0, 0.0 );
+    d = p2( 0.8, 1.9 );
+    
+    origin_screen = p2( canvas.width/2, canvas.height/2 );
+    scale = Math.min( canvas.width, canvas.height ) / 2;
     
     draw();
 }
@@ -57,6 +63,28 @@ function point( p, r, t, t_offset ) {
     ctx.fill(); 
 }
 
+// adapted from http://stackoverflow.com/a/6333775/126823
+function canvas_arrow(context, fromx, fromy, tox, toy, draw_arrow){
+    var headlen = 5; // length of head in pixels
+    var end_gap = 0; // distance of head and tail from requested positions
+    var angle = Math.atan2(toy-fromy,tox-fromx);
+    fromx += end_gap * Math.cos(angle);
+    fromy += end_gap * Math.sin(angle);
+    tox -= end_gap * Math.cos(angle);
+    toy -= end_gap * Math.sin(angle);
+    context.beginPath();
+    context.moveTo(fromx, fromy);
+    context.lineTo(tox, toy);
+    context.stroke();
+    if( draw_arrow ) {
+        context.beginPath();
+        context.moveTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
+        context.lineTo(tox, toy);
+        context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
+        context.stroke();
+    }
+}
+
 function draw() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -64,10 +92,22 @@ function draw() {
 
     ctx.font="14px Arial";
     
-    point( a, 4, "a", p2(0,0) );
-    point( b, 4, "b", p2(0,0) );
-    point( c, 4, "c", p2(0,0) );
-    point( d, 4, "d", p2(0,0) );
+    point( toScreen( a ), 4, "a", p2(0,0) );
+    point( toScreen( b ), 4, "b", p2(0,0) );
+    point( toScreen( c ), 4, "c", p2(0,0) );
+    point( toScreen( d ), 4, "d", p2(0,0) );
+    
+    // draw arrows showing the transform
+    var spacing = 20;
+    for( var x = 0; x < canvas.width; x += spacing ) {
+        for( var y = 0; y < canvas.height; y += spacing ) {
+            sp = p2( x, y );
+            p = fromScreen( sp );
+            q = mobius( p, a, b, c, d );
+            sq = toScreen( q );
+            canvas_arrow( ctx, sp.x, sp.y, sq.x, sq.y, true );
+        }
+    }
 }
 
 window.onload = init;
