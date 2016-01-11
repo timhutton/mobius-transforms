@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
+<meta charset="ISO-8859-1">
 <script>
 
 function p2( x, y ) { return { x:x, y:y }; }
@@ -16,9 +16,10 @@ function normalize( a ) { return mul( a, 1 / Math.sqrt( len2( a ) ) ); }
 function mul_complex( a, b ) { return p2( a.x * b.x - a.y * b.y, a.y * b.x + a.x * b.y ); }
 function div_complex( a, b ) { return p2( ( a.x * b.x + a.y * b.y ) / len2( b ), ( a.y * b.x - a.x * b.y ) / len2( b ) ); }
 function mobius( z, a, b, c, d ) { return div_complex( add( mul_complex( a, z ), b ), add( mul_complex( c, z ), d ) ); }
+function flip_y( p ) { return p2( p.x, -p.y ); }
 
-function toScreen( p ) { return add( origin_screen, mul( p, scale ) ); }
-function fromScreen( p ) { return mul( sub( p, origin_screen ), 1.0 / scale ); }
+function toScreen( p ) { return add( origin_screen, flip_y( mul( p, scale ) ) ); }
+function fromScreen( p ) { return mul( flip_y( sub( p, origin_screen ) ), 1.0 / scale ); }
 
 function getMousePos(canvas, evt) {
     var rect = canvas.getBoundingClientRect();
@@ -36,6 +37,7 @@ function onMouseDown( evt ) {
 function onMouseUp( evt ) {
     draw();
 }
+
 function init() {
     canvas = document.getElementById('canvas');
     ctx = canvas.getContext('2d');
@@ -46,9 +48,9 @@ function init() {
     canvas.addEventListener( 'mouseout',  onMouseUp, false );
     
     a = p2( 1.0, 0.0 );
-    b = p2( 1.0, 0.0 );
-    c = p2( 1.0, 0.0 );
-    d = p2( 0.8, 1.9 );
+    b = p2( 0.2, 0.1 );
+    c = p2( 0.3, 0.4 );
+    d = p2( 1.1, -0.1 );
     
     origin_screen = p2( canvas.width/2, canvas.height/2 );
     scale = Math.min( canvas.width, canvas.height ) / 2;
@@ -64,7 +66,7 @@ function point( p, r, t, t_offset ) {
 }
 
 // adapted from http://stackoverflow.com/a/6333775/126823
-function canvas_arrow(context, fromx, fromy, tox, toy, draw_arrow){
+function canvas_arrow(context, fromx, fromy, tox, toy, draw_arrow) { 
     var headlen = 5; // length of head in pixels
     var end_gap = 0; // distance of head and tail from requested positions
     var angle = Math.atan2(toy-fromy,tox-fromx);
@@ -92,12 +94,21 @@ function draw() {
 
     ctx.font="14px Arial";
     
-    point( toScreen( a ), 4, "a", p2(0,0) );
-    point( toScreen( b ), 4, "b", p2(0,0) );
-    point( toScreen( c ), 4, "c", p2(0,0) );
-    point( toScreen( d ), 4, "d", p2(0,0) );
+    // draw the axes
+    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+    ctx.beginPath();
+    sp1 = toScreen( p2( -100, 0 ) );
+    sp2 = toScreen( p2( 100, 0 ) );
+    ctx.moveTo( sp1.x, sp1.y );
+    ctx.lineTo( sp2.x, sp2.y );
+    sp1 = toScreen( p2( 0, -100 ) );
+    sp2 = toScreen( p2( 0, 100 ) );
+    ctx.moveTo( sp1.x, sp1.y );
+    ctx.lineTo( sp2.x, sp2.y );
+    ctx.stroke();
     
     // draw arrows showing the transform
+    ctx.strokeStyle = "rgba(0,0,0,0.2)";
     var spacing = 20;
     for( var x = 0; x < canvas.width; x += spacing ) {
         for( var y = 0; y < canvas.height; y += spacing ) {
@@ -108,6 +119,14 @@ function draw() {
             canvas_arrow( ctx, sp.x, sp.y, sq.x, sq.y, true );
         }
     }
+    
+    // draw the four control points
+    ctx.fillStyle = "rgb(0,0,0)";
+    ctx.strokeStyle = "rgb(0,0,0)";
+    point( toScreen( a ), 4, "a", p2(0,0) );
+    point( toScreen( b ), 4, "b", p2(0,0) );
+    point( toScreen( c ), 4, "c", p2(0,0) );
+    point( toScreen( d ), 4, "d", p2(0,0) );
 }
 
 window.onload = init;
@@ -125,6 +144,9 @@ instructions how to enable JavaScript in your web browser</a>.
 
 <p align="center"><canvas id="canvas" width="1500" height="600">(Canvas drawing not supported by your browser.)</canvas></p>
 
-<p>Instructions</p>
+<p>The <b><a href="https://en.wikipedia.org/wiki/M%C3%B6bius_transformation">Möbius transformation</a></b> is <b>f( z ) = ( az + b ) / ( cz + d )</b> where <b>z</b>, <b>a</b>,
+<b>b</b>, <b>c</b> and <b>d</b> are complex numbers.</p>
+
+<p>Drag the points to change the transform.</p>
 
 </html>
