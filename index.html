@@ -166,6 +166,11 @@ function point( p, r, t, t_offset ) {
     ctx.fill(); 
 }
 
+function pointInRect( p, rect ) {
+    return p.x > rect.x && p.x < ( rect.x + rect.width ) &&
+           p.y > rect.y && p.y < ( rect.y + rect.height );
+}
+
 // adapted from http://stackoverflow.com/a/6333775/126823
 function canvas_arrow( context, fromx, fromy, tox, toy ) { 
     var headlen = 5; // length of head in pixels
@@ -238,9 +243,14 @@ function draw() {
                 sq1 = toScreen( q1 );
                 sq2 = toScreen( q2 );
                 sq3 = toScreen( q3 );
-                ctx.moveTo( sq2.x, sq2.y );
-                ctx.lineTo( sq1.x, sq1.y );
-                ctx.lineTo( sq3.x, sq3.y );
+                if( pointInRect( sq2, canvas_rect ) || pointInRect( sq1, canvas_rect ) ) {
+                    ctx.moveTo( sq2.x, sq2.y );
+                    ctx.lineTo( sq1.x, sq1.y );
+                }
+                if( pointInRect( sq1, canvas_rect ) || pointInRect( sq3, canvas_rect ) ) {
+                    ctx.moveTo( sq1.x, sq1.y );
+                    ctx.lineTo( sq3.x, sq3.y );
+                }
             }
         }
         ctx.stroke();
@@ -281,8 +291,10 @@ instructions how to enable JavaScript in your web browser</a>.
 <p><canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas></p>
 
 <p>To simplify the transform, set <b>c</b> to zero (move it to the origin) and put <b>d</b> on the positive real axis (to the right of <b>c</b>). 
-Now <b>a</b> and <b>b</b> between them give a similarity transform: <b>a</b> controls the scale and rotation while <b>b</b> controls the translation.
+Now <b>a</b> and <b>b</b> between them give a similarity transform: <b>a</b> controls the scale and rotation while <b>b</b> controls the translation.</p>
 
 <p>Source code: <a href="https://github.com/timhutton/mobius-transforms">https://github.com/timhutton/mobius-transforms</a></p>
+
+<p>To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this amazing video</a>.</p>
 
 </html>
