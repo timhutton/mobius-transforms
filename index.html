@@ -155,6 +155,9 @@ function init() {
     grab_offset = p2( 0, 0 );
     
     touch_radius = 50;
+    
+    draw_grid = true;
+    draw_arrows = false;
 
     draw();
 }
@@ -202,7 +205,6 @@ function draw() {
     ctx.stroke();
     
     // draw arrows showing the transform
-    var draw_arrows = false;
     if( draw_arrows ) {
         ctx.strokeStyle = "rgba(0,0,0,0.4)";
         var spacing = 40;
@@ -222,7 +224,6 @@ function draw() {
     }
     
     // draw a distorted grid to show the transform
-    var draw_grid = true;
     if( draw_grid ) {
         ctx.strokeStyle = "rgba(0,0,0,0.4)";
         var spacing = 40;
@@ -272,6 +273,18 @@ function draw() {
     }
 }
 
+function onGridButton(element) { 
+    draw_grid = !draw_grid; 
+    element.value = draw_grid ? "Grid: ON" : "Grid: OFF";
+    draw(); 
+}
+
+function onArrowsButton(element) {
+    draw_arrows = !draw_arrows; 
+    element.value = draw_arrows ? "Arrows: ON" : "Arrows: OFF";
+    draw(); 
+}
+
 window.onload = init;
 </script>
 
@@ -281,6 +294,13 @@ Here are the <a href="http://www.enable-javascript.com/" target="_blank">
 instructions how to enable JavaScript in your web browser</a>.
 </p></noscript>
 
+<style>
+input[type='button'] { 
+    font-size: 20px; 
+    font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
+}
+</style>
+
 </head>
 
 <body>
@@ -288,8 +308,16 @@ instructions how to enable JavaScript in your web browser</a>.
 <p>The <b><a href="https://en.wikipedia.org/wiki/M%C3%B6bius_transformation">Möbius transformation</a></b> is <b>f( z ) = ( az + b ) / ( cz + d )</b> where <b>z</b>, <b>a</b>,
 <b>b</b>, <b>c</b> and <b>d</b> are complex numbers. Drag the points to change the transformation.</p>
 
-<p><canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas></p>
+<div style="float:left"><p><canvas id="canvas" width="800" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
 
+<div style="float:left;padding-left: 20px">
+
+<p><input type="button" value="Arrows: OFF" onclick="onArrowsButton(this)" /></p>
+<p><input type="button" value="Grid: ON" onclick="onGridButton(this)" /></p>
+
+</div>
+
+<div style="clear:both">
 <p>To simplify the transform, set <b>c</b> to zero (move it to the origin). Now <b>a</b> and <b>b</b> between 
 them give a similarity transform: <b>a</b> controls the scale and rotation while <b>b</b> controls the translation.</p>
 
@@ -299,4 +327,5 @@ them give a similarity transform: <b>a</b> controls the scale and rotation while
 
 <p>To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this amazing video</a>.</p>
 
+</div>
 </html>
