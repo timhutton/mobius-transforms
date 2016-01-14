@@ -8,6 +8,7 @@ function p2( x, y ) { return { x:x, y:y }; }
 function add( a, b ) { return p2( a.x + b.x, a.y + b.y ); }
 function sub( a, b ) { return p2( a.x - b.x, a.y - b.y ); }
 function mul( a, f ) { return p2( a.x * f, a.y * f ); }
+function average( a, b ) { return mul( add( a, b ), 0.5 ); }
 function dot( a, b ) { return a.x * b.x + a.y * b.y; }
 function len2( a ) { return dot(a,a); }
 function dist2( a, b ) { return len2( sub( a, b ) ); }
@@ -22,10 +23,9 @@ function flip_y( p ) { return p2( p.x, -p.y ); }
 
 function mobius_normalize( cp ) {
     // VCA, p.150
-    var ad_minus_bc = sub( mul_complex( cp[0], cp[3] ), mul_complex( cp[1], cp[2] ) );
-    for( var i = 0; i < 4; i++ ) {
-        cp[i] = div_complex( cp[i], sqrt_complex( ad_minus_bc ) );
-    }
+    var sqrt_ad_minus_bc = sqrt_complex( sub( mul_complex( cp[0], cp[3] ), mul_complex( cp[1], cp[2] ) ) );
+    for( var i = 0; i < 4; i++ )
+        cp[i] = div_complex( cp[i], sqrt_ad_minus_bc );
 }
 
 function toScreen( p ) { return add( origin_screen, flip_y( mul( p, scale ) ) ); }
@@ -146,6 +146,7 @@ function fixTouch (touch) {
 function init() {
     canvas = document.getElementById('canvas');
     ctx = canvas.getContext('2d');
+    canvas_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
 
     canvas.addEventListener( 'mousemove', onMouseMove, false );
     canvas.addEventListener( 'touchmove', onTouchMove, false );
@@ -199,6 +200,29 @@ function canvas_arrow( context, fromx, fromy, tox, toy ) {
     context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
 }
 
+function drawSmoothTransformedLine( sp1, sp2 ) {
+    var wp1 = fromScreen( sp1 );
+    var wp2 = fromScreen( sp2 );
+    var q1 = mobius( wp1, control_points[0], control_points[1], control_points[2], control_points[3] );
+    var q2 = mobius( wp2, control_points[0], control_points[1], control_points[2], control_points[3] );
+    var sq1 = toScreen( q1 );
+    var sq2 = toScreen( q2 );
+    if( !pointInRect( sq1, canvas_rect ) && !pointInRect( sq2, canvas_rect ) )
+        return; // both off the screen, so ignore
+    var close_enough = 20;
+    if( dist2( sq1, sq2 ) < close_enough * close_enough ) {
+        // close enough, so just connect with a straight line
+        ctx.moveTo( sq1.x, sq1.y );
+        ctx.lineTo( sq2.x, sq2.y );
+    }
+    else {
+        // recurse down
+        var halfway_house = average( sp1, sp2 );
+        drawSmoothTransformedLine( sp1, halfway_house );
+        drawSmoothTransformedLine( halfway_house, sp2 );
+    }
+}
+
 function draw() {
 
     if( normalize )
@@ -226,11 +250,9 @@ function draw() {
     if( draw_arrows ) {
         ctx.strokeStyle = "rgba(0,0,0,0.4)";
         var spacing = 40;
-        var sample_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
-        var canvas_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
         ctx.beginPath();
-        for( var x = sample_rect.x + spacing / 2; x < sample_rect.x + sample_rect.width; x += spacing ) {
-            for( var y = sample_rect.y + spacing / 2; y < sample_rect.y + sample_rect.height; y += spacing ) {
+        for( var x = canvas_rect.x + spacing / 2; x < canvas_rect.x + canvas_rect.width; x += spacing ) {
+            for( var y = canvas_rect.y + spacing / 2; y < canvas_rect.y + canvas_rect.height; y += spacing ) {
                 sp = p2( x, y );
                 p = fromScreen( sp );
                 q = mobius( p, control_points[0], control_points[1], control_points[2], control_points[3] );
@@ -244,32 +266,12 @@ function draw() {
     // draw a distorted grid to show the transform
     if( draw_grid ) {
         ctx.strokeStyle = "rgba(0,0,0,0.4)";
-        var spacing = 40;
-        var sample_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
-        var canvas_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
         ctx.beginPath();
-        for( var x = sample_rect.x; x < sample_rect.x + sample_rect.width; x += spacing ) {
-            for( var y = sample_rect.y; y < sample_rect.y + sample_rect.height; y += spacing ) {
-                sp1 = p2( x, y );
-                wp1 = fromScreen( sp1 );
-                sp2 = p2( x + spacing, y );
-                wp2 = fromScreen( sp2 );
-                sp3 = p2( x, y + spacing );
-                wp3 = fromScreen( sp3 );
-                q1 = mobius( wp1, control_points[0], control_points[1], control_points[2], control_points[3] );
-                q2 = mobius( wp2, control_points[0], control_points[1], control_points[2], control_points[3] );
-                q3 = mobius( wp3, control_points[0], control_points[1], control_points[2], control_points[3] );
-                sq1 = toScreen( q1 );
-                sq2 = toScreen( q2 );
-                sq3 = toScreen( q3 );
-                if( pointInRect( sq2, canvas_rect ) || pointInRect( sq1, canvas_rect ) ) {
-                    ctx.moveTo( sq2.x, sq2.y );
-                    ctx.lineTo( sq1.x, sq1.y );
-                }
-                if( pointInRect( sq1, canvas_rect ) || pointInRect( sq3, canvas_rect ) ) {
-                    ctx.moveTo( sq1.x, sq1.y );
-                    ctx.lineTo( sq3.x, sq3.y );
-                }
+        var spacing = 40;
+        for( var x = canvas_rect.x; x < canvas_rect.x + canvas_rect.width; x += spacing ) {
+            for( var y = canvas_rect.y; y < canvas_rect.y + canvas_rect.height; y += spacing ) {
+                drawSmoothTransformedLine( p2( x, y ), p2( x + spacing, y ) );
+                drawSmoothTransformedLine( p2( x, y ), p2( x, y + spacing ) );
             }
         }
         ctx.stroke();
