@@ -163,6 +163,7 @@ function init() {
     draw_grid = true;
     draw_arrows = false;
     normalize = false;
+    draw_fixed_points = false;
 
     draw();
 }
@@ -285,6 +286,18 @@ function draw() {
             ctx.fillStyle = ctx.strokeStyle = rest_color;
         point( toScreen( control_points[ i ] ), 4, "abcd"[i], p2(0,0) );
     }
+    
+    if( draw_fixed_points ) {
+        var cp = control_points.slice();
+        var ad_minus_bc = sub( mul_complex( cp[0], cp[3] ), mul_complex( cp[1], cp[2] ) );
+        for( var i = 0; i < 4; i++ ) {
+            cp[i] = div_complex( cp[i], sqrt_complex( ad_minus_bc ) );
+        }
+        var f1 = div_complex( add( sub(cp[0],cp[3]), sqrt_complex( sub( mul_complex( add(cp[0],cp[3]), add(cp[0],cp[3]) ), p2(4,0) ) ) ), mul( cp[2], 2.0 ) );
+        var f2 = div_complex( sub( sub(cp[0],cp[3]), sqrt_complex( sub( mul_complex( add(cp[0],cp[3]), add(cp[0],cp[3]) ), p2(4,0) ) ) ), mul( cp[2], 2.0 ) );
+        point( toScreen( f1 ), 2, "f1", p2(0,0) );
+        point( toScreen( f2 ), 2, "f2", p2(0,0) );
+    }
 }
 
 function onGridButton(element) { 
@@ -302,6 +315,12 @@ function onArrowsButton(element) {
 function onNormalizeButton(element) {
     normalize = !normalize; 
     element.value = normalize ? "Normalize: ON" : "Normalize: OFF";
+    draw(); 
+}
+
+function onFixedPointsButton(element) {
+    draw_fixed_points = !draw_fixed_points; 
+    element.value = draw_fixed_points ? "Fixed points: ON" : "Fixed points: OFF";
     draw(); 
 }
 
@@ -344,6 +363,7 @@ input[type='button'] {
 <p><input type="button" value="Grid: ON" onclick="onGridButton(this)" /></p>
 <p><input type="button" value="Normalize: OFF" onclick="onNormalizeButton(this)" /></p>
 <p><input type="button" value="Identity" onclick="onIdentityButton()" /></p>
+<p><input type="button" value="Fixed points: OFF" onclick="onFixedPointsButton(this)" /></p>
 
 </div>
 
