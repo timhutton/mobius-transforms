@@ -20,6 +20,14 @@ function sqrt_complex( a ) { return fromPolar( Math.sqrt( magnitude(a) ), phase(
 function mobius( z, a, b, c, d ) { return div_complex( add( mul_complex( a, z ), b ), add( mul_complex( c, z ), d ) ); }
 function flip_y( p ) { return p2( p.x, -p.y ); }
 
+function mobius_normalize( cp ) {
+    // VCA, p.150
+    var ad_minus_bc = sub( mul_complex( cp[0], cp[3] ), mul_complex( cp[1], cp[2] ) );
+    for( var i = 0; i < 4; i++ ) {
+        cp[i] = div_complex( cp[i], sqrt_complex( ad_minus_bc ) );
+    }
+}
+
 function toScreen( p ) { return add( origin_screen, flip_y( mul( p, scale ) ) ); }
 function fromScreen( p ) { return mul( flip_y( sub( p, origin_screen ) ), 1.0 / scale ); }
 
@@ -193,13 +201,8 @@ function canvas_arrow( context, fromx, fromy, tox, toy ) {
 
 function draw() {
 
-    if( normalize ) {
-        // VCA, p.150
-        var ad_minus_bc = sub( mul_complex( control_points[0], control_points[3] ), mul_complex( control_points[1], control_points[2] ) );
-        for( var i = 0; i < 4; i++ ) {
-            control_points[i] = div_complex( control_points[i], sqrt_complex( ad_minus_bc ) );
-        }
-    }
+    if( normalize )
+        mobius_normalize( control_points );
 
     // clear the area
     ctx.strokeStyle = "rgb(0,0,0)";
@@ -290,10 +293,7 @@ function draw() {
     if( draw_fixed_points ) {
         ctx.fillStyle = ctx.strokeStyle = "rgb(0,0,0)";
         var cp = control_points.slice();
-        var ad_minus_bc = sub( mul_complex( cp[0], cp[3] ), mul_complex( cp[1], cp[2] ) );
-        for( var i = 0; i < 4; i++ ) {
-            cp[i] = div_complex( cp[i], sqrt_complex( ad_minus_bc ) );
-        }
+        mobius_normalize( cp );
         var f1 = div_complex( add( sub(cp[0],cp[3]), sqrt_complex( sub( mul_complex( add(cp[0],cp[3]), add(cp[0],cp[3]) ), p2(4,0) ) ) ), mul( cp[2], 2.0 ) );
         var f2 = div_complex( sub( sub(cp[0],cp[3]), sqrt_complex( sub( mul_complex( add(cp[0],cp[3]), add(cp[0],cp[3]) ), p2(4,0) ) ) ), mul( cp[2], 2.0 ) );
         point( toScreen( f1 ), 2, "f1", p2(0,0) );
