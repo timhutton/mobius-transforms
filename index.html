@@ -288,6 +288,7 @@ function draw() {
     }
     
     if( draw_fixed_points ) {
+        ctx.fillStyle = ctx.strokeStyle = "rgb(0,0,0)";
         var cp = control_points.slice();
         var ad_minus_bc = sub( mul_complex( cp[0], cp[3] ), mul_complex( cp[1], cp[2] ) );
         for( var i = 0; i < 4; i++ ) {
