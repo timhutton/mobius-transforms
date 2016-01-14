@@ -201,16 +201,19 @@ function canvas_arrow( context, fromx, fromy, tox, toy ) {
 }
 
 function drawSmoothTransformedLine( sp1, sp2 ) {
+    // TODO: a more elegant method: straight line segments map to arcs of circles, so just draw directly!
     var wp1 = fromScreen( sp1 );
     var wp2 = fromScreen( sp2 );
     var q1 = mobius( wp1, control_points[0], control_points[1], control_points[2], control_points[3] );
     var q2 = mobius( wp2, control_points[0], control_points[1], control_points[2], control_points[3] );
     var sq1 = toScreen( q1 );
     var sq2 = toScreen( q2 );
-    if( !pointInRect( sq1, canvas_rect ) && !pointInRect( sq2, canvas_rect ) )
-        return; // both off the screen, so ignore
-    var close_enough = 20;
-    if( dist2( sq1, sq2 ) < close_enough * close_enough ) {
+    var close_enough = 4;
+    var too_far = 2000;
+    var d2 = dist2( sq1, sq2 )
+    if( d2 > too_far * too_far )
+        return; // these points have diverged
+    else if( d2 < close_enough * close_enough ) {
         // close enough, so just connect with a straight line
         ctx.moveTo( sq1.x, sq1.y );
         ctx.lineTo( sq2.x, sq2.y );
@@ -268,12 +271,10 @@ function draw() {
         ctx.strokeStyle = "rgba(0,0,0,0.4)";
         ctx.beginPath();
         var spacing = 40;
-        for( var x = canvas_rect.x; x < canvas_rect.x + canvas_rect.width; x += spacing ) {
-            for( var y = canvas_rect.y; y < canvas_rect.y + canvas_rect.height; y += spacing ) {
-                drawSmoothTransformedLine( p2( x, y ), p2( x + spacing, y ) );
-                drawSmoothTransformedLine( p2( x, y ), p2( x, y + spacing ) );
-            }
-        }
+        for( var x = canvas_rect.x; x < canvas_rect.x + canvas_rect.width; x += spacing )
+            drawSmoothTransformedLine( p2( x, canvas_rect.y ), p2( x, canvas_rect.y + canvas_rect.height ) );
+        for( var y = canvas_rect.y; y < canvas_rect.y + canvas_rect.height; y += spacing )
+            drawSmoothTransformedLine( p2( canvas_rect.x, y ), p2( canvas_rect.x + canvas_rect.width, y ) );
         ctx.stroke();
     }
     
