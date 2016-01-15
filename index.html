@@ -209,7 +209,7 @@ function drawArrow( from, to ) {
 }
 
 function distanceOfPointFromLine( end1, end2, p ) {
-    return Math.abs( (end2.y-end1.y)*p.x - (end2.x-end1.x)*p.y + end2.x*end1.y - end2.y*end1.x ) / Math.sqrt( dist2( end1, end2 ) );
+    return Math.abs( (end2.y-end1.y)*p.x - (end2.x-end1.x)*p.y + end2.x*end1.y - end2.y*end1.x ) / dist( end1, end2 );
 }
 
 function drawSmoothTransformedLine( a, c ) {
@@ -242,14 +242,13 @@ function drawSmoothTransformedArrow( sp ) {
     var p = fromScreen( sp );
     var num_steps = 30;
     var cp = [];
-    var tp = control_points.slice();
-    mobius_normalize( tp );
+    var target_p = control_points.slice();
+    mobius_normalize( target_p );
     for( var i = 0; i < num_steps; i++ ) {
         var u = i / num_steps;
         mobius_identity( cp );
         for( var j = 0; j < 4; j++ )
-            cp[ j ] = add( mul( tp[ j ], u ), mul( cp[ j ], 1 - u ) );
-        mobius_normalize( cp );
+            cp[ j ] = add( mul( target_p[ j ], u ), mul( cp[ j ], 1 - u ) );
         var q = mobius( p, cp[0], cp[1], cp[2], cp[3] );
         sq = toScreen( q );
         ctx.lineTo( sq.x, sq.y );
