@@ -201,7 +201,6 @@ function canvas_arrow( context, fromx, fromy, tox, toy ) {
 }
 
 function drawSmoothTransformedLine( sp1, sp2 ) {
-    // TODO: a more elegant method: straight line segments map to arcs of circles, so just draw directly!
     var wp1 = fromScreen( sp1 );
     var wp2 = fromScreen( sp2 );
     var q1 = mobius( wp1, control_points[0], control_points[1], control_points[2], control_points[3] );
@@ -269,8 +268,8 @@ function draw() {
     // draw a distorted grid to show the transform
     if( draw_grid ) {
         ctx.strokeStyle = "rgba(0,0,0,0.4)";
-        ctx.beginPath();
         var spacing = 40;
+        ctx.beginPath();
         for( var x = canvas_rect.x; x < canvas_rect.x + canvas_rect.width; x += spacing )
             drawSmoothTransformedLine( p2( x, canvas_rect.y ), p2( x, canvas_rect.y + canvas_rect.height ) );
         for( var y = canvas_rect.y; y < canvas_rect.y + canvas_rect.height; y += spacing )
