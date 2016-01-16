@@ -20,7 +20,7 @@ function phase( a ) { return Math.atan2( a.y, a.x ); }
 function fromPolar( mag, phase ) { return p2( mag * Math.cos(phase), mag*Math.sin(phase) ) }
 function sqrt_complex( a ) { return fromPolar( Math.sqrt( magnitude(a) ), phase(a) / 2.0 ); }
 function mobius( z, a, b, c, d ) { return div_complex( add( mul_complex( a, z ), b ), add( mul_complex( c, z ), d ) ); }
-function flip_y( p ) { return p2( p.x, -p.y ); }
+function complex_conjugate( p ) { return p2( p.x, -p.y ); }
 
 function mobius_normalize( cp ) {
     // VCA, p.150
@@ -36,8 +36,8 @@ function mobius_identity( cp ) {
     cp[3] = p2( 1, 0 ); 
 }
 
-function toScreen( p ) { return add( origin_screen, flip_y( mul( p, scale ) ) ); }
-function fromScreen( p ) { return mul( flip_y( sub( p, origin_screen ) ), 1.0 / scale ); }
+function toScreen( p ) { return add( origin_screen, complex_conjugate( mul( p, scale ) ) ); }
+function fromScreen( p ) { return mul( complex_conjugate( sub( p, origin_screen ) ), 1.0 / scale ); }
 
 function getMousePos(canvas, evt) {
     var rect = canvas.getBoundingClientRect();
@@ -64,7 +64,9 @@ function onMove( pos ) {
         // find the closest point, if within a minimum radius
         var iClosest = -1;
         var closest_dist2 = touch_radius * touch_radius;
-        for( var i = 0; i < 4; i++ ) {
+        var num_control_points = 4;
+        if( unitary ) num_control_points = 2; // only allow a and b to be dragged
+        for( var i = 0; i < num_control_points; i++ ) {
             var d2 = dist2( pos, toScreen( control_points[ i ] ) );
             if( d2 < closest_dist2 ) {
                 closest_dist2 = d2;
@@ -96,7 +98,9 @@ function onDown( pos ) {
     // find the closest point, if within a minimum radius
     var iClosest = -1;
     var closest_dist2 = touch_radius * touch_radius;
-    for( var i = 0; i < 4; i++ ) {
+    var num_control_points = 4;
+    if( unitary ) num_control_points = 2; // only allow a and b to be dragged
+    for( var i = 0; i < num_control_points; i++ ) {
         var d2 = dist2( pos, toScreen( control_points[ i ] ) );
         if( d2 < closest_dist2 ) {
             closest_dist2 = d2;
@@ -181,11 +185,12 @@ function init() {
     draw_arrows = false;
     normalize = false;
     draw_fixed_points = false;
+    unitary = false;
 
     draw();
 }
 
-function point( p, r, t, t_offset ) { 
+function drawPoint( p, r, t, t_offset ) { 
     ctx.beginPath(); 
     ctx.arc( p.x, p.y, r, 0, 2.0 * Math.PI ); 
     ctx.fillText( t, p.x + 5 + t_offset.x, p.y - 5 + t_offset.y );
@@ -263,6 +268,11 @@ function draw() {
 
     if( normalize )
         mobius_normalize( control_points );
+        
+    if( unitary ) {
+        control_points[2] = mul( complex_conjugate( control_points[1] ), -1 );
+        control_points[3] = complex_conjugate( control_points[0] );
+    }
 
     // clear the area
     ctx.strokeStyle = "rgb(0,0,0)";
@@ -315,6 +325,7 @@ function draw() {
     var rest_color = "rgb(0,0,0)";
     var highlighted_color = "rgb(0,255,255)";
     var dragging_color = "rgb(0,255,0)";
+    var radius = 4;
     for( var i = 0; i < 4; i++ ) {
         if( point_is_highlighted && i_point == i )
             ctx.fillStyle = ctx.strokeStyle = highlighted_color;
@@ -322,7 +333,9 @@ function draw() {
             ctx.fillStyle = ctx.strokeStyle = dragging_color;
         else
             ctx.fillStyle = ctx.strokeStyle = rest_color;
-        point( toScreen( control_points[ i ] ), 4, "abcd"[i], p2(0,0) );
+        if( unitary && i > 1 ) radius = 2;
+        else radius = 4;
+        drawPoint( toScreen( control_points[ i ] ), radius, "abcd"[i], p2(0,0) );
     }
     
     if( draw_fixed_points ) {
@@ -331,8 +344,8 @@ function draw() {
         mobius_normalize( cp );
         var f1 = div_complex( add( sub(cp[0],cp[3]), sqrt_complex( sub( mul_complex( add(cp[0],cp[3]), add(cp[0],cp[3]) ), p2(4,0) ) ) ), mul( cp[2], 2.0 ) );
         var f2 = div_complex( sub( sub(cp[0],cp[3]), sqrt_complex( sub( mul_complex( add(cp[0],cp[3]), add(cp[0],cp[3]) ), p2(4,0) ) ) ), mul( cp[2], 2.0 ) );
-        point( toScreen( f1 ), 2, "f1", p2(0,0) );
-        point( toScreen( f2 ), 2, "f2", p2(0,0) );
+        drawPoint( toScreen( f1 ), 2, "f1", p2(0,0) );
+        drawPoint( toScreen( f2 ), 2, "f2", p2(0,0) );
     }
 }
 
@@ -357,6 +370,12 @@ function onNormalizeButton(element) {
 function onFixedPointsButton(element) {
     draw_fixed_points = !draw_fixed_points; 
     element.value = draw_fixed_points ? "Fixed points: ON" : "Fixed points: OFF";
+    draw(); 
+}
+
+function onUnitaryButton(element) {
+    unitary = !unitary; 
+    element.value = unitary ? "Unitary: ON" : "Unitary: OFF";
     draw(); 
 }
 
@@ -397,6 +416,7 @@ input[type='button'] {
 <p><input type="button" value="Normalize: OFF" onclick="onNormalizeButton(this)" /></p>
 <p><input type="button" value="Identity" onclick="onIdentityButton()" /></p>
 <p><input type="button" value="Fixed points: OFF" onclick="onFixedPointsButton(this)" /></p>
+<p><input type="button" value="Unitary: OFF" onclick="onUnitaryButton(this)" /></p>
 
 </div>
 
@@ -406,7 +426,9 @@ them give a similarity transform: <b>a</b> controls the scale and rotation while
 
 <p>The identity transform is given when <b>b</b>=<b>c</b>=0 and <b>a</b>=<b>d</b>.</p>
 
-<p>A <i>normalized</i> Möbius transformation is one where <b>ad - bc = 1</b>.
+<p>A <i>normalized</i> Möbius transformation is one where <b>ad - bc = 1</b>.</p>
+
+<p>A <i>unitary</i> Möbius transform has <b>c = -b&#773;</b> and <b>d = a&#773;</b>, where <b>z&#773;</b> is the <a href="https://en.wikipedia.org/wiki/Complex_conjugate">complex conjugate</a> of <b>z</b>.</p>
 
 <p>Source code: <a href="https://github.com/timhutton/mobius-transforms">https://github.com/timhutton/mobius-transforms</a></p>
 
