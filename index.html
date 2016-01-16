@@ -280,16 +280,17 @@ function draw() {
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
     // draw the axes
+    var lines = [ p2( -100, 0 ), p2( 100, 0 ), p2( 0, -100 ), p2( 0, 100 ),
+                  p2( 1, 0.05 ), p2( 1, -0.05 ), p2( 0.05, 1 ), p2( -0.05, 1 ),
+                  p2( -1, 0.05 ), p2( -1, -0.05 ), p2( 0.05, -1 ), p2( -0.05, -1 ) ];
     ctx.strokeStyle = "rgba(0,0,0,0.2)";
     ctx.beginPath();
-    sp1 = toScreen( p2( -100, 0 ) );
-    sp2 = toScreen( p2( 100, 0 ) );
-    ctx.moveTo( sp1.x, sp1.y );
-    ctx.lineTo( sp2.x, sp2.y );
-    sp1 = toScreen( p2( 0, -100 ) );
-    sp2 = toScreen( p2( 0, 100 ) );
-    ctx.moveTo( sp1.x, sp1.y );
-    ctx.lineTo( sp2.x, sp2.y );
+    for( var i = 0; i < 6; i++ ) {
+        sp1 = toScreen( lines[ i*2 + 0 ] );
+        sp2 = toScreen( lines[ i*2 + 1 ] );
+        ctx.moveTo( sp1.x, sp1.y );
+        ctx.lineTo( sp2.x, sp2.y );
+    }
     ctx.stroke();
     
     // draw arrows showing the transform
