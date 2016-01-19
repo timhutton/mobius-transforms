@@ -29,6 +29,33 @@ function mobius_normalize( cp ) {
         cp[i] = div_complex( cp[i], sqrt_ad_minus_bc );
 }
 
+function mobius_make_unitary( cp ) {
+    cp[2] = mul( complex_conjugate( cp[1] ), -1 );
+    cp[3] = complex_conjugate( cp[0] );
+}
+
+function mobius_make_nonloxodromic( cp ) {
+    cp[3].y = -cp[0].y;
+}
+
+function enforce_constraints() {
+    // hacky approach for now: enforce the constraints over and over until the control points stop moving
+    var cp = control_points.slice();
+    do {
+        if( normalize )
+            mobius_normalize( cp );
+        if( unitary )
+            mobius_make_unitary( cp );
+        if( nonloxodromic )
+            mobius_make_nonloxodromic( cp );
+        var d = 0;
+        for( var i = 0; i < 4; i++ ) {
+            d += dist2( cp[i], control_points[i] );
+            control_points[i] = cp[i];
+        }
+    } while( d > 1E-8 ); 
+}
+
 function mobius_identity( cp ) {
     cp[0] = p2( 1, 0 ); 
     cp[1] = p2( 0, 0 ); 
@@ -58,6 +85,7 @@ function onTouchMove( evt ) {
 function onMove( pos ) {
     if( point_is_being_dragged ) {
         control_points[ i_point ] = fromScreen( add( pos, drag_offset ) );
+        enforce_constraints();
         draw();
     }
     else {
@@ -172,7 +200,7 @@ function init() {
     control_points = [ p2( 1.0, 0.0 ), p2( 0.2, 0.1 ), p2( 0.3, 0.4 ), p2( 1.1, -0.1 ) ];
     
     origin_screen = p2( canvas.width/2, canvas.height/2 );
-    scale = Math.min( canvas.width, canvas.height ) / 4;
+    scale = Math.min( canvas.width, canvas.height ) / 6;
     
     point_is_highlighted = false;
     point_is_being_dragged = false;
@@ -186,6 +214,9 @@ function init() {
     normalize = false;
     draw_fixed_points = false;
     unitary = false;
+    nonloxodromic = false;
+    show_ad_minus_bc = false;
+    show_a_plus_d = false;
 
     draw();
 }
@@ -264,30 +295,41 @@ function drawSmoothTransformedArrow( sp ) {
     drawArrow( sq, sq2 );
 }
 
-function draw() {
+function roundTowardsZero( x ) {
+    return ( x > 0 ) ? Math.floor(x) : Math.ceil(x);
+}
 
-    if( normalize )
-        mobius_normalize( control_points );
-        
-    if( unitary ) {
-        control_points[2] = mul( complex_conjugate( control_points[1] ), -1 );
-        control_points[3] = complex_conjugate( control_points[0] );
-    }
+function draw() {
 
     // clear the area
     ctx.strokeStyle = "rgb(0,0,0)";
+    ctx.lineWidth = 1;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
     // draw the axes
-    var lines = [ p2( -100, 0 ), p2( 100, 0 ), p2( 0, -100 ), p2( 0, 100 ),
-                  p2( 1, 0.05 ), p2( 1, -0.05 ), p2( 0.05, 1 ), p2( -0.05, 1 ),
-                  p2( -1, 0.05 ), p2( -1, -0.05 ), p2( 0.05, -1 ), p2( -0.05, -1 ) ];
+    var lines = [ p2( -100, 0 ), p2( 100, 0 ), p2( 0, -100 ), p2( 0, 100 ) ];
+    var min_x = roundTowardsZero( fromScreen( p2( 0, 0 ) ).x );
+    var max_x = roundTowardsZero( fromScreen( p2( canvas.width, 0 ) ).x );
+    var min_y = roundTowardsZero( fromScreen( p2( 0, canvas.height ) ).y );
+    var max_y = roundTowardsZero( fromScreen( p2( 0, 0 ) ).y );
     ctx.strokeStyle = "rgba(0,0,0,0.2)";
     ctx.beginPath();
-    for( var i = 0; i < 6; i++ ) {
-        sp1 = toScreen( lines[ i*2 + 0 ] );
-        sp2 = toScreen( lines[ i*2 + 1 ] );
+    for( var i = 0; i < 2; i++ ) {
+        var sp1 = toScreen( lines[ i*2 + 0 ] );
+        var sp2 = toScreen( lines[ i*2 + 1 ] );
+        ctx.moveTo( sp1.x, sp1.y );
+        ctx.lineTo( sp2.x, sp2.y );
+    }
+    for( var x = min_x; x <= max_x; x++ ) {
+        var sp1 = toScreen( p2( x, -0.05 ) );
+        var sp2 = toScreen( p2( x, 0.05 ) );
+        ctx.moveTo( sp1.x, sp1.y );
+        ctx.lineTo( sp2.x, sp2.y );
+    }
+    for( var y = min_y; y <= max_y; y++ ) {
+        var sp1 = toScreen( p2( -0.05, y ) );
+        var sp2 = toScreen( p2( 0.05, y ) );
         ctx.moveTo( sp1.x, sp1.y );
         ctx.lineTo( sp2.x, sp2.y );
     }
@@ -326,7 +368,8 @@ function draw() {
     var rest_color = "rgb(0,0,0)";
     var highlighted_color = "rgb(0,255,255)";
     var dragging_color = "rgb(0,255,0)";
-    var radius = 4;
+    var num_moveable_control_points = 4;
+    if( unitary ) num_moveable_control_points = 2;
     for( var i = 0; i < 4; i++ ) {
         if( point_is_highlighted && i_point == i )
             ctx.fillStyle = ctx.strokeStyle = highlighted_color;
@@ -334,8 +377,7 @@ function draw() {
             ctx.fillStyle = ctx.strokeStyle = dragging_color;
         else
             ctx.fillStyle = ctx.strokeStyle = rest_color;
-        if( unitary && i > 1 ) radius = 2;
-        else radius = 4;
+        var radius = ( i < num_moveable_control_points ) ? 4 : 2;
         drawPoint( toScreen( control_points[ i ] ), radius, "abcd"[i], p2(0,0) );
     }
     
@@ -347,6 +389,33 @@ function draw() {
         var f2 = div_complex( sub( sub(cp[0],cp[3]), sqrt_complex( sub( mul_complex( add(cp[0],cp[3]), add(cp[0],cp[3]) ), p2(4,0) ) ) ), mul( cp[2], 2.0 ) );
         drawPoint( toScreen( f1 ), 2, "f1", p2(0,0) );
         drawPoint( toScreen( f2 ), 2, "f2", p2(0,0) );
+    }
+    
+    if( show_a_plus_d ) {
+    
+        if( normalize ) {
+            // show the classification region
+            ctx.fillStyle = ctx.strokeStyle = "rgba(0,160,0,0.2)";
+            ctx.lineWidth = 5;
+            var sp1 = toScreen( p2( -2, 0 ) );
+            var sp2 = toScreen( p2( 2, 0 ) );
+            ctx.beginPath();
+            ctx.moveTo( sp1.x, sp1.y );
+            ctx.lineTo( sp2.x, sp2.y );
+            ctx.stroke();
+            drawPoint( toScreen( p2( -2, 0 ) ), 5, "", p2(0,0) );
+            drawPoint( toScreen( p2( 2, 0 ) ), 5, "", p2(0,0) );
+        }
+
+        var a_plus_d = add( control_points[0], control_points[3] );
+        ctx.fillStyle = ctx.strokeStyle = "rgb(0,0,0)";
+        drawPoint( toScreen( a_plus_d ), 2, "a+d", p2(0,0) );
+    }
+
+    if( show_ad_minus_bc ) {
+        var ad_minus_bc = sub( mul_complex( control_points[0], control_points[3] ), mul_complex( control_points[1], control_points[2] ) );
+        ctx.fillStyle = ctx.strokeStyle = "rgb(0,0,0)";
+        drawPoint( toScreen( ad_minus_bc ), 2, "ad-bc", p2(0,0) );
     }
 }
 
@@ -360,11 +429,12 @@ function onArrowsButton(element) {
     draw_arrows = !draw_arrows; 
     element.value = draw_arrows ? "Arrows: ON" : "Arrows: OFF";
     draw(); 
-}
+1}
 
 function onNormalizeButton(element) {
     normalize = !normalize; 
     element.value = normalize ? "Normalize: ON" : "Normalize: OFF";
+    enforce_constraints();
     draw(); 
 }
 
@@ -374,14 +444,35 @@ function onFixedPointsButton(element) {
     draw(); 
 }
 
+function onShowAPlusDButton(element) {
+    show_a_plus_d = !show_a_plus_d; 
+    element.value = show_a_plus_d ? "Show a+d: ON" : "Show a+d: OFF";
+    draw(); 
+}
+
+function onShowADMinusBCButton(element) {
+    show_ad_minus_bc = !show_ad_minus_bc; 
+    element.value = show_ad_minus_bc ? "Show ad-bc: ON" : "Show ad-bc: OFF";
+    draw(); 
+}
+
 function onUnitaryButton(element) {
-    unitary = !unitary; 
+    unitary = !unitary;
     element.value = unitary ? "Unitary: ON" : "Unitary: OFF";
+    enforce_constraints();
+    draw(); 
+}
+
+function onNonLoxodromicButton(element) {
+    nonloxodromic = !nonloxodromic; 
+    element.value = nonloxodromic ? "Non-loxodromic: ON" : "Non-loxodromic: OFF";
+    enforce_constraints();
     draw(); 
 }
 
 function onIdentityButton() {
     mobius_identity( control_points );
+    enforce_constraints();
     draw(); 
 }
 
@@ -414,26 +505,33 @@ input[type='button'] {
 
 <p><input type="button" value="Arrows: OFF" onclick="onArrowsButton(this)" /></p>
 <p><input type="button" value="Grid: ON" onclick="onGridButton(this)" /></p>
-<p><input type="button" value="Normalize: OFF" onclick="onNormalizeButton(this)" /></p>
 <p><input type="button" value="Identity" onclick="onIdentityButton()" /></p>
+<p><input type="button" value="Normalize: OFF" onclick="onNormalizeButton(this)" /></p>
+<p><input type="button" value="Show ad-bc: OFF" onclick="onShowADMinusBCButton(this)" /></p>
 <p><input type="button" value="Fixed points: OFF" onclick="onFixedPointsButton(this)" /></p>
 <p><input type="button" value="Unitary: OFF" onclick="onUnitaryButton(this)" /></p>
+<p><input type="button" value="Non-loxodromic: OFF" onclick="onNonLoxodromicButton(this)" /></p>
+<p><input type="button" value="Show a+d: OFF" onclick="onShowAPlusDButton(this)" /></p>
 
 </div>
 
 <div style="clear:both">
-<p>To simplify the transform, set <b>c</b> to zero (move it to the origin). Now <b>a</b> and <b>b</b> between 
-them give a similarity transform: <b>a</b> controls the scale and rotation while <b>b</b> controls the translation.</p>
+<p>To simplify the transformation, set <b>c</b> to zero (move it to the origin). Now <b>a</b> and <b>b</b> between 
+them give a similarity transformation: <b>a</b> controls the scale and rotation while <b>b</b> controls the translation.</p>
 
-<p>The identity transform is given when <b>b</b>=<b>c</b>=0 and <b>a</b>=<b>d</b>.</p>
+<p>The identity transformation is given when <b>b</b>=<b>c</b>=0 and <b>a</b>=<b>d</b>.</p>
 
 <p>A <i>normalized</i> Möbius transformation is one where <b>ad - bc = 1</b>.</p>
 
-<p>A <i>unitary</i> Möbius transform has <b>c = -b&#773;</b> and <b>d = a&#773;</b>, where <b>z&#773;</b> is the <a href="https://en.wikipedia.org/wiki/Complex_conjugate">complex conjugate</a> of <b>z</b>.</p>
+<p>A <i>unitary</i> Möbius transformation has <b>c = -b&#773;</b> and <b>d = a&#773;</b> (where <b>z&#773;</b> is the <a href="https://en.wikipedia.org/wiki/Complex_conjugate">complex conjugate</a> of <b>z</b>).</p>
+
+<p>A normalized Möbius transformation is <i>loxodromic</i> if <b>a+d</b> is not on the real line. Set <b><tt>Non-loxodromic:ON</tt></b> to enforce that <b>a+d</b> is real, and <b><tt>Normalize:ON</tt></b> to ensure that the transformation is normalized. Then if <b>|a+d| < 2</b> the Möbius transformation is <i>elliptic</i>. If <b>|a+b|=2</b> then it is <i>parabolic</i>. Otherwise, with <b>|a+d| > 2</b>, it is <i>hyperbolic</i>. 
+
+<p>Read the book <a href="http://www.amazon.co.uk/Visual-Complex-Analysis-Tristan-Needham/dp/0198534469">Visual Complex Analysis</a> by Tristan Needham. To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this amazing video</a>.</p>
+
+<hr>
 
 <p>Source code: <a href="https://github.com/timhutton/mobius-transforms">https://github.com/timhutton/mobius-transforms</a></p>
-
-<p>To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this amazing video</a> or read the book <a href="http://www.amazon.co.uk/Visual-Complex-Analysis-Tristan-Needham/dp/0198534469">Visual Complex Analysis</a> by Tristan Needham.</p>
 
 </div>
 </html>
