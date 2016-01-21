@@ -200,7 +200,7 @@ function init() {
     control_points = [ p2( 1.0, 0.0 ), p2( 0.2, 0.1 ), p2( 0.3, 0.4 ), p2( 1.1, -0.1 ) ];
     
     origin_screen = p2( canvas.width/2, canvas.height/2 );
-    scale = Math.min( canvas.width, canvas.height ) / 6;
+    scale = Math.min( canvas.width, canvas.height ) / 5;
     
     point_is_highlighted = false;
     point_is_being_dragged = false;
@@ -525,7 +525,9 @@ them give a similarity transformation: <b>a</b> controls the scale and rotation 
 
 <p>A <i>unitary</i> Möbius transformation has <b>c = -b&#773;</b> and <b>d = a&#773;</b> (where <b>z&#773;</b> is the <a href="https://en.wikipedia.org/wiki/Complex_conjugate">complex conjugate</a> of <b>z</b>).</p>
 
-<p>A normalized Möbius transformation is <i>loxodromic</i> if <b>a+d</b> is not on the real line. Set <b><tt>Non-loxodromic:ON</tt></b> to enforce that <b>a+d</b> is real, and <b><tt>Normalize:ON</tt></b> to ensure that the transformation is normalized. Then if <b>|a+d| < 2</b> the Möbius transformation is <i>elliptic</i>. If <b>|a+b|=2</b> then it is <i>parabolic</i>. Otherwise, with <b>|a+d| > 2</b>, it is <i>hyperbolic</i>. 
+<p>A normalized Möbius transformation is <i>loxodromic</i> if <b>a+d</b> is not on the real line. Set <b><tt>Non-loxodromic:ON</tt></b> to enforce that <b>a+d</b> is real, and <b><tt>Normalize:ON</tt></b> to ensure that the transformation is normalized. Then if <b>|a+d| < 2</b> the Möbius transformation is <i>elliptic</i>. If <b>|a+b|=2</b> then it is <i>parabolic</i>. Otherwise, with <b>|a+d| > 2</b>, it is <i>hyperbolic</i>.
+
+<p>If the unit circle is the Poincare disk model of the hyperbolic plane, then the Möbius transformation with <b>c = b&#773;</b> and <b>a = d = 1</b> is an isometry of the hyperbolic plane corresponding to a translation of the origin by <b>b</b>.</p>
 
 <p>Read the book <a href="http://www.amazon.co.uk/Visual-Complex-Analysis-Tristan-Needham/dp/0198534469">Visual Complex Analysis</a> by Tristan Needham. To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this amazing video</a>.</p>
 
