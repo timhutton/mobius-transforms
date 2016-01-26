@@ -4,23 +4,39 @@
 <meta charset="UTF-8">
 <script>
 
-function p2( x, y ) { return { x:x, y:y }; }
-function add( a, b ) { return p2( a.x + b.x, a.y + b.y ); }
-function sub( a, b ) { return p2( a.x - b.x, a.y - b.y ); }
-function mul( a, f ) { return p2( a.x * f, a.y * f ); }
+function p2( x, y ) { return { x:x, y:y, z:0 }; }
+function p3( x, y, z ) { return { x:x, y:y, z:z }; }
+function add( a, b ) { return p3( a.x + b.x, a.y + b.y, a.z + b.z ); }
+function sub( a, b ) { return p3( a.x - b.x, a.y - b.y, a.z - b.z ); }
+function mul( a, f ) { return p3( a.x * f, a.y * f, a.z * f ); }
 function average( a, b ) { return mul( add( a, b ), 0.5 ); }
-function dot( a, b ) { return a.x * b.x + a.y * b.y; }
+function dot( a, b ) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 function len2( a ) { return dot(a,a); }
 function dist2( a, b ) { return len2( sub( a, b ) ); }
 function dist( a, b ) { return Math.sqrt( len2( sub( a, b ) ) ); }
 function mul_complex( a, b ) { return p2( a.x * b.x - a.y * b.y, a.y * b.x + a.x * b.y ); }
 function div_complex( a, b ) { return p2( ( a.x * b.x + a.y * b.y ) / len2( b ), ( a.y * b.x - a.x * b.y ) / len2( b ) ); }
 function magnitude( a ) { return Math.sqrt( len2( a ) ); }
+function normalize( a ) { return mul( a, 1 / magnitude( a ) ); }
+function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, a.x * b.y - a.y * b.x ); }
 function phase( a ) { return Math.atan2( a.y, a.x ); }
 function fromPolar( mag, phase ) { return p2( mag * Math.cos(phase), mag*Math.sin(phase) ) }
 function sqrt_complex( a ) { return fromPolar( Math.sqrt( magnitude(a) ), phase(a) / 2.0 ); }
 function mobius( z, a, b, c, d ) { return div_complex( add( mul_complex( a, z ), b ), add( mul_complex( c, z ), d ) ); }
 function complex_conjugate( p ) { return p2( p.x, -p.y ); }
+function sphereInversion( p, sphere ) {
+    var d2 = generalized_dist2( p, sphere.p, sphere.metric_signature );
+    return add( sphere.p, mul( sub( p, sphere.p ), sphere.r2 / d2 ) );
+}
+function generalized_dist2( p1, p2, metric_signature ) {
+    // squared-distance function, generalized for different metric signatures
+    // e.g. [1,1,0] is the 2D Euclidean plane XY,
+    //      [1,-1,0] is the hyperbola model XY,
+    //      [1,1,-1] is the hyperboloid model XYZ
+    return metric_signature.x * Math.pow( p1.x - p2.x, 2 ) 
+         + metric_signature.y * Math.pow( p1.y - p2.y, 2 )
+         + metric_signature.z * Math.pow( p1.z - p2.z, 2 );
+}
 
 function mobius_normalize( cp ) {
     // VCA, p.150
@@ -38,11 +54,25 @@ function mobius_make_nonloxodromic( cp ) {
     cp[3].y = -cp[0].y;
 }
 
+function repositionCamera() {
+    var look_at = p3(0,0,0.25);
+    var vd = 1.2; // vertical distance
+    var hd = vd * 2; // horizontal distance
+    camera = {};
+    camera.p = p3( hd*Math.cos(theta), hd*Math.sin(theta), vd  );
+    camera.z = normalize( sub( look_at, camera.p ) );
+    var up = p3(0,0,1);
+    camera.x = normalize( cross( camera.z, up ) );
+    camera.y = normalize( cross( camera.x, camera.z ) );
+    camera.f = canvas.height;
+    camera.pp = p2(canvas.width/2,canvas.height/2);
+}
+
 function enforce_constraints() {
     // hacky approach for now: enforce the constraints over and over until the control points stop moving
     var cp = control_points.slice();
     do {
-        if( normalize )
+        if( normalize_mobius )
             mobius_normalize( cp );
         if( unitary )
             mobius_make_unitary( cp );
@@ -63,8 +93,40 @@ function mobius_identity( cp ) {
     cp[3] = p2( 1, 0 ); 
 }
 
-function toScreen( p ) { return add( origin_screen, complex_conjugate( mul( p, scale ) ) ); }
-function fromScreen( p ) { return mul( complex_conjugate( sub( p, origin_screen ) ), 1.0 / scale ); }
+function toScreen( p ) { 
+    if( show_3D )
+        return camera_projection( p );
+    else
+        return add( origin_screen, complex_conjugate( mul( p, scale ) ) ); 
+}
+
+function fromScreen( p ) { 
+    if( show_3D ) {
+        // what point on the xy plane, tp, would have camera_projection( tp ) = p?
+        // we know it lies on the line from the camera position through the virtual camera's screen at an arbitrary distance 
+        var vsp = p3( ( p.x - camera.pp.x ) / camera.f, ( ( canvas.height - p.y) - camera.pp.y ) / camera.f, 1 ); // virtual screen point in camera space
+        var ray = add( add( mul( camera.x, vsp.x ), mul( camera.y, vsp.y ) ), mul( camera.z, vsp.z ) ); // into world space
+        var u = -camera.p.z / ray.z;
+        return add( camera.p, mul( ray, u ) );
+    }
+    else
+        return mul( complex_conjugate( sub( p, origin_screen ) ), 1.0 / scale ); 
+}
+
+function camera_projection( p ) {
+    var ray = sub( p, camera.p ); // the ray from camera center to point
+    var cp = p3( dot( camera.x, ray ), dot( camera.y, ray ), dot( camera.z, ray ) ); // into camera space
+    return p3( cp.x * camera.f / cp.z + camera.pp.x, 
+               canvas.height - ( cp.y * camera.f / cp.z + camera.pp.y ),
+               cp.z );
+}
+
+function inViewingFrustrum( p ) {
+    if( !show_3D) return true;
+    var near_plane = 0.5;
+    var far_plane = 1000;
+    return p.z > near_plane && p.z < far_plane;
+}
 
 function getMousePos(canvas, evt) {
     var rect = canvas.getBoundingClientRect();
@@ -211,14 +273,23 @@ function init() {
     
     draw_grid = true;
     draw_arrows = false;
-    normalize = false;
+    normalize_mobius = false;
     draw_fixed_points = false;
     unitary = false;
     nonloxodromic = false;
     show_ad_minus_bc = false;
     show_a_plus_d = false;
 
+    theta = -Math.PI / 2; 
+    repositionCamera();
+    
+    show_3D = true;
+    riemann_inversion_sphere = { p: p3(0,0,1), r2:1, metric_signature:p3(1,1,1) };
+
     draw();
+    
+    is_spinning = true;
+    animate();
 }
 
 function drawPoint( p, r, t, t_offset ) { 
@@ -248,34 +319,51 @@ function distanceOfPointFromLine( end1, end2, p ) {
     return Math.abs( (end2.y-end1.y)*p.x - (end2.x-end1.x)*p.y + end2.x*end1.y - end2.y*end1.x ) / dist( end1, end2 );
 }
 
-function drawSmoothTransformedLine( a, c ) {
-    var b = average(a,c);
-    var wa = fromScreen( a );
-    var wb = fromScreen( b );
-    var wc = fromScreen( c );
-    var qa = mobius( wa, control_points[0], control_points[1], control_points[2], control_points[3] );
-    var qb = mobius( wb, control_points[0], control_points[1], control_points[2], control_points[3] );
-    var qc = mobius( wc, control_points[0], control_points[1], control_points[2], control_points[3] );
+function drawSmoothTransformedLine( a, c, apply_mobius, on_sphere ) {
+    var b = average( a, c );
+    var qa,qb,qc;
+    if( apply_mobius ) {
+        qa = mobius( a, control_points[0], control_points[1], control_points[2], control_points[3] );
+        qb = mobius( b, control_points[0], control_points[1], control_points[2], control_points[3] );
+        qc = mobius( c, control_points[0], control_points[1], control_points[2], control_points[3] );
+    }
+    else {
+        qa = a; qb = b; qc = c;
+    }
+    if( on_sphere ) {
+        qa = sphereInversion( qa, riemann_inversion_sphere );
+        qb = sphereInversion( qb, riemann_inversion_sphere );
+        qc = sphereInversion( qc, riemann_inversion_sphere );
+    }
     var sa = toScreen( qa );
     var sb = toScreen( qb );
     var sc = toScreen( qc );
     // if nearly collinear then just draw straight lines
     var close_enough = 3;
     if( distanceOfPointFromLine( sa, sc, sb ) < close_enough ) {
-        ctx.moveTo( sa.x, sa.y );
-        ctx.lineTo( sb.x, sb.y );
-        ctx.lineTo( sc.x, sc.y );
+        if( inViewingFrustrum( sa ) && inViewingFrustrum( sb ) ) {
+            ctx.moveTo( sa.x, sa.y );
+            ctx.lineTo( sb.x, sb.y );
+        }
+        if( inViewingFrustrum( sb ) && inViewingFrustrum( sc ) ) {
+            ctx.moveTo( sb.x, sb.y );
+            ctx.lineTo( sc.x, sc.y );
+        }
         return;
     }
     // otherwise recurse down
-    drawSmoothTransformedLine( a, b );
-    drawSmoothTransformedLine( b, c );
+    drawSmoothTransformedLine( a, b, apply_mobius, on_sphere );
+    drawSmoothTransformedLine( b, c, apply_mobius, on_sphere );
 }
 
-function drawSmoothTransformedArrow( sp ) {
+function drawSmoothTransformedArrow( p, on_sphere ) {
     // interpolate between the identity transform and the current transform
-    ctx.moveTo( sp.x, sp.y );
-    var p = fromScreen( sp );
+    if( on_sphere )
+        op = sphereInversion( p, riemann_inversion_sphere );
+    else
+        op = p;
+    var sp2 = toScreen( op );
+    ctx.moveTo( sp2.x, sp2.y );
     var num_steps = 30;
     var cp = [];
     var target_p = control_points.slice();
@@ -286,13 +374,21 @@ function drawSmoothTransformedArrow( sp ) {
         for( var j = 0; j < 4; j++ )
             cp[ j ] = add( mul( target_p[ j ], u ), mul( cp[ j ], 1 - u ) );
         var q = mobius( p, cp[0], cp[1], cp[2], cp[3] );
+        if( on_sphere )
+            q = sphereInversion( q, riemann_inversion_sphere );
         sq = toScreen( q );
-        ctx.lineTo( sq.x, sq.y );
+        if( inViewingFrustrum( sq ) )
+            ctx.lineTo( sq.x, sq.y );
+        else
+            ctx.moveTo( sq.x, sq.y );
     }
     // draw the arrow using the last line segment
     var q = mobius( p, control_points[0], control_points[1], control_points[2], control_points[3] );
+    if( on_sphere )
+        q = sphereInversion( q, riemann_inversion_sphere );
     var sq2 = toScreen( q );
-    drawArrow( sq, sq2 );
+    if( inViewingFrustrum( sq ) && inViewingFrustrum( sq2 ) )
+        drawArrow( sq, sq2 );
 }
 
 function roundTowardsZero( x ) {
@@ -308,42 +404,41 @@ function draw() {
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
     // draw the axes
-    var lines = [ p2( -100, 0 ), p2( 100, 0 ), p2( 0, -100 ), p2( 0, 100 ) ];
-    var min_x = roundTowardsZero( fromScreen( p2( 0, 0 ) ).x );
-    var max_x = roundTowardsZero( fromScreen( p2( canvas.width, 0 ) ).x );
-    var min_y = roundTowardsZero( fromScreen( p2( 0, canvas.height ) ).y );
-    var max_y = roundTowardsZero( fromScreen( p2( 0, 0 ) ).y );
+    var extent = 3;
     ctx.strokeStyle = "rgba(0,0,0,0.2)";
     ctx.beginPath();
-    for( var i = 0; i < 2; i++ ) {
-        var sp1 = toScreen( lines[ i*2 + 0 ] );
-        var sp2 = toScreen( lines[ i*2 + 1 ] );
-        ctx.moveTo( sp1.x, sp1.y );
-        ctx.lineTo( sp2.x, sp2.y );
-    }
-    for( var x = min_x; x <= max_x; x++ ) {
-        var sp1 = toScreen( p2( x, -0.05 ) );
-        var sp2 = toScreen( p2( x, 0.05 ) );
-        ctx.moveTo( sp1.x, sp1.y );
-        ctx.lineTo( sp2.x, sp2.y );
-    }
-    for( var y = min_y; y <= max_y; y++ ) {
-        var sp1 = toScreen( p2( -0.05, y ) );
-        var sp2 = toScreen( p2( 0.05, y ) );
-        ctx.moveTo( sp1.x, sp1.y );
-        ctx.lineTo( sp2.x, sp2.y );
+    drawSmoothTransformedLine( p2( -extent, 0 ), p2( 0, 0 ), false, false );
+    drawSmoothTransformedLine( p2( 0, 0 ), p2( extent, 0 ), false, false );
+    drawSmoothTransformedLine( p2( 0, -extent ), p2( 0, 0 ), false, false );
+    drawSmoothTransformedLine( p2( 0, 0 ), p2( 0, extent ), false, false );
+    for( var i = -extent; i <= extent; i++ ) {
+        drawSmoothTransformedLine( p2( i, -0.05 ), p2( i, 0.05 ), false, false );
+        drawSmoothTransformedLine( p2( -0.05, i ), p2( 0.05, i ), false, false );
     }
     ctx.stroke();
     
     // draw arrows showing the transform
     if( draw_arrows ) {
+        if( show_3D ) {
+            spacing = 0.5;
+            min_x = -extent + spacing/2; max_x = extent;
+            min_y = -extent + spacing/2; max_y = extent;
+        }
+        else {
+            spacing = 40;
+            min_x = canvas_rect.x + spacing/2; max_x = canvas_rect.x + canvas_rect.width;
+            min_y = canvas_rect.y + spacing/2; max_y = canvas_rect.y + canvas_rect.height;
+        }
         ctx.strokeStyle = "rgba(0,0,128,0.4)";
-        var spacing = 40;
         ctx.beginPath();
-        for( var x = canvas_rect.x + spacing / 2; x < canvas_rect.x + canvas_rect.width; x += spacing ) {
-            for( var y = canvas_rect.y + spacing / 2; y < canvas_rect.y + canvas_rect.height; y += spacing ) {
-                sp = p2( x, y );
-                drawSmoothTransformedArrow( sp );
+        for( var x = min_x; x < max_x; x += spacing ) {
+            for( var y = min_y; y < max_y; y += spacing ) {
+                if( show_3D ) {
+                    drawSmoothTransformedArrow( p2(x,y), false );
+                    drawSmoothTransformedArrow( p2(x,y), true );
+                }
+                else
+                    drawSmoothTransformedArrow( fromScreen( p2(x,y) ), false );
             }
         }
         ctx.stroke();
@@ -351,13 +446,36 @@ function draw() {
     
     // draw a distorted grid to show the transform
     if( draw_grid ) {
+        if( show_3D ) {
+            spacing = 0.5;
+            min_x = -extent; max_x = extent;
+            min_y = -extent; max_y = extent;
+        }
+        else {
+            spacing = 40;
+            min_x = canvas_rect.x; max_x = canvas_rect.x + canvas_rect.width;
+            min_y = canvas_rect.y; max_y = canvas_rect.y + canvas_rect.height;
+        }
         ctx.strokeStyle = "rgba(0,0,0,0.4)";
-        var spacing = 40;
         ctx.beginPath();
-        for( var x = canvas_rect.x; x < canvas_rect.x + canvas_rect.width; x += spacing ) {
-            for( var y = canvas_rect.y; y < canvas_rect.y + canvas_rect.height; y += spacing ) {
-                drawSmoothTransformedLine( p2( x, y ), p2( x + spacing, y ) );
-                drawSmoothTransformedLine( p2( x, y ), p2( x, y + spacing ) );
+        for( var x = min_x; x < max_x; x += spacing ) {
+            for( var y = min_y; y < max_y; y += spacing ) {
+                if( show_3D ) {
+                    var wp1 = p2( x, y );
+                    var wp2 = p2( x + spacing, y );
+                    drawSmoothTransformedLine( wp1, wp2, true, false );
+                    drawSmoothTransformedLine( wp1, wp2, true, true );
+                    wp2 = p2( x, y + spacing );
+                    drawSmoothTransformedLine( wp1, wp2, true, false );
+                    drawSmoothTransformedLine( wp1, wp2, true, true );
+                }
+                else {
+                    var wp1 = fromScreen( p2( x, y ) );
+                    var wp2 = fromScreen( p2( x + spacing, y ) );
+                    drawSmoothTransformedLine( wp1, wp2, true, false );
+                    wp2 = fromScreen( p2( x, y + spacing ) );
+                    drawSmoothTransformedLine( wp1, wp2, true, false );
+                }
             }
         }
         ctx.stroke();
@@ -389,11 +507,17 @@ function draw() {
         var f2 = div_complex( sub( sub(cp[0],cp[3]), sqrt_complex( sub( mul_complex( add(cp[0],cp[3]), add(cp[0],cp[3]) ), p2(4,0) ) ) ), mul( cp[2], 2.0 ) );
         drawPoint( toScreen( f1 ), 2, "f1", p2(0,0) );
         drawPoint( toScreen( f2 ), 2, "f2", p2(0,0) );
+        if( show_3D ) {
+            f1 = sphereInversion( f1, riemann_inversion_sphere );
+            f2 = sphereInversion( f2, riemann_inversion_sphere );
+            drawPoint( toScreen( f1 ), 2, "f1", p2(0,0) );
+            drawPoint( toScreen( f2 ), 2, "f2", p2(0,0) );
+        }
     }
     
     if( show_a_plus_d ) {
     
-        if( normalize ) {
+        if( normalize_mobius ) {
             // show the classification region
             ctx.fillStyle = ctx.strokeStyle = "rgba(0,160,0,0.2)";
             ctx.lineWidth = 5;
@@ -417,6 +541,11 @@ function draw() {
         ctx.fillStyle = ctx.strokeStyle = "rgb(0,0,0)";
         drawPoint( toScreen( ad_minus_bc ), 2, "ad-bc", p2(0,0) );
     }
+    
+    if( show_3D ) {
+        ctx.fillStyle = ctx.strokeStyle = "rgb(0,0,0)";
+        drawPoint( toScreen( riemann_inversion_sphere.p ), 2, "", p2(0,0) );
+    }
 }
 
 function onGridButton(element) { 
@@ -432,8 +561,8 @@ function onArrowsButton(element) {
 1}
 
 function onNormalizeButton(element) {
-    normalize = !normalize; 
-    element.value = normalize ? "Normalize: ON" : "Normalize: OFF";
+    normalize_mobius = !normalize_mobius; 
+    element.value = normalize_mobius ? "Normalize: ON" : "Normalize: OFF";
     enforce_constraints();
     draw(); 
 }
@@ -476,6 +605,32 @@ function onIdentityButton() {
     draw(); 
 }
 
+function onShowIn3DButton(element) {
+    show_3D = !show_3D; 
+    if( show_3D ) {
+        theta = -Math.PI / 2; 
+        repositionCamera();
+    }
+    element.value = show_3D ? "Show in 3D: ON" : "Show in 3D: OFF";
+    draw(); 
+}
+
+function onSpinningButton(element) {
+    is_spinning = !is_spinning; 
+    element.value = is_spinning ? "Spinning: ON" : "Spinning: OFF";
+    draw(); 
+}
+
+function animate() {
+    if( is_spinning ) {
+        // rotate round
+        theta += 0.005;
+        repositionCamera();
+    }
+    draw();
+    requestAnimationFrame( animate );
+}
+
 window.onload = init;
 </script>
 
@@ -512,6 +667,8 @@ input[type='button'] {
 <p><input type="button" value="Unitary: OFF" onclick="onUnitaryButton(this)" /></p>
 <p><input type="button" value="Non-loxodromic: OFF" onclick="onNonLoxodromicButton(this)" /></p>
 <p><input type="button" value="Show a+d: OFF" onclick="onShowAPlusDButton(this)" /></p>
+<p><input type="button" value="Show in 3D: OFF" onclick="onShowIn3DButton(this)" /></p>
+<p><input type="button" value="Spinning: OFF" onclick="onSpinningButton(this)" /></p>
 
 </div>
 
