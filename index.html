@@ -242,7 +242,7 @@ function fixTouch (touch) {
         y = touch.pageY - winPageY;
     }
     var rect = canvas.getBoundingClientRect();
-    return { x: x - rect.left, y:y - rect.top };
+    return p2( x - rect.left, y - rect.top );
 }
 
 function init() {
