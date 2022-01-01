@@ -274,7 +274,7 @@ function init() {
     control_points = [ p2( 1.0, -5.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, -5.0 ) ];
 
     origin_screen = p2( canvas.width/2, canvas.height/2 );
-    scale = Math.min( canvas.width, canvas.height ) / 10;
+    scale = Math.min( canvas.width, canvas.height ) / 11;
 
     point_is_highlighted = false;
     point_is_being_dragged = false;
@@ -561,7 +561,6 @@ function draw() {
 
     // draw the drawn lines
     var inverse_mobius = get_mobius_inverse(control_points);
-    var extent = 6;
     ctx.strokeStyle = "rgba(255,0,0,1.0)";
     ctx.beginPath();
     for(var iPath = 0; iPath < drawn_lines.length; iPath++)
