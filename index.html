@@ -288,10 +288,10 @@ function init() {
     canvas.addEventListener( 'touchend',  onMouseUp, false );
     canvas.addEventListener( 'touchcancel',  onMouseUp, false );
 
-    control_points = [ p2( 1.0, -5.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, -5.0 ) ];
+    control_points = [ p2( 1.0, -2.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, -2.0 ) ];
 
     origin_screen = p2( canvas.width/2, canvas.height/2 );
-    scale = Math.min( canvas.width, canvas.height ) / 11;
+    scale = Math.min( canvas.width, canvas.height ) / 6;
 
     point_is_highlighted = false;
     point_is_being_dragged = false;
@@ -589,6 +589,17 @@ function draw() {
             drawSmoothTransformedLine( path[iPt], path[iPt + 1], null, false );
             if(show_3D)
                 drawSmoothTransformedLine( path[iPt], path[iPt + 1], null, true );
+        }
+    }
+    ctx.stroke();
+    // draw the iterated mobius transformed versions
+    ctx.strokeStyle = "rgba(255,0,100,0.7)";
+    ctx.beginPath();
+    for(var iPath = 0; iPath < drawn_lines.length; iPath++)
+    {
+        var path = drawn_lines[iPath];
+        for(var iPt = 0; iPt < path.length-1; iPt++)
+        {
             var t = control_points;
             var ti = inverse_mobius;
             for(var i = 0; i < 50; i++) {
@@ -685,6 +696,11 @@ function onDrawingModeButton(element) {
     draw();
 }
 
+function onClearDrawingButton(element) {
+    drawn_lines = [];
+    draw();
+}
+
 function animate() {
     if( is_spinning ) {
         // rotate round
@@ -715,10 +731,10 @@ input[type='button'] {
 
 <body>
 
-<p>The <b><a href="https://en.wikipedia.org/wiki/M%C3%B6bius_transformation">Möbius transformation</a></b> is <b>f( z ) = ( az + b ) / ( cz + d )</b> where <b>z</b>, <b>a</b>,
+<p>A <b><a href="https://en.wikipedia.org/wiki/M%C3%B6bius_transformation">Möbius transformation</a></b> is <b>f( z ) = ( az + b ) / ( cz + d )</b> where <b>z</b>, <b>a</b>,
 <b>b</b>, <b>c</b> and <b>d</b> are complex numbers. Drag the points to change the transformation.</p>
 
-<div style="float:left"><p><canvas id="canvas" width="700" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
+<div style="float:left;touch-action:none"><p><canvas id="canvas" width="700" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
 
 <div style="float:left;padding-left: 20px">
 
@@ -734,6 +750,7 @@ input[type='button'] {
 <p><input type="button" value="Show in 3D: OFF" onclick="onShowIn3DButton(this)" /></p>
 <p><input type="button" value="Spinning: ON" onclick="onSpinningButton(this)" /></p>
 <p><input type="button" value="Drawing mode: OFF" onclick="onDrawingModeButton(this)" /></p>
+<p><input type="button" value="Clear drawing" onclick="onClearDrawingButton(this)" /></p>
 
 </div>
 
@@ -747,11 +764,13 @@ them give a similarity transformation: <b>a</b> controls the scale and rotation 
 
 <p>A <i>unitary</i> Möbius transformation has <b>c = -b&#773;</b> and <b>d = a&#773;</b> (where <b>z&#773;</b> is the <a href="https://en.wikipedia.org/wiki/Complex_conjugate">complex conjugate</a> of <b>z</b>).</p>
 
-<p>A normalized Möbius transformation is <i>loxodromic</i> if <b>a+d</b> is not on the real line. Set <b><tt>Non-loxodromic:ON</tt></b> to enforce that <b>a+d</b> is real, and <b><tt>Normalize:ON</tt></b> to ensure that the transformation is normalized. Then if <b>|a+d| < 2</b> the Möbius transformation is <i>elliptic</i>. If <b>|a+b|=2</b> then it is <i>parabolic</i>. Otherwise, with <b>|a+d| > 2</b>, it is <i>hyperbolic</i>.
+<p>A normalized Möbius transformation is <i>loxodromic</i> if <b>a+d</b> is not on the real line. Set <b>Non-loxodromic: ON</b> to enforce that <b>a+d</b> is real, and <b>Normalize: ON</b> to ensure that the transformation is normalized. Then if <b>|a+d| < 2</b> the Möbius transformation is <i>elliptic</i>. If <b>|a+b|=2</b> then it is <i>parabolic</i>. Otherwise, with <b>|a+d| > 2</b>, it is <i>hyperbolic</i>.
 
 <p>If the unit circle is the Poincare disk model of the hyperbolic plane, then the Möbius transformation with <b>c = b&#773;</b> and <b>a = d = 1</b> is an isometry of the hyperbolic plane corresponding to a translation of the origin by <b>b</b>.</p>
 
-<p>Read the book <a href="http://www.amazon.co.uk/Visual-Complex-Analysis-Tristan-Needham/dp/0198534469">Visual Complex Analysis</a> by Tristan Needham. To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this amazing video</a>.</p>
+<p>With <b>Drawing mode: ON</b>, draw on the screen. Multiple copies of the drawing under iterations of the Möbius transformation and its inverse are shown.
+
+<p>Read the book <a href="http://www.amazon.co.uk/Visual-Complex-Analysis-Tristan-Needham/dp/0198534469">Visual Complex Analysis</a> by Tristan Needham. To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this video</a>. To explore the possibilities of iterating Möbius transforms, see the book <a href="https://en.wikipedia.org/wiki/Indra%27s_Pearls_(book)">Indra's Pearls</a>, by David Mumford, Caroline Series and David Wright.</p>
 
 <hr>
 
