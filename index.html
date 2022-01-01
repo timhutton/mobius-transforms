@@ -33,7 +33,7 @@ function generalized_dist2( p1, p2, metric_signature ) {
     // e.g. [1,1,0] is the 2D Euclidean plane XY,
     //      [1,-1,0] is the hyperbola model XY,
     //      [1,1,-1] is the hyperboloid model XYZ
-    return metric_signature.x * Math.pow( p1.x - p2.x, 2 ) 
+    return metric_signature.x * Math.pow( p1.x - p2.x, 2 )
          + metric_signature.y * Math.pow( p1.y - p2.y, 2 )
          + metric_signature.z * Math.pow( p1.z - p2.z, 2 );
 }
@@ -50,8 +50,27 @@ function mobius_make_unitary( cp ) {
     cp[3] = complex_conjugate( cp[0] );
 }
 
+
+function get_mobius_inverse( cp ) {
+    return [cp[3], mul(cp[1], -1.0), mul(cp[2], -1.0), cp[0]];
+}
+
+function get_mobius_composed(a, b) {
+    return [add(mul_complex(a[0], b[0]), mul_complex(a[1], b[2])),
+            add(mul_complex(a[0], b[1]), mul_complex(a[1], b[3])),
+            add(mul_complex(a[2], b[0]), mul_complex(a[3], b[2])),
+            add(mul_complex(a[2], b[1]), mul_complex(a[3], b[3]))];
+}
+
 function mobius_make_nonloxodromic( cp ) {
     cp[3].y = -cp[0].y;
+}
+
+function mobius_identity( cp ) {
+    cp[0] = p2( 1, 0 );
+    cp[1] = p2( 0, 0 );
+    cp[2] = p2( 0, 0 );
+    cp[3] = p2( 1, 0 );
 }
 
 function repositionCamera() {
@@ -83,40 +102,33 @@ function enforce_constraints() {
             d += dist2( cp[i], control_points[i] );
             control_points[i] = cp[i];
         }
-    } while( d > 1E-8 ); 
+    } while( d > 1E-8 );
 }
 
-function mobius_identity( cp ) {
-    cp[0] = p2( 1, 0 ); 
-    cp[1] = p2( 0, 0 ); 
-    cp[2] = p2( 0, 0 ); 
-    cp[3] = p2( 1, 0 ); 
-}
-
-function toScreen( p ) { 
+function toScreen( p ) {
     if( show_3D )
         return camera_projection( p );
     else
-        return add( origin_screen, complex_conjugate( mul( p, scale ) ) ); 
+        return add( origin_screen, complex_conjugate( mul( p, scale ) ) );
 }
 
-function fromScreen( p ) { 
+function fromScreen( p ) {
     if( show_3D ) {
         // what point on the xy plane, tp, would have camera_projection( tp ) = p?
-        // we know it lies on the line from the camera position through the virtual camera's screen at an arbitrary distance 
+        // we know it lies on the line from the camera position through the virtual camera's screen at an arbitrary distance
         var vsp = p3( ( p.x - camera.pp.x ) / camera.f, ( ( canvas.height - p.y) - camera.pp.y ) / camera.f, 1 ); // virtual screen point in camera space
         var ray = add( add( mul( camera.x, vsp.x ), mul( camera.y, vsp.y ) ), mul( camera.z, vsp.z ) ); // into world space
         var u = -camera.p.z / ray.z;
         return add( camera.p, mul( ray, u ) );
     }
     else
-        return mul( complex_conjugate( sub( p, origin_screen ) ), 1.0 / scale ); 
+        return mul( complex_conjugate( sub( p, origin_screen ) ), 1.0 / scale );
 }
 
 function camera_projection( p ) {
     var ray = sub( p, camera.p ); // the ray from camera center to point
     var cp = p3( dot( camera.x, ray ), dot( camera.y, ray ), dot( camera.z, ray ) ); // into camera space
-    return p3( cp.x * camera.f / cp.z + camera.pp.x, 
+    return p3( cp.x * camera.f / cp.z + camera.pp.x,
                canvas.height - ( cp.y * camera.f / cp.z + camera.pp.y ),
                cp.z );
 }
@@ -145,7 +157,17 @@ function onTouchMove( evt ) {
 }
 
 function onMove( pos ) {
-    if( point_is_being_dragged ) {
+    if( drawing ) {
+        if( is_mouse_down ) {
+            // add the point to the drawn_lines if sufficiently far from the previous point
+            var oldPath = drawn_lines[ drawn_lines.length - 1 ];
+            var oldPos = toScreen( oldPath[ oldPath.length - 1 ] );
+            if( dist( oldPos, pos ) > 3 ) {
+                oldPath.push( fromScreen( pos ) );
+            }
+        }
+    }
+    else if( point_is_being_dragged ) {
         control_points[ i_point ] = fromScreen( add( pos, drag_offset ) );
         enforce_constraints();
         draw();
@@ -171,7 +193,7 @@ function onMove( pos ) {
         else if( point_is_highlighted ) {
             point_is_highlighted = false;
             draw();
-        }    
+        }
     }
 }
 
@@ -184,34 +206,40 @@ function onTouchStart( evt ) {
     onDown( fixTouch( evt.changedTouches[0] ) );
 }
 
-function onDown( pos ) {    
-    // find the closest point, if within a minimum radius
-    var iClosest = -1;
-    var closest_dist2 = touch_radius * touch_radius;
-    var num_control_points = 4;
-    if( unitary ) num_control_points = 2; // only allow a and b to be dragged
-    for( var i = 0; i < num_control_points; i++ ) {
-        var d2 = dist2( pos, toScreen( control_points[ i ] ) );
-        if( d2 < closest_dist2 ) {
-            closest_dist2 = d2;
-            iClosest = i;
+function onDown( pos ) {
+    if( drawing ) {
+        drawn_lines.push([fromScreen(pos)]);
+        is_mouse_down = true;
+    }
+    else {
+        // find the closest point, if within a minimum radius
+        var iClosest = -1;
+        var closest_dist2 = touch_radius * touch_radius;
+        var num_control_points = 4;
+        if( unitary ) num_control_points = 2; // only allow a and b to be dragged
+        for( var i = 0; i < num_control_points; i++ ) {
+            var d2 = dist2( pos, toScreen( control_points[ i ] ) );
+            if( d2 < closest_dist2 ) {
+                closest_dist2 = d2;
+                iClosest = i;
+            }
+        }
+        if( iClosest >= 0 ) {
+            point_is_being_dragged = true;
+            point_is_highlighted = false;
+            i_point = iClosest;
+            drag_offset = sub( toScreen( control_points[ i_point ] ), pos );
+            draw();
+        }
+        else if( point_is_being_dragged ) {
+            point_is_being_dragged = false;
+            draw();
+        }
+        else if( point_is_highlighted ) {
+            point_is_highlighted = false;
+            draw();
         }
     }
-    if( iClosest >= 0 ) {
-        point_is_being_dragged = true;
-        point_is_highlighted = false;
-        i_point = iClosest;
-        drag_offset = sub( toScreen( control_points[ i_point ] ), pos );
-        draw();
-    }
-    else if( point_is_being_dragged ) {
-        point_is_being_dragged = false;
-        draw();
-    }    
-    else if( point_is_highlighted ) {
-        point_is_highlighted = false;
-        draw();
-    }    
 }
 
 function onMouseUp( evt ) {
@@ -219,6 +247,7 @@ function onMouseUp( evt ) {
         point_is_highlighted = point_is_being_dragged = false;
         draw();
     }
+    is_mouse_down = false;
 }
 
 // thanks to: http://stackoverflow.com/a/12714084/126823
@@ -258,19 +287,19 @@ function init() {
     canvas.addEventListener( 'mouseout',  onMouseUp, false );
     canvas.addEventListener( 'touchend',  onMouseUp, false );
     canvas.addEventListener( 'touchcancel',  onMouseUp, false );
-    
-    control_points = [ p2( 1.0, 0.0 ), p2( 0.2, 0.1 ), p2( 0.3, 0.4 ), p2( 1.1, -0.1 ) ];
-    
+
+    control_points = [ p2( 0.9, -2.0 ), p2( 1.1, 0.0 ), p2( 0.9, 0.0 ), p2( 0.5, -2.0 ) ];
+
     origin_screen = p2( canvas.width/2, canvas.height/2 );
-    scale = Math.min( canvas.width, canvas.height ) / 5;
-    
+    scale = Math.min( canvas.width, canvas.height ) / 6;
+
     point_is_highlighted = false;
     point_is_being_dragged = false;
     i_point = -1;
     grab_offset = p2( 0, 0 );
-    
+
     touch_radius = 50;
-    
+
     draw_grid = true;
     draw_arrows = false;
     normalize_mobius = false;
@@ -280,23 +309,27 @@ function init() {
     show_ad_minus_bc = false;
     show_a_plus_d = false;
 
-    theta = -Math.PI / 2; 
+    theta = -Math.PI / 2;
     repositionCamera();
-    
+
     show_3D = false;
     riemann_inversion_sphere = { p: p3(0,0,1), r2:1, metric_signature:p3(1,1,1) };
 
+    drawn_lines = [];
+    drawing = false;
+    is_mouse_down = false;
+
     draw();
-    
+
     is_spinning = true;
     animate();
 }
 
-function drawPoint( p, r, t, t_offset ) { 
-    ctx.beginPath(); 
-    ctx.arc( p.x, p.y, r, 0, 2.0 * Math.PI ); 
+function drawPoint( p, r, t, t_offset ) {
+    ctx.beginPath();
+    ctx.arc( p.x, p.y, r, 0, 2.0 * Math.PI );
     ctx.fillText( t, p.x + 5 + t_offset.x, p.y - 5 + t_offset.y );
-    ctx.fill(); 
+    ctx.fill();
 }
 
 function pointInRect( p, rect ) {
@@ -305,7 +338,7 @@ function pointInRect( p, rect ) {
 }
 
 // adapted from http://stackoverflow.com/a/6333775/126823
-function drawArrow( from, to ) { 
+function drawArrow( from, to ) {
     var headlen = 5; // length of head in pixels
     var angle = Math.atan2(to.y-from.y,to.x-from.x);
     ctx.moveTo(from.x, from.y);
@@ -319,16 +352,13 @@ function distanceOfPointFromLine( end1, end2, p ) {
     return Math.abs( (end2.y-end1.y)*p.x - (end2.x-end1.x)*p.y + end2.x*end1.y - end2.y*end1.x ) / dist( end1, end2 );
 }
 
-function drawSmoothTransformedLine( a, c, apply_mobius, on_sphere ) {
+function drawSmoothTransformedLine( a, c, mobius_transform, on_sphere, recursion_depth = 1 ) {
     var b = average( a, c );
-    var qa,qb,qc;
-    if( apply_mobius ) {
-        qa = mobius( a, control_points[0], control_points[1], control_points[2], control_points[3] );
-        qb = mobius( b, control_points[0], control_points[1], control_points[2], control_points[3] );
-        qc = mobius( c, control_points[0], control_points[1], control_points[2], control_points[3] );
-    }
-    else {
-        qa = a; qb = b; qc = c;
+    var qa = a,qb = b,qc = c;
+    if( mobius_transform ) {
+        qa = mobius( qa, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
+        qb = mobius( qb, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
+        qc = mobius( qc, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
     }
     if( on_sphere ) {
         qa = sphereInversion( qa, riemann_inversion_sphere );
@@ -340,7 +370,7 @@ function drawSmoothTransformedLine( a, c, apply_mobius, on_sphere ) {
     var sc = toScreen( qc );
     // if nearly collinear then just draw straight lines
     var close_enough = 3;
-    if( distanceOfPointFromLine( sa, sc, sb ) < close_enough ) {
+    if( recursion_depth > 5 || distanceOfPointFromLine( sa, sc, sb ) < close_enough ) {
         if( inViewingFrustrum( sa ) && inViewingFrustrum( sb ) ) {
             ctx.moveTo( sa.x, sa.y );
             ctx.lineTo( sb.x, sb.y );
@@ -352,8 +382,8 @@ function drawSmoothTransformedLine( a, c, apply_mobius, on_sphere ) {
         return;
     }
     // otherwise recurse down
-    drawSmoothTransformedLine( a, b, apply_mobius, on_sphere );
-    drawSmoothTransformedLine( b, c, apply_mobius, on_sphere );
+    drawSmoothTransformedLine( a, b, mobius_transform, on_sphere, recursion_depth + 1 );
+    drawSmoothTransformedLine( b, c, mobius_transform, on_sphere, recursion_depth + 1 );
 }
 
 function drawSmoothTransformedArrow( p, on_sphere ) {
@@ -404,19 +434,19 @@ function draw() {
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
     // draw the axes
-    var extent = 3;
+    var extent = 6;
     ctx.strokeStyle = "rgba(0,0,0,0.2)";
     ctx.beginPath();
-    drawSmoothTransformedLine( p2( -extent, 0 ), p2( 0, 0 ), false, false );
-    drawSmoothTransformedLine( p2( 0, 0 ), p2( extent, 0 ), false, false );
-    drawSmoothTransformedLine( p2( 0, -extent ), p2( 0, 0 ), false, false );
-    drawSmoothTransformedLine( p2( 0, 0 ), p2( 0, extent ), false, false );
+    drawSmoothTransformedLine( p2( -extent, 0 ), p2( 0, 0 ), null, false );
+    drawSmoothTransformedLine( p2( 0, 0 ), p2( extent, 0 ), null, false );
+    drawSmoothTransformedLine( p2( 0, -extent ), p2( 0, 0 ), null, false );
+    drawSmoothTransformedLine( p2( 0, 0 ), p2( 0, extent ), null, false );
     for( var i = -extent; i <= extent; i++ ) {
-        drawSmoothTransformedLine( p2( i, -0.05 ), p2( i, 0.05 ), false, false );
-        drawSmoothTransformedLine( p2( -0.05, i ), p2( 0.05, i ), false, false );
+        drawSmoothTransformedLine( p2( i, -0.05 ), p2( i, 0.05 ), null, false );
+        drawSmoothTransformedLine( p2( -0.05, i ), p2( 0.05, i ), null, false );
     }
     ctx.stroke();
-    
+
     // draw arrows showing the transform
     if( draw_arrows ) {
         if( show_3D ) {
@@ -434,16 +464,16 @@ function draw() {
         for( var x = min_x; x < max_x; x += spacing ) {
             for( var y = min_y; y < max_y; y += spacing ) {
                 if( show_3D ) {
-                    drawSmoothTransformedArrow( p2(x,y), false );
-                    drawSmoothTransformedArrow( p2(x,y), true );
+                    drawSmoothTransformedArrow( p2(x,y), null );
+                    drawSmoothTransformedArrow( p2(x,y), control_points );
                 }
                 else
-                    drawSmoothTransformedArrow( fromScreen( p2(x,y) ), false );
+                    drawSmoothTransformedArrow( fromScreen( p2(x,y) ), null );
             }
         }
         ctx.stroke();
     }
-    
+
     // draw a distorted grid to show the transform
     if( draw_grid ) {
         if( show_3D ) {
@@ -463,24 +493,24 @@ function draw() {
                 if( show_3D ) {
                     var wp1 = p2( x, y );
                     var wp2 = p2( x + spacing, y );
-                    drawSmoothTransformedLine( wp1, wp2, true, false );
-                    drawSmoothTransformedLine( wp1, wp2, true, true );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, false );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, true );
                     wp2 = p2( x, y + spacing );
-                    drawSmoothTransformedLine( wp1, wp2, true, false );
-                    drawSmoothTransformedLine( wp1, wp2, true, true );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, false );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, true );
                 }
                 else {
                     var wp1 = fromScreen( p2( x, y ) );
                     var wp2 = fromScreen( p2( x + spacing, y ) );
-                    drawSmoothTransformedLine( wp1, wp2, true, false );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, false );
                     wp2 = fromScreen( p2( x, y + spacing ) );
-                    drawSmoothTransformedLine( wp1, wp2, true, false );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, false );
                 }
             }
         }
         ctx.stroke();
     }
-    
+
     // draw the four control points
     ctx.font="22px Arial";
     var rest_color = "rgb(0,0,0)";
@@ -498,7 +528,7 @@ function draw() {
         var radius = ( i < num_moveable_control_points ) ? 4 : 2;
         drawPoint( toScreen( control_points[ i ] ), radius, "abcd"[i], p2(0,0) );
     }
-    
+
     if( draw_fixed_points ) {
         ctx.fillStyle = ctx.strokeStyle = "rgb(0,0,0)";
         var cp = control_points.slice();
@@ -514,9 +544,9 @@ function draw() {
             drawPoint( toScreen( f2 ), 2, "f2", p2(0,0) );
         }
     }
-    
+
     if( show_a_plus_d ) {
-    
+
         if( normalize_mobius ) {
             // show the classification region
             ctx.fillStyle = ctx.strokeStyle = "rgba(0,160,0,0.2)";
@@ -541,84 +571,134 @@ function draw() {
         ctx.fillStyle = ctx.strokeStyle = "rgb(0,0,0)";
         drawPoint( toScreen( ad_minus_bc ), 2, "ad-bc", p2(0,0) );
     }
-    
+
     if( show_3D ) {
         ctx.fillStyle = ctx.strokeStyle = "rgb(0,0,0)";
         drawPoint( toScreen( riemann_inversion_sphere.p ), 2, "", p2(0,0) );
     }
+
+    // draw the drawn lines
+    var inverse_mobius = get_mobius_inverse(control_points);
+    ctx.strokeStyle = "rgba(255,0,0,1.0)";
+    ctx.beginPath();
+    for(var iPath = 0; iPath < drawn_lines.length; iPath++)
+    {
+        var path = drawn_lines[iPath];
+        for(var iPt = 0; iPt < path.length-1; iPt++)
+        {
+            drawSmoothTransformedLine( path[iPt], path[iPt + 1], null, false );
+            if(show_3D)
+                drawSmoothTransformedLine( path[iPt], path[iPt + 1], null, true );
+        }
+    }
+    ctx.stroke();
+    // draw the iterated mobius transformed versions
+    ctx.strokeStyle = "rgba(255,0,100,0.7)";
+    ctx.beginPath();
+    for(var iPath = 0; iPath < drawn_lines.length; iPath++)
+    {
+        var path = drawn_lines[iPath];
+        for(var iPt = 0; iPt < path.length-1; iPt++)
+        {
+            var t = control_points;
+            var ti = inverse_mobius;
+            for(var i = 0; i < 50; i++) {
+                drawSmoothTransformedLine( path[iPt], path[iPt + 1], t, false );
+                drawSmoothTransformedLine( path[iPt], path[iPt + 1], ti, false );
+                if(show_3D) {
+                    drawSmoothTransformedLine( path[iPt], path[iPt + 1], t, true );
+                    drawSmoothTransformedLine( path[iPt], path[iPt + 1], ti, true );
+                }
+                t = get_mobius_composed(t, control_points);
+                ti = get_mobius_composed(ti, inverse_mobius);
+            }
+        }
+    }
+    ctx.stroke();
 }
 
-function onGridButton(element) { 
-    draw_grid = !draw_grid; 
+function onGridButton(element) {
+    draw_grid = !draw_grid;
     element.value = draw_grid ? "Grid: ON" : "Grid: OFF";
-    draw(); 
+    draw();
 }
 
 function onArrowsButton(element) {
-    draw_arrows = !draw_arrows; 
+    draw_arrows = !draw_arrows;
     element.value = draw_arrows ? "Arrows: ON" : "Arrows: OFF";
-    draw(); 
+    draw();
 1}
 
 function onNormalizeButton(element) {
-    normalize_mobius = !normalize_mobius; 
+    normalize_mobius = !normalize_mobius;
     element.value = normalize_mobius ? "Normalize: ON" : "Normalize: OFF";
     enforce_constraints();
-    draw(); 
+    draw();
 }
 
 function onFixedPointsButton(element) {
-    draw_fixed_points = !draw_fixed_points; 
+    draw_fixed_points = !draw_fixed_points;
     element.value = draw_fixed_points ? "Fixed points: ON" : "Fixed points: OFF";
-    draw(); 
+    draw();
 }
 
 function onShowAPlusDButton(element) {
-    show_a_plus_d = !show_a_plus_d; 
+    show_a_plus_d = !show_a_plus_d;
     element.value = show_a_plus_d ? "Show a+d: ON" : "Show a+d: OFF";
-    draw(); 
+    draw();
 }
 
 function onShowADMinusBCButton(element) {
-    show_ad_minus_bc = !show_ad_minus_bc; 
+    show_ad_minus_bc = !show_ad_minus_bc;
     element.value = show_ad_minus_bc ? "Show ad-bc: ON" : "Show ad-bc: OFF";
-    draw(); 
+    draw();
 }
 
 function onUnitaryButton(element) {
     unitary = !unitary;
     element.value = unitary ? "Unitary: ON" : "Unitary: OFF";
     enforce_constraints();
-    draw(); 
+    draw();
 }
 
 function onNonLoxodromicButton(element) {
-    nonloxodromic = !nonloxodromic; 
+    nonloxodromic = !nonloxodromic;
     element.value = nonloxodromic ? "Non-loxodromic: ON" : "Non-loxodromic: OFF";
     enforce_constraints();
-    draw(); 
+    draw();
 }
 
 function onIdentityButton() {
     mobius_identity( control_points );
     enforce_constraints();
-    draw(); 
+    draw();
 }
 
 function onShowIn3DButton(element) {
-    show_3D = !show_3D; 
+    show_3D = !show_3D;
     if( show_3D ) {
-        theta = -Math.PI / 2; 
+        theta = -Math.PI / 2;
         repositionCamera();
     }
     element.value = show_3D ? "Show in 3D: ON" : "Show in 3D: OFF";
-    draw(); 
+    draw();
 }
 
 function onSpinningButton(element) {
-    is_spinning = !is_spinning; 
+    is_spinning = !is_spinning;
     element.value = is_spinning ? "Spinning: ON" : "Spinning: OFF";
-    draw(); 
+    draw();
+}
+
+function onDrawingModeButton(element) {
+    drawing = !drawing;
+    element.value = drawing ? "Drawing mode: ON" : "Drawing mode: OFF";
+    draw();
+}
+
+function onClearDrawingButton(element) {
+    drawn_lines = [];
+    draw();
 }
 
 function animate() {
@@ -641,8 +721,8 @@ instructions how to enable JavaScript in your web browser</a>.
 </p></noscript>
 
 <style>
-input[type='button'] { 
-    font-size: 20px; 
+input[type='button'] {
+    font-size: 20px;
     font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
 }
 </style>
@@ -651,10 +731,10 @@ input[type='button'] {
 
 <body>
 
-<p>The <b><a href="https://en.wikipedia.org/wiki/M%C3%B6bius_transformation">Möbius transformation</a></b> is <b>f( z ) = ( az + b ) / ( cz + d )</b> where <b>z</b>, <b>a</b>,
+<p>A <b><a href="https://en.wikipedia.org/wiki/M%C3%B6bius_transformation">Möbius transformation</a></b> is <b>f( z ) = ( az + b ) / ( cz + d )</b> where <b>z</b>, <b>a</b>,
 <b>b</b>, <b>c</b> and <b>d</b> are complex numbers. Drag the points to change the transformation.</p>
 
-<div style="float:left"><p><canvas id="canvas" width="700" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
+<div style="float:left;touch-action:none"><p><canvas id="canvas" width="700" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
 
 <div style="float:left;padding-left: 20px">
 
@@ -669,11 +749,13 @@ input[type='button'] {
 <p><input type="button" value="Show a+d: OFF" onclick="onShowAPlusDButton(this)" /></p>
 <p><input type="button" value="Show in 3D: OFF" onclick="onShowIn3DButton(this)" /></p>
 <p><input type="button" value="Spinning: ON" onclick="onSpinningButton(this)" /></p>
+<p><input type="button" value="Drawing mode: OFF" onclick="onDrawingModeButton(this)" /></p>
+<p><input type="button" value="Clear drawing" onclick="onClearDrawingButton(this)" /></p>
 
 </div>
 
 <div style="clear:both">
-<p>To simplify the transformation, set <b>c</b> to zero (move it to the origin). Now <b>a</b> and <b>b</b> between 
+<p>To simplify the transformation, set <b>c</b> to zero (move it to the origin). Now <b>a</b> and <b>b</b> between
 them give a similarity transformation: <b>a</b> controls the scale and rotation while <b>b</b> controls the translation.</p>
 
 <p>The identity transformation is given when <b>b</b>=<b>c</b>=0 and <b>a</b>=<b>d</b>.</p>
@@ -682,11 +764,13 @@ them give a similarity transformation: <b>a</b> controls the scale and rotation 
 
 <p>A <i>unitary</i> Möbius transformation has <b>c = -b&#773;</b> and <b>d = a&#773;</b> (where <b>z&#773;</b> is the <a href="https://en.wikipedia.org/wiki/Complex_conjugate">complex conjugate</a> of <b>z</b>).</p>
 
-<p>A normalized Möbius transformation is <i>loxodromic</i> if <b>a+d</b> is not on the real line. Set <b><tt>Non-loxodromic:ON</tt></b> to enforce that <b>a+d</b> is real, and <b><tt>Normalize:ON</tt></b> to ensure that the transformation is normalized. Then if <b>|a+d| < 2</b> the Möbius transformation is <i>elliptic</i>. If <b>|a+b|=2</b> then it is <i>parabolic</i>. Otherwise, with <b>|a+d| > 2</b>, it is <i>hyperbolic</i>.
+<p>A normalized Möbius transformation is <i>loxodromic</i> if <b>a+d</b> is not on the real line. Set <b>Non-loxodromic: ON</b> to enforce that <b>a+d</b> is real, and <b>Normalize: ON</b> to ensure that the transformation is normalized. Then if <b>|a+d| < 2</b> the Möbius transformation is <i>elliptic</i>. If <b>|a+b|=2</b> then it is <i>parabolic</i>. Otherwise, with <b>|a+d| > 2</b>, it is <i>hyperbolic</i>.
 
 <p>If the unit circle is the Poincare disk model of the hyperbolic plane, then the Möbius transformation with <b>c = b&#773;</b> and <b>a = d = 1</b> is an isometry of the hyperbolic plane corresponding to a translation of the origin by <b>b</b>.</p>
 
-<p>Read the book <a href="http://www.amazon.co.uk/Visual-Complex-Analysis-Tristan-Needham/dp/0198534469">Visual Complex Analysis</a> by Tristan Needham. To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this amazing video</a>.</p>
+<p>With <b>Drawing mode: ON</b>, draw on the screen. Multiple copies of the drawing under iterations of the Möbius transformation and its inverse are shown.
+
+<p>Read the book <a href="http://www.amazon.co.uk/Visual-Complex-Analysis-Tristan-Needham/dp/0198534469">Visual Complex Analysis</a> by Tristan Needham. To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this video</a>. To explore the possibilities of iterating Möbius transforms, see the book <a href="https://en.wikipedia.org/wiki/Indra%27s_Pearls_(book)">Indra's Pearls</a>, by David Mumford, Caroline Series and David Wright.</p>
 
 <hr>
 
