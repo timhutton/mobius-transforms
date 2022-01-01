@@ -157,7 +157,17 @@ function onTouchMove( evt ) {
 }
 
 function onMove( pos ) {
-    if( point_is_being_dragged ) {
+    if( drawing ) {
+        if( is_mouse_down ) {
+            // add the point to the drawn_lines if sufficiently far from the previous point
+            var oldPath = drawn_lines[ drawn_lines.length - 1 ];
+            var oldPos = toScreen( oldPath[ oldPath.length - 1 ] );
+            if( dist( oldPos, pos ) > 3 ) {
+                oldPath.push( fromScreen( pos ) );
+            }
+        }
+    }
+    else if( point_is_being_dragged ) {
         control_points[ i_point ] = fromScreen( add( pos, drag_offset ) );
         enforce_constraints();
         draw();
@@ -197,32 +207,38 @@ function onTouchStart( evt ) {
 }
 
 function onDown( pos ) {
-    // find the closest point, if within a minimum radius
-    var iClosest = -1;
-    var closest_dist2 = touch_radius * touch_radius;
-    var num_control_points = 4;
-    if( unitary ) num_control_points = 2; // only allow a and b to be dragged
-    for( var i = 0; i < num_control_points; i++ ) {
-        var d2 = dist2( pos, toScreen( control_points[ i ] ) );
-        if( d2 < closest_dist2 ) {
-            closest_dist2 = d2;
-            iClosest = i;
+    if( drawing ) {
+        drawn_lines.push([fromScreen(pos)]);
+        is_mouse_down = true;
+    }
+    else {
+        // find the closest point, if within a minimum radius
+        var iClosest = -1;
+        var closest_dist2 = touch_radius * touch_radius;
+        var num_control_points = 4;
+        if( unitary ) num_control_points = 2; // only allow a and b to be dragged
+        for( var i = 0; i < num_control_points; i++ ) {
+            var d2 = dist2( pos, toScreen( control_points[ i ] ) );
+            if( d2 < closest_dist2 ) {
+                closest_dist2 = d2;
+                iClosest = i;
+            }
         }
-    }
-    if( iClosest >= 0 ) {
-        point_is_being_dragged = true;
-        point_is_highlighted = false;
-        i_point = iClosest;
-        drag_offset = sub( toScreen( control_points[ i_point ] ), pos );
-        draw();
-    }
-    else if( point_is_being_dragged ) {
-        point_is_being_dragged = false;
-        draw();
-    }
-    else if( point_is_highlighted ) {
-        point_is_highlighted = false;
-        draw();
+        if( iClosest >= 0 ) {
+            point_is_being_dragged = true;
+            point_is_highlighted = false;
+            i_point = iClosest;
+            drag_offset = sub( toScreen( control_points[ i_point ] ), pos );
+            draw();
+        }
+        else if( point_is_being_dragged ) {
+            point_is_being_dragged = false;
+            draw();
+        }
+        else if( point_is_highlighted ) {
+            point_is_highlighted = false;
+            draw();
+        }
     }
 }
 
@@ -231,6 +247,7 @@ function onMouseUp( evt ) {
         point_is_highlighted = point_is_being_dragged = false;
         draw();
     }
+    is_mouse_down = false;
 }
 
 // thanks to: http://stackoverflow.com/a/12714084/126823
@@ -298,8 +315,9 @@ function init() {
     show_3D = false;
     riemann_inversion_sphere = { p: p3(0,0,1), r2:1, metric_signature:p3(1,1,1) };
 
-    drawn_lines = [[p2(-0.55, -1.26), p2(-0.4, -1.11), p2(-0.45, -1.03)]];
-    drawing = true;
+    drawn_lines = [];
+    drawing = false;
+    is_mouse_down = false;
 
     draw();
 
@@ -661,6 +679,12 @@ function onSpinningButton(element) {
     draw();
 }
 
+function onDrawingModeButton(element) {
+    drawing = !drawing;
+    element.value = drawing ? "Drawing mode: ON" : "Drawing mode: OFF";
+    draw();
+}
+
 function animate() {
     if( is_spinning ) {
         // rotate round
@@ -709,6 +733,7 @@ input[type='button'] {
 <p><input type="button" value="Show a+d: OFF" onclick="onShowAPlusDButton(this)" /></p>
 <p><input type="button" value="Show in 3D: OFF" onclick="onShowIn3DButton(this)" /></p>
 <p><input type="button" value="Spinning: ON" onclick="onSpinningButton(this)" /></p>
+<p><input type="button" value="Drawing mode: OFF" onclick="onDrawingModeButton(this)" /></p>
 
 </div>
 
