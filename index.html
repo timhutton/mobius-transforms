@@ -50,8 +50,27 @@ function mobius_make_unitary( cp ) {
     cp[3] = complex_conjugate( cp[0] );
 }
 
+
+function get_mobius_inverse( cp ) {
+    return [cp[3], mul(cp[1], -1.0), mul(cp[2], -1.0), cp[0]];
+}
+
+function get_mobius_composed(a, b) {
+    return [add(mul_complex(a[0], b[0]), mul_complex(a[1], b[2])),
+            add(mul_complex(a[0], b[1]), mul_complex(a[1], b[3])),
+            add(mul_complex(a[2], b[0]), mul_complex(a[3], b[2])),
+            add(mul_complex(a[2], b[1]), mul_complex(a[3], b[3]))];
+}
+
 function mobius_make_nonloxodromic( cp ) {
     cp[3].y = -cp[0].y;
+}
+
+function mobius_identity( cp ) {
+    cp[0] = p2( 1, 0 );
+    cp[1] = p2( 0, 0 );
+    cp[2] = p2( 0, 0 );
+    cp[3] = p2( 1, 0 );
 }
 
 function repositionCamera() {
@@ -84,13 +103,6 @@ function enforce_constraints() {
             control_points[i] = cp[i];
         }
     } while( d > 1E-8 );
-}
-
-function mobius_identity( cp ) {
-    cp[0] = p2( 1, 0 );
-    cp[1] = p2( 0, 0 );
-    cp[2] = p2( 0, 0 );
-    cp[3] = p2( 1, 0 );
 }
 
 function toScreen( p ) {
@@ -286,7 +298,7 @@ function init() {
     show_3D = false;
     riemann_inversion_sphere = { p: p3(0,0,1), r2:1, metric_signature:p3(1,1,1) };
 
-    drawn_lines = [[p2(-0.55, -0.66), p2(-0.4, -0.51), p2(-0.45, -0.43)]];
+    drawn_lines = [[p2(-0.55, -1.26), p2(-0.4, -1.11), p2(-0.45, -1.03)]];
     drawing = true;
 
     draw();
@@ -322,16 +334,13 @@ function distanceOfPointFromLine( end1, end2, p ) {
     return Math.abs( (end2.y-end1.y)*p.x - (end2.x-end1.x)*p.y + end2.x*end1.y - end2.y*end1.x ) / dist( end1, end2 );
 }
 
-function drawSmoothTransformedLine( a, c, apply_mobius, on_sphere, num_mobius_applications = 1, recursion_depth = 1 ) {
+function drawSmoothTransformedLine( a, c, mobius_transform, on_sphere, recursion_depth = 1 ) {
     var b = average( a, c );
     var qa = a,qb = b,qc = c;
-    if( apply_mobius ) {
-        for(var i = 0; i < num_mobius_applications; i++)
-        {
-            qa = mobius( qa, control_points[0], control_points[1], control_points[2], control_points[3] );
-            qb = mobius( qb, control_points[0], control_points[1], control_points[2], control_points[3] );
-            qc = mobius( qc, control_points[0], control_points[1], control_points[2], control_points[3] );
-        }
+    if( mobius_transform ) {
+        qa = mobius( qa, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
+        qb = mobius( qb, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
+        qc = mobius( qc, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
     }
     if( on_sphere ) {
         qa = sphereInversion( qa, riemann_inversion_sphere );
@@ -355,8 +364,8 @@ function drawSmoothTransformedLine( a, c, apply_mobius, on_sphere, num_mobius_ap
         return;
     }
     // otherwise recurse down
-    drawSmoothTransformedLine( a, b, apply_mobius, on_sphere, num_mobius_applications, recursion_depth + 1 );
-    drawSmoothTransformedLine( b, c, apply_mobius, on_sphere, num_mobius_applications, recursion_depth + 1 );
+    drawSmoothTransformedLine( a, b, mobius_transform, on_sphere, recursion_depth + 1 );
+    drawSmoothTransformedLine( b, c, mobius_transform, on_sphere, recursion_depth + 1 );
 }
 
 function drawSmoothTransformedArrow( p, on_sphere ) {
@@ -410,13 +419,13 @@ function draw() {
     var extent = 6;
     ctx.strokeStyle = "rgba(0,0,0,0.2)";
     ctx.beginPath();
-    drawSmoothTransformedLine( p2( -extent, 0 ), p2( 0, 0 ), false, false );
-    drawSmoothTransformedLine( p2( 0, 0 ), p2( extent, 0 ), false, false );
-    drawSmoothTransformedLine( p2( 0, -extent ), p2( 0, 0 ), false, false );
-    drawSmoothTransformedLine( p2( 0, 0 ), p2( 0, extent ), false, false );
+    drawSmoothTransformedLine( p2( -extent, 0 ), p2( 0, 0 ), null, false );
+    drawSmoothTransformedLine( p2( 0, 0 ), p2( extent, 0 ), null, false );
+    drawSmoothTransformedLine( p2( 0, -extent ), p2( 0, 0 ), null, false );
+    drawSmoothTransformedLine( p2( 0, 0 ), p2( 0, extent ), null, false );
     for( var i = -extent; i <= extent; i++ ) {
-        drawSmoothTransformedLine( p2( i, -0.05 ), p2( i, 0.05 ), false, false );
-        drawSmoothTransformedLine( p2( -0.05, i ), p2( 0.05, i ), false, false );
+        drawSmoothTransformedLine( p2( i, -0.05 ), p2( i, 0.05 ), null, false );
+        drawSmoothTransformedLine( p2( -0.05, i ), p2( 0.05, i ), null, false );
     }
     ctx.stroke();
 
@@ -437,11 +446,11 @@ function draw() {
         for( var x = min_x; x < max_x; x += spacing ) {
             for( var y = min_y; y < max_y; y += spacing ) {
                 if( show_3D ) {
-                    drawSmoothTransformedArrow( p2(x,y), false );
-                    drawSmoothTransformedArrow( p2(x,y), true );
+                    drawSmoothTransformedArrow( p2(x,y), null );
+                    drawSmoothTransformedArrow( p2(x,y), control_points );
                 }
                 else
-                    drawSmoothTransformedArrow( fromScreen( p2(x,y) ), false );
+                    drawSmoothTransformedArrow( fromScreen( p2(x,y) ), null );
             }
         }
         ctx.stroke();
@@ -466,18 +475,18 @@ function draw() {
                 if( show_3D ) {
                     var wp1 = p2( x, y );
                     var wp2 = p2( x + spacing, y );
-                    drawSmoothTransformedLine( wp1, wp2, true, false );
-                    drawSmoothTransformedLine( wp1, wp2, true, true );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, false );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, true );
                     wp2 = p2( x, y + spacing );
-                    drawSmoothTransformedLine( wp1, wp2, true, false );
-                    drawSmoothTransformedLine( wp1, wp2, true, true );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, false );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, true );
                 }
                 else {
                     var wp1 = fromScreen( p2( x, y ) );
                     var wp2 = fromScreen( p2( x + spacing, y ) );
-                    drawSmoothTransformedLine( wp1, wp2, true, false );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, false );
                     wp2 = fromScreen( p2( x, y + spacing ) );
-                    drawSmoothTransformedLine( wp1, wp2, true, false );
+                    drawSmoothTransformedLine( wp1, wp2, control_points, false );
                 }
             }
         }
@@ -551,6 +560,7 @@ function draw() {
     }
 
     // draw the drawn lines
+    var inverse_mobius = get_mobius_inverse(control_points);
     var extent = 6;
     ctx.strokeStyle = "rgba(255,0,0,1.0)";
     ctx.beginPath();
@@ -559,18 +569,20 @@ function draw() {
         var path = drawn_lines[iPath];
         for(var iPt = 0; iPt < path.length-1; iPt++)
         {
-            drawSmoothTransformedLine( path[iPt], path[iPt + 1], false, false );
-            for(var iMobius = 1; iMobius < 100; iMobius++)
-            {
-                drawSmoothTransformedLine( path[iPt], path[iPt + 1], true, false, iMobius );
-            }
+            drawSmoothTransformedLine( path[iPt], path[iPt + 1], null, false );
             if(show_3D)
-            {
-                drawSmoothTransformedLine( path[iPt], path[iPt + 1], false, true );
-                for(var iMobius = 1; iMobius < 100; iMobius++)
-                {
-                    drawSmoothTransformedLine( path[iPt], path[iPt + 1], true, true, iMobius );
+                drawSmoothTransformedLine( path[iPt], path[iPt + 1], null, true );
+            var t = control_points;
+            var ti = inverse_mobius;
+            for(var i = 0; i < 50; i++) {
+                drawSmoothTransformedLine( path[iPt], path[iPt + 1], t, false );
+                drawSmoothTransformedLine( path[iPt], path[iPt + 1], ti, false );
+                if(show_3D) {
+                    drawSmoothTransformedLine( path[iPt], path[iPt + 1], t, true );
+                    drawSmoothTransformedLine( path[iPt], path[iPt + 1], ti, true );
                 }
+                t = get_mobius_composed(t, control_points);
+                ti = get_mobius_composed(ti, inverse_mobius);
             }
         }
     }
