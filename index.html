@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<script src="code/drawing.js"></script>
 <script src="code/math.js"></script>
 <script>
 
@@ -245,7 +246,7 @@ function init() {
     repositionCamera();
 
     show_3D = false;
-    riemann_inversion_sphere = { p: p3(0,0,1), r2:1, metric_signature:p3(1,1,1) };
+    riemann_inversion_sphere = { p:p3(0,0,1), r:1 };
 
     drawn_lines = [];
     drawing = false;
@@ -279,9 +280,9 @@ function drawSmoothTransformedLine( a, c, mobius_transform, on_sphere, recursion
     var b = average( a, c );
     var qa = a,qb = b,qc = c;
     if( mobius_transform ) {
-        qa = mobius( qa, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
-        qb = mobius( qb, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
-        qc = mobius( qc, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
+        qa = mobius_on_point( mobius_transform, qa );
+        qb = mobius_on_point( mobius_transform, qb );
+        qc = mobius_on_point( mobius_transform, qc );
     }
     if( on_sphere ) {
         qa = sphereInversion( qa, riemann_inversion_sphere );
@@ -326,7 +327,7 @@ function drawSmoothTransformedArrow( p, on_sphere ) {
         mobius_identity( cp );
         for( var j = 0; j < 4; j++ )
             cp[ j ] = add( mul( target_p[ j ], u ), mul( cp[ j ], 1 - u ) );
-        var q = mobius( p, cp[0], cp[1], cp[2], cp[3] );
+        var q = mobius_on_point( cp, p );
         if( on_sphere )
             q = sphereInversion( q, riemann_inversion_sphere );
         sq = toScreen( q );
@@ -336,7 +337,7 @@ function drawSmoothTransformedArrow( p, on_sphere ) {
             ctx.moveTo( sq.x, sq.y );
     }
     // draw the arrow using the last line segment
-    var q = mobius( p, control_points[0], control_points[1], control_points[2], control_points[3] );
+    var q = mobius_on_point( control_points, p );
     if( on_sphere )
         q = sphereInversion( q, riemann_inversion_sphere );
     var sq2 = toScreen( q );

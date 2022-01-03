@@ -16,37 +16,28 @@ function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, 
 function phase( a ) { return Math.atan2( a.y, a.x ); }
 function fromPolar( mag, phase ) { return p2( mag * Math.cos(phase), mag*Math.sin(phase) ) }
 function sqrt_complex( a ) { return fromPolar( Math.sqrt( magnitude(a) ), phase(a) / 2.0 ); }
-function mobius( z, a, b, c, d ) { return div_complex( add( mul_complex( a, z ), b ), add( mul_complex( c, z ), d ) ); }
+function mobius_on_point( m, z ) { return div_complex( add( mul_complex( m[0], z ), m[1] ), add( mul_complex( m[2], z ), m[3] ) ); }
 function complex_conjugate( p ) { return p2( p.x, -p.y ); }
 function sphereInversion( p, sphere ) {
-    var d2 = generalized_dist2( p, sphere.p, sphere.metric_signature );
-    return add( sphere.p, mul( sub( p, sphere.p ), sphere.r2 / d2 ) );
-}
-function generalized_dist2( p1, p2, metric_signature ) {
-    // squared-distance function, generalized for different metric signatures
-    // e.g. [1,1,0] is the 2D Euclidean plane XY,
-    //      [1,-1,0] is the hyperbola model XY,
-    //      [1,1,-1] is the hyperboloid model XYZ
-    return metric_signature.x * Math.pow( p1.x - p2.x, 2 )
-         + metric_signature.y * Math.pow( p1.y - p2.y, 2 )
-         + metric_signature.z * Math.pow( p1.z - p2.z, 2 );
+    var d2 = dist2( p, sphere.p );
+    return add( sphere.p, mul( sub( p, sphere.p ), sphere.r * sphere.r / d2 ) );
 }
 
-function mobius_normalize( cp ) {
+function mobius_normalize( m ) {
     // VCA, p.150
-    var sqrt_ad_minus_bc = sqrt_complex( sub( mul_complex( cp[0], cp[3] ), mul_complex( cp[1], cp[2] ) ) );
+    var sqrt_ad_minus_bc = sqrt_complex( sub( mul_complex( m[0], m[3] ), mul_complex( m[1], m[2] ) ) );
     for( var i = 0; i < 4; i++ )
-        cp[i] = div_complex( cp[i], sqrt_ad_minus_bc );
+        m[i] = div_complex( m[i], sqrt_ad_minus_bc );
 }
 
-function mobius_make_unitary( cp ) {
-    cp[2] = mul( complex_conjugate( cp[1] ), -1 );
-    cp[3] = complex_conjugate( cp[0] );
+function mobius_make_unitary( m ) {
+    m[2] = mul( complex_conjugate( m[1] ), -1 );
+    m[3] = complex_conjugate( m[0] );
 }
 
 
-function get_mobius_inverse( cp ) {
-    return [cp[3], mul(cp[1], -1.0), mul(cp[2], -1.0), cp[0]];
+function get_mobius_inverse( m ) {
+    return [m[3], mul(m[1], -1.0), mul(m[2], -1.0), m[0]];
 }
 
 function get_mobius_composed(a, b) {
@@ -56,15 +47,23 @@ function get_mobius_composed(a, b) {
             add(mul_complex(a[2], b[1]), mul_complex(a[3], b[3]))];
 }
 
-function mobius_make_nonloxodromic( cp ) {
-    cp[3].y = -cp[0].y;
+function mobius_make_nonloxodromic( m ) {
+    m[3].y = -m[0].y;
 }
 
-function mobius_identity( cp ) {
-    cp[0] = p2( 1, 0 );
-    cp[1] = p2( 0, 0 );
-    cp[2] = p2( 0, 0 );
-    cp[3] = p2( 1, 0 );
+function mobius_identity( m ) {
+    m[0] = p2( 1, 0 );
+    m[1] = p2( 0, 0 );
+    m[2] = p2( 0, 0 );
+    m[3] = p2( 1, 0 );
+}
+
+function mobius_on_circle(m, c) {
+    // Apply the mobius transformation to a circle. Indra's Pearls, p. 91
+    var z = sub( c.p, div_complex( p2(c.r * c.r, 0), complex_conjugate(add(div_complex(m[3], m[2]), c.p))));
+    var q = mobius_on_point(m, z);
+    var s = dist(q, mobius_on_point(m, add(c.p, p2(c.r, 0))));
+    return {p:q, r:s};
 }
 
 function pointInRect( p, rect ) {
