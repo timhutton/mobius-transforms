@@ -235,9 +235,9 @@ function draw() {
     // draw the circles
     ctx.strokeStyle = "rgba(255,0,0,0.8)";
     for(var iCircle = 0; iCircle < control_points.length/2; iCircle++) {
-        var c = toScreen(control_points[2 * iCircle]);
-        var r = dist(c, toScreen(control_points[2 * iCircle + 1]));
-        drawCircle(c, r);
+        var c = control_points[2 * iCircle];
+        var r = dist(c, control_points[2 * iCircle + 1]);
+        drawWorldSpaceCircle( { p:c, r:r } );
     }
 
     // find the mobius transforms defined by the circles
@@ -248,9 +248,15 @@ function draw() {
 
     // transform the circles repeatedly
     var x = D_a;
-    for(var i = 0; i < 4; i++) {
-        ctx.strokeStyle = "rgba(0, 0, 155, " + Math.pow(0.6, i) + ")";
+    for(var i = 0; i < 20; i++) {
+        ctx.strokeStyle = "rgba(0, 0, 155, " + Math.pow(0.8, i) + ")";
         x = mobius_on_circle( m_a, x );
+        drawWorldSpaceCircle(x);
+    }
+    x = D_A;
+    for(var i = 0; i < 20; i++) {
+        ctx.strokeStyle = "rgba(0, 155, 0, " + Math.pow(0.8, i) + ")";
+        x = mobius_on_circle( m_A, x );
         drawWorldSpaceCircle(x);
     }
 }
