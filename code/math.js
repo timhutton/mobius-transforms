@@ -66,6 +66,11 @@ function mobius_on_circle(m, c) {
     return {p:q, r:s};
 }
 
+function pair_circles(a, b) {
+    // return the Mobius transformation that pairs these two circles. Indra's Pearls, p.90
+    return [ b.p, sub( p2(a.r*b.r, 0), mul_complex(b.p, a.p) ), p2(1.0, 0.0), p2(-a.p.x, -a.p.y) ];
+}
+
 function pointInRect( p, rect ) {
     return p.x > rect.x && p.x < ( rect.x + rect.width ) &&
            p.y > rect.y && p.y < ( rect.y + rect.height );

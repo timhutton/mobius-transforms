@@ -45,8 +45,7 @@ function onMove( pos ) {
         // find the closest point, if within a minimum radius
         var iClosest = -1;
         var closest_dist2 = touch_radius * touch_radius;
-        var num_control_points = 4;
-        for( var i = 0; i < num_control_points; i++ ) {
+        for( var i = 0; i < control_points.length; i++ ) {
             var d2 = dist2( pos, toScreen( control_points[ i ] ) );
             if( d2 < closest_dist2 ) {
                 closest_dist2 = d2;
@@ -78,8 +77,7 @@ function onDown( pos ) {
     // find the closest point, if within a minimum radius
     var iClosest = -1;
     var closest_dist2 = touch_radius * touch_radius;
-    var num_control_points = 4;
-    for( var i = 0; i < num_control_points; i++ ) {
+    for( var i = 0; i < control_points.length; i++ ) {
         var d2 = dist2( pos, toScreen( control_points[ i ] ) );
         if( d2 < closest_dist2 ) {
             closest_dist2 = d2;
@@ -149,7 +147,9 @@ function init() {
     canvas.addEventListener( 'touchend',  onMouseUp, false );
     canvas.addEventListener( 'touchcancel',  onMouseUp, false );
 
-    control_points = [ p2( 0.9, -2.0 ), p2( 1.1, 0.0 ), p2( 0.9, 0.0 ), p2( 0.5, -2.0 ) ];
+    control_points = [ p2( -1.0, 0.0 ), p2( 0.0, 0.0 ),
+                       p2( 1.0, 0.0 ), p2( 2.0, 0.0 ),
+                       p2( 0.9, 1.0 ), p2( 0.5, 1.0 ) ];
 
     origin_screen = p2( canvas.width/2, canvas.height/2 );
     scale = Math.min( canvas.width, canvas.height ) / 6;
@@ -186,9 +186,9 @@ function drawSmoothTransformedLine( a, c, mobius_transform, recursion_depth = 1 
     var b = average( a, c );
     var qa = a,qb = b,qc = c;
     if( mobius_transform ) {
-        qa = mobius( qa, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
-        qb = mobius( qb, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
-        qc = mobius( qc, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
+        qa = mobius_on_point( mobius_transform, qa );
+        qb = mobius_on_point( mobius_transform, qb );
+        qc = mobius_on_point( mobius_transform, qc );
     }
     var sa = toScreen( qa );
     var sb = toScreen( qb );
@@ -224,7 +224,7 @@ function drawSmoothTransformedArrow( p ) {
         ctx.lineTo( sq.x, sq.y );
     }
     // draw the arrow using the last line segment
-    var q = mobius( p, control_points[0], control_points[1], control_points[2], control_points[3] );
+    var q = mobius_on_point( control_points, p );
     var sq2 = toScreen( q );
     drawArrow( sq, sq2 );
 }
@@ -256,16 +256,15 @@ function draw() {
     var rest_color = "rgb(0,0,0)";
     var highlighted_color = "rgb(0,255,255)";
     var dragging_color = "rgb(0,255,0)";
-    var num_moveable_control_points = 4;
-    for( var i = 0; i < 4; i++ ) {
+    for( var i = 0; i < control_points.length; i++ ) {
         if( point_is_highlighted && i_point == i )
             ctx.fillStyle = ctx.strokeStyle = highlighted_color;
         else if( point_is_being_dragged && i_point == i )
             ctx.fillStyle = ctx.strokeStyle = dragging_color;
         else
             ctx.fillStyle = ctx.strokeStyle = rest_color;
-        var radius = ( i < num_moveable_control_points ) ? 4 : 2;
-        drawPoint( toScreen( control_points[ i ] ), radius, "abcd"[i], p2(0,0) );
+        var radius = 4;
+        drawPoint( toScreen( control_points[ i ] ), radius, (i%2)==0?String.fromCharCode(65 + i/2):"", p2(0,0) );
     }
 
     // draw the circles
@@ -277,7 +276,25 @@ function draw() {
     }
 
     // find the mobius transforms defined by the circles
+    var D_A = {p:control_points[0], r:dist(control_points[0], control_points[1])};
+    var D_a = {p:control_points[2], r:dist(control_points[2], control_points[3])};
+    var c = {p:control_points[4], r:dist(control_points[4], control_points[5])};
+    var m_a = pair_circles( D_A, D_a );
+    var m_A = pair_circles( D_a, D_A );
 
+    // transform the circles repeatedly
+    var x = c;
+    for(var i = 0; i < 4; i++) {
+        ctx.strokeStyle = "rgba(0, 0, 155, " + Math.pow(0.6, i) + ")";
+        x = mobius_on_circle( m_a, x );
+        drawWorldSpaceCircle(x);
+    }
+}
+
+function drawWorldSpaceCircle( c ) {
+    var sc = toScreen(c.p);
+    var sr = dist(sc, toScreen(add(c.p, p2(c.r,0))));
+    drawCircle(sc, sr);
 }
 
 window.onload = init;
