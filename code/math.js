@@ -10,6 +10,7 @@ function dist2( a, b ) { return len2( sub( a, b ) ); }
 function dist( a, b ) { return Math.sqrt( len2( sub( a, b ) ) ); }
 function mul_complex( a, b ) { return p2( a.x * b.x - a.y * b.y, a.y * b.x + a.x * b.y ); }
 function div_complex( a, b ) { return p2( ( a.x * b.x + a.y * b.y ) / len2( b ), ( a.y * b.x - a.x * b.y ) / len2( b ) ); }
+function negative( a ) { return p2( -a.x, -a.y ); }
 function magnitude( a ) { return Math.sqrt( len2( a ) ); }
 function normalize( a ) { return mul( a, 1 / magnitude( a ) ); }
 function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, a.x * b.y - a.y * b.x ); }
@@ -67,7 +68,7 @@ function mobius_on_circle(m, c) {
 
 function pair_circles(a, b) {
     // return the Mobius transformation that pairs these two circles. Indra's Pearls, p.90
-    return [ b.p, sub( p2(a.r * b.r, 0), mul_complex(b.p, a.p) ), p2(1.0, 0.0), p2(-a.p.x, -a.p.y) ];
+    return [ b.p, sub( p2(a.r * b.r, 0), mul_complex(b.p, a.p) ), p2(1.0, 0.0), negative(a.p) ];
 }
 
 function pointInRect( p, rect ) {
