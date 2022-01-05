@@ -35,7 +35,6 @@ function mobius_make_unitary( m ) {
     m[3] = complex_conjugate( m[0] );
 }
 
-
 function get_mobius_inverse( m ) {
     return [m[3], mul(m[1], -1.0), mul(m[2], -1.0), m[0]];
 }
@@ -68,7 +67,7 @@ function mobius_on_circle(m, c) {
 
 function pair_circles(a, b) {
     // return the Mobius transformation that pairs these two circles. Indra's Pearls, p.90
-    return [ b.p, sub( p2(a.r*b.r, 0), mul_complex(b.p, a.p) ), p2(1.0, 0.0), p2(-a.p.x, -a.p.y) ];
+    return [ b.p, sub( p2(a.r * b.r, 0), mul_complex(b.p, a.p) ), p2(1.0, 0.0), p2(-a.p.x, -a.p.y) ];
 }
 
 function pointInRect( p, rect ) {

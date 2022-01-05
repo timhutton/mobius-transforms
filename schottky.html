@@ -148,8 +148,7 @@ function init() {
     canvas.addEventListener( 'touchcancel',  onMouseUp, false );
 
     control_points = [ p2( -1.0, 0.0 ), p2( 0.0, 0.0 ),
-                       p2( 1.0, 0.0 ), p2( 2.0, 0.0 ),
-                       p2( 0.9, 1.0 ), p2( 0.5, 1.0 ) ];
+                       p2( 1.0, 0.0 ), p2( 2.0, 0.0 ) ];
 
     origin_screen = p2( canvas.width/2, canvas.height/2 );
     scale = Math.min( canvas.width, canvas.height ) / 6;
@@ -169,17 +168,6 @@ function drawPoint( p, r, t, t_offset ) {
     ctx.arc( p.x, p.y, r, 0, 2.0 * Math.PI );
     ctx.fillText( t, p.x + 5 + t_offset.x, p.y - 5 + t_offset.y );
     ctx.fill();
-}
-
-// adapted from http://stackoverflow.com/a/6333775/126823
-function drawArrow( from, to ) {
-    var headlen = 5; // length of head in pixels
-    var angle = Math.atan2(to.y-from.y,to.x-from.x);
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(to.x, to.y);
-    ctx.moveTo(to.x-headlen*Math.cos(angle-Math.PI/6),to.y-headlen*Math.sin(angle-Math.PI/6));
-    ctx.lineTo(to.x, to.y);
-    ctx.lineTo(to.x-headlen*Math.cos(angle+Math.PI/6),to.y-headlen*Math.sin(angle+Math.PI/6));
 }
 
 function drawSmoothTransformedLine( a, c, mobius_transform, recursion_depth = 1 ) {
@@ -204,29 +192,6 @@ function drawSmoothTransformedLine( a, c, mobius_transform, recursion_depth = 1 
     // otherwise recurse down
     drawSmoothTransformedLine( a, b, mobius_transform, on_sphere, recursion_depth + 1 );
     drawSmoothTransformedLine( b, c, mobius_transform, on_sphere, recursion_depth + 1 );
-}
-
-function drawSmoothTransformedArrow( p ) {
-    // interpolate between the identity transform and the current transform
-    var sp2 = toScreen( p );
-    ctx.moveTo( sp2.x, sp2.y );
-    var num_steps = 30;
-    var cp = [];
-    var target_p = control_points.slice();
-    mobius_normalize( target_p );
-    for( var i = 0; i < num_steps; i++ ) {
-        var u = i / num_steps;
-        mobius_identity( cp );
-        for( var j = 0; j < 4; j++ )
-            cp[ j ] = add( mul( target_p[ j ], u ), mul( cp[ j ], 1 - u ) );
-        var q = mobius( p, cp[0], cp[1], cp[2], cp[3] );
-        sq = toScreen( q );
-        ctx.lineTo( sq.x, sq.y );
-    }
-    // draw the arrow using the last line segment
-    var q = mobius_on_point( control_points, p );
-    var sq2 = toScreen( q );
-    drawArrow( sq, sq2 );
 }
 
 function draw() {
@@ -278,12 +243,11 @@ function draw() {
     // find the mobius transforms defined by the circles
     var D_A = {p:control_points[0], r:dist(control_points[0], control_points[1])};
     var D_a = {p:control_points[2], r:dist(control_points[2], control_points[3])};
-    var c = {p:control_points[4], r:dist(control_points[4], control_points[5])};
     var m_a = pair_circles( D_A, D_a );
     var m_A = pair_circles( D_a, D_A );
 
     // transform the circles repeatedly
-    var x = c;
+    var x = D_a;
     for(var i = 0; i < 4; i++) {
         ctx.strokeStyle = "rgba(0, 0, 155, " + Math.pow(0.6, i) + ")";
         x = mobius_on_circle( m_a, x );
