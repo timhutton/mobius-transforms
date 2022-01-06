@@ -148,7 +148,8 @@ function init() {
     canvas.addEventListener( 'touchcancel',  onMouseUp, false );
 
     control_points = [ p2( -1.0, 0.0 ), p2( 0.0, 0.0 ),
-                       p2( 1.0, 0.0 ), p2( 2.0, 0.0 ) ];
+                       p2( 1.0, 0.0 ), p2( 2.0, 0.0 )];//,
+                       //p2( -1.0, 1.0 ), p2( 1.5, 1.0 ) ];
 
     origin_screen = p2( canvas.width/2, canvas.height/2 );
     scale = Math.min( canvas.width, canvas.height ) / 6;
@@ -216,12 +217,12 @@ function draw() {
     }
     ctx.stroke();
 
-    // draw the four control points
+    // draw the control points
     ctx.font="22px Arial";
     var rest_color = "rgb(0,0,0)";
     var highlighted_color = "rgb(0,255,255)";
     var dragging_color = "rgb(0,255,0)";
-    for( var i = 0; i < control_points.length; i++ ) {
+    for( var i = 0; i < control_points.length-1; i++ ) {
         if( point_is_highlighted && i_point == i )
             ctx.fillStyle = ctx.strokeStyle = highlighted_color;
         else if( point_is_being_dragged && i_point == i )
@@ -234,7 +235,7 @@ function draw() {
 
     // draw the circles
     ctx.strokeStyle = "rgba(255,0,0,0.8)";
-    for(var iCircle = 0; iCircle < control_points.length/2; iCircle++) {
+    for(var iCircle = 0; iCircle < 2; iCircle++) {
         var c = control_points[2 * iCircle];
         var r = dist(c, control_points[2 * iCircle + 1]);
         drawWorldSpaceCircle( { p:c, r:r } );
@@ -247,18 +248,26 @@ function draw() {
     var m_A = pair_circles( D_a, D_A );
 
     // transform the circles repeatedly
-    var x = D_a;
+    var x = D_A;
     for(var i = 0; i < 20; i++) {
         ctx.strokeStyle = "rgba(0, 0, 155, " + Math.pow(0.8, i) + ")";
         x = mobius_on_circle( m_a, x );
+        //console.log('transformed circle:',x);
         drawWorldSpaceCircle(x);
     }
-    x = D_A;
+    x = D_a;
     for(var i = 0; i < 20; i++) {
         ctx.strokeStyle = "rgba(0, 155, 0, " + Math.pow(0.8, i) + ")";
         x = mobius_on_circle( m_A, x );
         drawWorldSpaceCircle(x);
     }
+
+    // also transform point C
+    //console.log('m_a:',m_a);
+    //var C2 = mobius_on_point( m_a, control_points[4] );
+    //console.log('C2:',C2);
+    //ctx.fillStyle = "rgb(0,0,0)";
+    //drawPoint( toScreen( C2 ), 2, "C2", p2(0,0) );
 }
 
 function drawWorldSpaceCircle( c ) {

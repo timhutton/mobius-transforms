@@ -17,16 +17,19 @@ function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, 
 function phase( a ) { return Math.atan2( a.y, a.x ); }
 function fromPolar( mag, phase ) { return p2( mag * Math.cos(phase), mag*Math.sin(phase) ) }
 function sqrt_complex( a ) { return fromPolar( Math.sqrt( magnitude(a) ), phase(a) / 2.0 ); }
-function mobius_on_point( m, z ) { return div_complex( add( mul_complex( m[0], z ), m[1] ), add( mul_complex( m[2], z ), m[3] ) ); }
 function complex_conjugate( p ) { return p2( p.x, -p.y ); }
 function sphereInversion( p, sphere ) {
     var d2 = dist2( p, sphere.p );
     return add( sphere.p, mul( sub( p, sphere.p ), sphere.r * sphere.r / d2 ) );
 }
 
+function get_mobius_determinant( m ) {
+    return sub( mul_complex( m[0], m[3] ), mul_complex( m[1], m[2] ) );
+}
+
 function mobius_normalize( m ) {
     // VCA, p.150
-    var sqrt_ad_minus_bc = sqrt_complex( sub( mul_complex( m[0], m[3] ), mul_complex( m[1], m[2] ) ) );
+    var sqrt_ad_minus_bc = sqrt_complex( get_mobius_determinant( m ) );
     for( var i = 0; i < 4; i++ )
         m[i] = div_complex( m[i], sqrt_ad_minus_bc );
 }
@@ -58,18 +61,50 @@ function mobius_identity( m ) {
     m[3] = p2( 1, 0 );
 }
 
+function mobius_on_point( m, z ) {
+    if( isNaN(z.x) || isNaN(z.y) ) {
+        // special case for z = inf, return a / c
+        return div_complex( m[0], m[2] );
+    }
+    return div_complex( add( mul_complex( m[0], z ), m[1] ), add( mul_complex( m[2], z ), m[3] ) );
+}
+
 function mobius_on_circle(m, c) {
     // Apply the mobius transformation to a circle. Indra's Pearls, p. 91
-    var z = sub( c.p, div_complex( p2(c.r * c.r, 0), complex_conjugate(add(div_complex(m[3], m[2]), c.p))));
+    var z = sub( c.p, div_complex( p2(c.r * c.r, 0), complex_conjugate( add( div_complex( m[3], m[2] ), c.p) ) ) );
+    //console.log('z:',z);
     var q = mobius_on_point(m, z);
-    var s = dist(q, mobius_on_point(m, add(c.p, p2(c.r, 0))));
+    //console.log('q:',q);
+    //console.log('m(p):',mobius_on_point(m, c.p));
+    //console.log('m(p+r):',mobius_on_point(m, add(c.p, p2(c.r, 0.0))));
+    var s = dist(q, mobius_on_point(m, add(c.p, p2(c.r, 0.0))));
+    //console.log('s:',s);
     return {p:q, r:s};
 }
 
 function pair_circles(a, b) {
     // return the Mobius transformation that pairs these two circles. Indra's Pearls, p.90
-    return [ b.p, sub( p2(a.r * b.r, 0), mul_complex(b.p, a.p) ), p2(1.0, 0.0), negative(a.p) ];
+    var P = a.p;
+    var r = a.r;
+    var Q = b.p;
+    var s = b.r;
+    // DEBUG:
+    //return [ p2(1.0, 0.0), negative(P), p2(0.0, 0.0), p2(1.0, 0.0) ]; // z - P
+    //return [ p2(0.0, 0.0), r*s, p2(1.0, 0.0), negative(P) ]; // rs / (z - P)
+    return [ Q, sub( p2(r * s, 0), mul_complex(Q, P) ), p2(1.0, 0.0), negative( P ) ]; // rs / (z - P) + Q
 }
+
+/*function pair_circles2(a, b, u, v) {
+    // return the Mobius transformation that pairs these two circles. Indra's Pearls, p.90
+    var P = a.p;
+    var r = a.r;
+    var Q = b.p;
+    var s = b.r;
+    return [ add(mul_complex(p2(s, 0.0), complex_conjugate( v )), mul_complex(Q, u)),
+             TODO,
+             u,
+             sub( mul_complex( p2(r, 0.0), v ), mul_complex(u, P) ) ];
+}*/
 
 function pointInRect( p, rect ) {
     return p.x > rect.x && p.x < ( rect.x + rect.width ) &&

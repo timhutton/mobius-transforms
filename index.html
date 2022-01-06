@@ -499,39 +499,31 @@ function draw() {
 
     // draw the drawn lines
     var inverse_mobius = get_mobius_inverse(control_points);
-    ctx.strokeStyle = "rgba(255,0,0,1.0)";
-    ctx.beginPath();
-    for(var iPath = 0; iPath < drawn_lines.length; iPath++)
-    {
-        var path = drawn_lines[iPath];
-        for(var iPt = 0; iPt < path.length-1; iPt++)
-        {
-            drawSmoothTransformedLine( path[iPt], path[iPt + 1], null, false );
-            if(show_3D)
-                drawSmoothTransformedLine( path[iPt], path[iPt + 1], null, true );
-        }
-    }
-    ctx.stroke();
+    ctx.strokeStyle = "rgba(0,0,150,1.0)";
+    drawSketch( null );
     // draw the iterated mobius transformed versions
-    ctx.strokeStyle = "rgba(255,0,100,0.7)";
+    var t = control_points;
+    var ti = inverse_mobius;
+    for(var i = 0; i < 50; i++) {
+        ctx.strokeStyle = "rgba(0,150,0,1.0)";
+        drawSketch( t );
+        ctx.strokeStyle = "rgba(255,0,0,1.0)";
+        drawSketch( ti );
+        t = get_mobius_composed(t, control_points);
+        ti = get_mobius_composed(ti, inverse_mobius);
+    }
+}
+
+function drawSketch(mobius_transform) {
     ctx.beginPath();
     for(var iPath = 0; iPath < drawn_lines.length; iPath++)
     {
         var path = drawn_lines[iPath];
         for(var iPt = 0; iPt < path.length-1; iPt++)
         {
-            var t = control_points;
-            var ti = inverse_mobius;
-            for(var i = 0; i < 50; i++) {
-                drawSmoothTransformedLine( path[iPt], path[iPt + 1], t, false );
-                drawSmoothTransformedLine( path[iPt], path[iPt + 1], ti, false );
-                if(show_3D) {
-                    drawSmoothTransformedLine( path[iPt], path[iPt + 1], t, true );
-                    drawSmoothTransformedLine( path[iPt], path[iPt + 1], ti, true );
-                }
-                t = get_mobius_composed(t, control_points);
-                ti = get_mobius_composed(ti, inverse_mobius);
-            }
+            drawSmoothTransformedLine( path[iPt], path[iPt + 1], mobius_transform, false );
+            if(show_3D)
+                drawSmoothTransformedLine( path[iPt], path[iPt + 1], mobius_transform, true );
         }
     }
     ctx.stroke();
@@ -688,7 +680,7 @@ them give a similarity transformation: <b>a</b> controls the scale and rotation 
 
 <p>If the unit circle is the Poincare disk model of the hyperbolic plane, then the Möbius transformation with <b>c = b&#773;</b> and <b>a = d = 1</b> is an isometry of the hyperbolic plane corresponding to a translation of the origin by <b>b</b>.</p>
 
-<p>With <b>Drawing mode: ON</b>, draw on the screen. Multiple copies of the drawing under iterations of the Möbius transformation and its inverse are shown.
+<p>With <b>Drawing mode: ON</b>, draw on the screen. Multiple copies of the drawing (blue) under iterations of the Möbius transformation (green) and its inverse (red) are shown.
 
 <p>Read the book <a href="http://www.amazon.co.uk/Visual-Complex-Analysis-Tristan-Needham/dp/0198534469">Visual Complex Analysis</a> by Tristan Needham. To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this video</a>. To explore the possibilities of iterating Möbius transforms, see the book <a href="https://en.wikipedia.org/wiki/Indra%27s_Pearls_(book)">Indra's Pearls</a>, by David Mumford, Caroline Series and David Wright.</p>
 
