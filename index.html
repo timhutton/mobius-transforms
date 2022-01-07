@@ -2,76 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<script src="code/drawing.js"></script>
+<script src="code/math.js"></script>
 <script>
-
-function p2( x, y ) { return { x:x, y:y, z:0 }; }
-function p3( x, y, z ) { return { x:x, y:y, z:z }; }
-function add( a, b ) { return p3( a.x + b.x, a.y + b.y, a.z + b.z ); }
-function sub( a, b ) { return p3( a.x - b.x, a.y - b.y, a.z - b.z ); }
-function mul( a, f ) { return p3( a.x * f, a.y * f, a.z * f ); }
-function average( a, b ) { return mul( add( a, b ), 0.5 ); }
-function dot( a, b ) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-function len2( a ) { return dot(a,a); }
-function dist2( a, b ) { return len2( sub( a, b ) ); }
-function dist( a, b ) { return Math.sqrt( len2( sub( a, b ) ) ); }
-function mul_complex( a, b ) { return p2( a.x * b.x - a.y * b.y, a.y * b.x + a.x * b.y ); }
-function div_complex( a, b ) { return p2( ( a.x * b.x + a.y * b.y ) / len2( b ), ( a.y * b.x - a.x * b.y ) / len2( b ) ); }
-function magnitude( a ) { return Math.sqrt( len2( a ) ); }
-function normalize( a ) { return mul( a, 1 / magnitude( a ) ); }
-function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, a.x * b.y - a.y * b.x ); }
-function phase( a ) { return Math.atan2( a.y, a.x ); }
-function fromPolar( mag, phase ) { return p2( mag * Math.cos(phase), mag*Math.sin(phase) ) }
-function sqrt_complex( a ) { return fromPolar( Math.sqrt( magnitude(a) ), phase(a) / 2.0 ); }
-function mobius( z, a, b, c, d ) { return div_complex( add( mul_complex( a, z ), b ), add( mul_complex( c, z ), d ) ); }
-function complex_conjugate( p ) { return p2( p.x, -p.y ); }
-function sphereInversion( p, sphere ) {
-    var d2 = generalized_dist2( p, sphere.p, sphere.metric_signature );
-    return add( sphere.p, mul( sub( p, sphere.p ), sphere.r2 / d2 ) );
-}
-function generalized_dist2( p1, p2, metric_signature ) {
-    // squared-distance function, generalized for different metric signatures
-    // e.g. [1,1,0] is the 2D Euclidean plane XY,
-    //      [1,-1,0] is the hyperbola model XY,
-    //      [1,1,-1] is the hyperboloid model XYZ
-    return metric_signature.x * Math.pow( p1.x - p2.x, 2 )
-         + metric_signature.y * Math.pow( p1.y - p2.y, 2 )
-         + metric_signature.z * Math.pow( p1.z - p2.z, 2 );
-}
-
-function mobius_normalize( cp ) {
-    // VCA, p.150
-    var sqrt_ad_minus_bc = sqrt_complex( sub( mul_complex( cp[0], cp[3] ), mul_complex( cp[1], cp[2] ) ) );
-    for( var i = 0; i < 4; i++ )
-        cp[i] = div_complex( cp[i], sqrt_ad_minus_bc );
-}
-
-function mobius_make_unitary( cp ) {
-    cp[2] = mul( complex_conjugate( cp[1] ), -1 );
-    cp[3] = complex_conjugate( cp[0] );
-}
-
-
-function get_mobius_inverse( cp ) {
-    return [cp[3], mul(cp[1], -1.0), mul(cp[2], -1.0), cp[0]];
-}
-
-function get_mobius_composed(a, b) {
-    return [add(mul_complex(a[0], b[0]), mul_complex(a[1], b[2])),
-            add(mul_complex(a[0], b[1]), mul_complex(a[1], b[3])),
-            add(mul_complex(a[2], b[0]), mul_complex(a[3], b[2])),
-            add(mul_complex(a[2], b[1]), mul_complex(a[3], b[3]))];
-}
-
-function mobius_make_nonloxodromic( cp ) {
-    cp[3].y = -cp[0].y;
-}
-
-function mobius_identity( cp ) {
-    cp[0] = p2( 1, 0 );
-    cp[1] = p2( 0, 0 );
-    cp[2] = p2( 0, 0 );
-    cp[3] = p2( 1, 0 );
-}
 
 function repositionCamera() {
     var look_at = p3(0,0,0.25);
@@ -313,7 +246,7 @@ function init() {
     repositionCamera();
 
     show_3D = false;
-    riemann_inversion_sphere = { p: p3(0,0,1), r2:1, metric_signature:p3(1,1,1) };
+    riemann_inversion_sphere = { p:p3(0,0,1), r:1 };
 
     drawn_lines = [];
     drawing = false;
@@ -332,11 +265,6 @@ function drawPoint( p, r, t, t_offset ) {
     ctx.fill();
 }
 
-function pointInRect( p, rect ) {
-    return p.x > rect.x && p.x < ( rect.x + rect.width ) &&
-           p.y > rect.y && p.y < ( rect.y + rect.height );
-}
-
 // adapted from http://stackoverflow.com/a/6333775/126823
 function drawArrow( from, to ) {
     var headlen = 5; // length of head in pixels
@@ -348,17 +276,13 @@ function drawArrow( from, to ) {
     ctx.lineTo(to.x-headlen*Math.cos(angle+Math.PI/6),to.y-headlen*Math.sin(angle+Math.PI/6));
 }
 
-function distanceOfPointFromLine( end1, end2, p ) {
-    return Math.abs( (end2.y-end1.y)*p.x - (end2.x-end1.x)*p.y + end2.x*end1.y - end2.y*end1.x ) / dist( end1, end2 );
-}
-
 function drawSmoothTransformedLine( a, c, mobius_transform, on_sphere, recursion_depth = 1 ) {
     var b = average( a, c );
     var qa = a,qb = b,qc = c;
     if( mobius_transform ) {
-        qa = mobius( qa, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
-        qb = mobius( qb, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
-        qc = mobius( qc, mobius_transform[0], mobius_transform[1], mobius_transform[2], mobius_transform[3] );
+        qa = mobius_on_point( mobius_transform, qa );
+        qb = mobius_on_point( mobius_transform, qb );
+        qc = mobius_on_point( mobius_transform, qc );
     }
     if( on_sphere ) {
         qa = sphereInversion( qa, riemann_inversion_sphere );
@@ -403,7 +327,7 @@ function drawSmoothTransformedArrow( p, on_sphere ) {
         mobius_identity( cp );
         for( var j = 0; j < 4; j++ )
             cp[ j ] = add( mul( target_p[ j ], u ), mul( cp[ j ], 1 - u ) );
-        var q = mobius( p, cp[0], cp[1], cp[2], cp[3] );
+        var q = mobius_on_point( cp, p );
         if( on_sphere )
             q = sphereInversion( q, riemann_inversion_sphere );
         sq = toScreen( q );
@@ -413,16 +337,12 @@ function drawSmoothTransformedArrow( p, on_sphere ) {
             ctx.moveTo( sq.x, sq.y );
     }
     // draw the arrow using the last line segment
-    var q = mobius( p, control_points[0], control_points[1], control_points[2], control_points[3] );
+    var q = mobius_on_point( control_points, p );
     if( on_sphere )
         q = sphereInversion( q, riemann_inversion_sphere );
     var sq2 = toScreen( q );
     if( inViewingFrustrum( sq ) && inViewingFrustrum( sq2 ) )
         drawArrow( sq, sq2 );
-}
-
-function roundTowardsZero( x ) {
-    return ( x > 0 ) ? Math.floor(x) : Math.ceil(x);
 }
 
 function draw() {
@@ -579,39 +499,31 @@ function draw() {
 
     // draw the drawn lines
     var inverse_mobius = get_mobius_inverse(control_points);
-    ctx.strokeStyle = "rgba(255,0,0,1.0)";
-    ctx.beginPath();
-    for(var iPath = 0; iPath < drawn_lines.length; iPath++)
-    {
-        var path = drawn_lines[iPath];
-        for(var iPt = 0; iPt < path.length-1; iPt++)
-        {
-            drawSmoothTransformedLine( path[iPt], path[iPt + 1], null, false );
-            if(show_3D)
-                drawSmoothTransformedLine( path[iPt], path[iPt + 1], null, true );
-        }
-    }
-    ctx.stroke();
+    ctx.strokeStyle = "rgba(0,0,150,1.0)";
+    drawSketch( null );
     // draw the iterated mobius transformed versions
-    ctx.strokeStyle = "rgba(255,0,100,0.7)";
+    var t = control_points;
+    var ti = inverse_mobius;
+    for(var i = 0; i < 50; i++) {
+        ctx.strokeStyle = "rgba(0,150,0,1.0)";
+        drawSketch( t );
+        ctx.strokeStyle = "rgba(255,0,0,1.0)";
+        drawSketch( ti );
+        t = get_mobius_composed(t, control_points);
+        ti = get_mobius_composed(ti, inverse_mobius);
+    }
+}
+
+function drawSketch(mobius_transform) {
     ctx.beginPath();
     for(var iPath = 0; iPath < drawn_lines.length; iPath++)
     {
         var path = drawn_lines[iPath];
         for(var iPt = 0; iPt < path.length-1; iPt++)
         {
-            var t = control_points;
-            var ti = inverse_mobius;
-            for(var i = 0; i < 50; i++) {
-                drawSmoothTransformedLine( path[iPt], path[iPt + 1], t, false );
-                drawSmoothTransformedLine( path[iPt], path[iPt + 1], ti, false );
-                if(show_3D) {
-                    drawSmoothTransformedLine( path[iPt], path[iPt + 1], t, true );
-                    drawSmoothTransformedLine( path[iPt], path[iPt + 1], ti, true );
-                }
-                t = get_mobius_composed(t, control_points);
-                ti = get_mobius_composed(ti, inverse_mobius);
-            }
+            drawSmoothTransformedLine( path[iPt], path[iPt + 1], mobius_transform, false );
+            if(show_3D)
+                drawSmoothTransformedLine( path[iPt], path[iPt + 1], mobius_transform, true );
         }
     }
     ctx.stroke();
@@ -631,8 +543,10 @@ function onArrowsButton(element) {
 
 function onNormalizeButton(element) {
     normalize_mobius = !normalize_mobius;
+    if( normalize_mobius ) {
+        mobius_normalize( control_points );
+    }
     element.value = normalize_mobius ? "Normalize: ON" : "Normalize: OFF";
-    enforce_constraints();
     draw();
 }
 
@@ -768,7 +682,7 @@ them give a similarity transformation: <b>a</b> controls the scale and rotation 
 
 <p>If the unit circle is the Poincare disk model of the hyperbolic plane, then the Möbius transformation with <b>c = b&#773;</b> and <b>a = d = 1</b> is an isometry of the hyperbolic plane corresponding to a translation of the origin by <b>b</b>.</p>
 
-<p>With <b>Drawing mode: ON</b>, draw on the screen. Multiple copies of the drawing under iterations of the Möbius transformation and its inverse are shown.
+<p>With <b>Drawing mode: ON</b>, draw on the screen. Multiple copies of the drawing (blue) under iterations of the Möbius transformation (green) and its inverse (red) are shown.
 
 <p>Read the book <a href="http://www.amazon.co.uk/Visual-Complex-Analysis-Tristan-Needham/dp/0198534469">Visual Complex Analysis</a> by Tristan Needham. To see the relationship with the Riemann sphere, see <a href="https://www.youtube.com/watch?v=0z1fIsUNhO4">this video</a>. To explore the possibilities of iterating Möbius transforms, see the book <a href="https://en.wikipedia.org/wiki/Indra%27s_Pearls_(book)">Indra's Pearls</a>, by David Mumford, Caroline Series and David Wright.</p>
 
