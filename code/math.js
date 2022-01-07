@@ -94,17 +94,17 @@ function pair_circles(a, b) {
     return [ Q, sub( p2(r * s, 0), mul_complex(Q, P) ), p2(1.0, 0.0), negative( P ) ]; // rs / (z - P) + Q
 }
 
-/*function pair_circles2(a, b, u, v) {
+function pair_circles2(a, b, u, v) {
     // return the Mobius transformation that pairs these two circles. Indra's Pearls, p.90
     var P = a.p;
     var r = a.r;
     var Q = b.p;
     var s = b.r;
-    return [ add(mul_complex(p2(s, 0.0), complex_conjugate( v )), mul_complex(Q, u)),
-             TODO,
+    return [ add( mul_complex(p2(s, 0.0), complex_conjugate( v )), mul_complex(Q, u)),
+             sub( sub( add( mul(complex_conjugate(u), s*r), mul_complex(Q, mul(v, r)) ), mul( mul_complex(complex_conjugate(v), P), s ) ), mul_complex(mul_complex(Q,u), P) ),
              u,
              sub( mul_complex( p2(r, 0.0), v ), mul_complex(u, P) ) ];
-}*/
+}
 
 function pointInRect( p, rect ) {
     return p.x > rect.x && p.x < ( rect.x + rect.width ) &&
@@ -118,4 +118,3 @@ function distanceOfPointFromLine( end1, end2, p ) {
 function roundTowardsZero( x ) {
     return ( x > 0 ) ? Math.floor(x) : Math.ceil(x);
 }
-
