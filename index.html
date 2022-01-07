@@ -542,8 +542,10 @@ function onArrowsButton(element) {
 1}
 
 function onNormalizeButton(element) {
-    mobius_normalize( control_points );
     normalize_mobius = !normalize_mobius;
+    if( normalize_mobius ) {
+        mobius_normalize( control_points );
+    }
     element.value = normalize_mobius ? "Normalize: ON" : "Normalize: OFF";
     draw();
 }
