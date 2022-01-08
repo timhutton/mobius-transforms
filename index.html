@@ -23,6 +23,7 @@ function repositionCamera() {
 function enforce_constraints() {
     // hacky approach for now: enforce the constraints over and over until the control points stop moving
     var cp = control_points.slice();
+    var iterations = 0;
     do {
         if( normalize_mobius )
             mobius_normalize( cp );
@@ -30,12 +31,51 @@ function enforce_constraints() {
             mobius_make_unitary( cp );
         if( nonloxodromic )
             mobius_make_nonloxodromic( cp );
+        if( unit_circle_group ) {
+            // [ u, v; complex_conjugate(u), complex_conjugate(v) ] where |u|^2 - |v|^2 = 1
+            // implies |v| = sqrt( |u|^2 - 1 )
+            // implies |u| >= 1
+            var u = cp[0];
+            var u_mag = magnitude( u );
+            if( u_mag == 0.0 ) {
+                cp[0] = p2( 1.0, 0.0 );
+                cp[1] = p2( 0.0, 0.0 );
+                cp[2] = p2( 0.0, 0.0 );
+                cp[3] = p2( 1.0, 0.0 );
+            }
+            else if( u_mag < 1.0 ) {
+                u = normalize( u );
+                cp[0] = u;
+                cp[1] = p2( 0.0, 0.0 );
+                cp[2] = p2( 0.0, 0.0 );
+                cp[3] = complex_conjugate( u );
+            }
+            else {
+                var v = cp[1];
+                var v_mag_old = magnitude( v );
+                var v_mag_new = Math.sqrt( len2( u ) - 1.0 );
+                if( v_mag_old == 0.0 || isNaN( v_mag_old ) ) {
+                    v = p2( v_mag_new, 0.0);
+                }
+                else {
+                    v = mul( v, v_mag_new / v_mag_old );
+                }
+                cp[0] = u;
+                cp[1] = v;
+                cp[2] = complex_conjugate( v );
+                cp[3] = complex_conjugate( u );
+            }
+        }
         var d = 0;
         for( var i = 0; i < 4; i++ ) {
             d += dist2( cp[i], control_points[i] );
             control_points[i] = cp[i];
         }
-    } while( d > 1E-8 );
+        iterations++;
+    } while( iterations < 50 && d > 1E-8 );
+    if( iterations > 40 ) {
+        console.log('enforce_constraints iterations:', iterations);
+    }
 }
 
 function toScreen( p ) {
@@ -98,6 +138,7 @@ function onMove( pos ) {
             if( dist( oldPos, pos ) > 3 ) {
                 oldPath.push( fromScreen( pos ) );
             }
+            draw();
         }
     }
     else if( point_is_being_dragged ) {
@@ -110,7 +151,7 @@ function onMove( pos ) {
         var iClosest = -1;
         var closest_dist2 = touch_radius * touch_radius;
         var num_control_points = 4;
-        if( unitary ) num_control_points = 2; // only allow a and b to be dragged
+        if( unitary || unit_circle_group ) num_control_points = 2; // only allow a and b to be dragged
         for( var i = 0; i < num_control_points; i++ ) {
             var d2 = dist2( pos, toScreen( control_points[ i ] ) );
             if( d2 < closest_dist2 ) {
@@ -149,7 +190,7 @@ function onDown( pos ) {
         var iClosest = -1;
         var closest_dist2 = touch_radius * touch_radius;
         var num_control_points = 4;
-        if( unitary ) num_control_points = 2; // only allow a and b to be dragged
+        if( unitary || unit_circle_group ) num_control_points = 2; // only allow a and b to be dragged
         for( var i = 0; i < num_control_points; i++ ) {
             var d2 = dist2( pos, toScreen( control_points[ i ] ) );
             if( d2 < closest_dist2 ) {
@@ -241,6 +282,7 @@ function init() {
     nonloxodromic = false;
     show_ad_minus_bc = false;
     show_a_plus_d = false;
+    unit_circle_group = false;
 
     theta = -Math.PI / 2;
     repositionCamera();
@@ -294,7 +336,9 @@ function drawSmoothTransformedLine( a, c, mobius_transform, on_sphere, recursion
     var sc = toScreen( qc );
     // if nearly collinear then just draw straight lines
     var close_enough = 3;
-    if( recursion_depth > 5 || distanceOfPointFromLine( sa, sc, sb ) < close_enough ) {
+    if( recursion_depth > 5
+        || dist( sa, sc ) < close_enough
+        || distanceOfPointFromLine( sa, sc, sb ) < close_enough ) {
         if( inViewingFrustrum( sa ) && inViewingFrustrum( sb ) ) {
             ctx.moveTo( sa.x, sa.y );
             ctx.lineTo( sb.x, sb.y );
@@ -357,15 +401,31 @@ function draw() {
     var extent = 6;
     ctx.strokeStyle = "rgba(0,0,0,0.2)";
     ctx.beginPath();
-    drawSmoothTransformedLine( p2( -extent, 0 ), p2( 0, 0 ), null, false );
-    drawSmoothTransformedLine( p2( 0, 0 ), p2( extent, 0 ), null, false );
-    drawSmoothTransformedLine( p2( 0, -extent ), p2( 0, 0 ), null, false );
-    drawSmoothTransformedLine( p2( 0, 0 ), p2( 0, extent ), null, false );
+    for( var i = -extent; i <= extent - 1; i++ ) {
+        drawSmoothTransformedLine( p2( i, 0 ), p2( i+1, 0 ), null, false );
+        drawSmoothTransformedLine( p2( 0, i ), p2( 0, i+1 ), null, false );
+    }
     for( var i = -extent; i <= extent; i++ ) {
         drawSmoothTransformedLine( p2( i, -0.05 ), p2( i, 0.05 ), null, false );
         drawSmoothTransformedLine( p2( -0.05, i ), p2( 0.05, i ), null, false );
     }
     ctx.stroke();
+
+    if( unit_circle_group ) {
+        // draw the unit circle
+        ctx.strokeStyle = "rgba(0,0,0,0.8)";
+        ctx.beginPath();
+        var p = p2( 1.0, 0.0 );
+        var sp = toScreen( p );
+        ctx.moveTo( sp.x, sp.y );
+        for( i = 5; i <=  360; i+= 5 ) {
+            var theta = i * Math.PI / 180.0;
+            p = p2( Math.cos( theta ), Math.sin( theta ) );
+            sp = toScreen( p );
+            ctx.lineTo( sp.x, sp.y );
+        }
+        ctx.stroke();
+    }
 
     // draw arrows showing the transform
     if( draw_arrows ) {
@@ -383,6 +443,15 @@ function draw() {
         ctx.beginPath();
         for( var x = min_x; x < max_x; x += spacing ) {
             for( var y = min_y; y < max_y; y += spacing ) {
+                if( unit_circle_group ) {
+                    // skip this arrow if outside the unit circle
+                    if( show_3D && len2( p2( x, y ) ) > 1.0 ) { // (x,y is in world space)
+                        continue;
+                    }
+                    if( !show_3D && len2( fromScreen( p2( x, y ) ) ) > 1.0 ) { // (x,y is on the screen)
+                        continue;
+                    }
+                }
                 if( show_3D ) {
                     drawSmoothTransformedArrow( p2(x,y), null );
                     drawSmoothTransformedArrow( p2(x,y), control_points );
@@ -437,7 +506,7 @@ function draw() {
     var highlighted_color = "rgb(0,255,255)";
     var dragging_color = "rgb(0,255,0)";
     var num_moveable_control_points = 4;
-    if( unitary ) num_moveable_control_points = 2;
+    if( unitary || unit_circle_group ) num_moveable_control_points = 2;
     for( var i = 0; i < 4; i++ ) {
         if( point_is_highlighted && i_point == i )
             ctx.fillStyle = ctx.strokeStyle = highlighted_color;
@@ -539,7 +608,7 @@ function onArrowsButton(element) {
     draw_arrows = !draw_arrows;
     element.value = draw_arrows ? "Arrows: ON" : "Arrows: OFF";
     draw();
-1}
+}
 
 function onNormalizeButton(element) {
     normalize_mobius = !normalize_mobius;
@@ -582,6 +651,13 @@ function onNonLoxodromicButton(element) {
     draw();
 }
 
+function onUnitCircleGroupButton(element) {
+    unit_circle_group = !unit_circle_group;
+    element.value = unit_circle_group ? "Unit circle group: ON" : "Unit circle group: OFF";
+    enforce_constraints();
+    draw();
+}
+
 function onIdentityButton() {
     mobius_identity( control_points );
     enforce_constraints();
@@ -590,18 +666,22 @@ function onIdentityButton() {
 
 function onShowIn3DButton(element) {
     show_3D = !show_3D;
-    if( show_3D ) {
-        theta = -Math.PI / 2;
-        repositionCamera();
-    }
     element.value = show_3D ? "Show in 3D: ON" : "Show in 3D: OFF";
+    if( show_3D ) {
+        lastFrameTime = undefined; // reset the spin to avoid jumps
+        repositionCamera();
+        animate();
+    }
     draw();
 }
 
 function onSpinningButton(element) {
     is_spinning = !is_spinning;
     element.value = is_spinning ? "Spinning: ON" : "Spinning: OFF";
-    draw();
+    if( is_spinning ) {
+        lastFrameTime = undefined; // reset the spin to avoid jumps
+        animate();
+    }
 }
 
 function onDrawingModeButton(element) {
@@ -615,14 +695,22 @@ function onClearDrawingButton(element) {
     draw();
 }
 
-function animate() {
-    if( is_spinning ) {
+function animate( currentFrameTime ) {
+    if( show_3D && is_spinning ) {
         // rotate round
-        theta += 0.005;
-        repositionCamera();
+        if( typeof currentFrameTime !== 'undefined' ) {
+            if( typeof lastFrameTime === 'undefined' ) {
+                lastFrameTime = currentFrameTime;
+            }
+            var elapsedSinceLastFrame = currentFrameTime - lastFrameTime;
+            var theta_increment = elapsedSinceLastFrame * 0.0003;
+            lastFrameTime = currentFrameTime;
+            theta += theta_increment;
+            repositionCamera();
+        }
+        draw();
+        requestAnimationFrame( animate );
     }
-    draw();
-    requestAnimationFrame( animate );
 }
 
 window.onload = init;
@@ -660,6 +748,7 @@ input[type='button'] {
 <p><input type="button" value="Fixed points: OFF" onclick="onFixedPointsButton(this)" /></p>
 <p><input type="button" value="Unitary: OFF" onclick="onUnitaryButton(this)" /></p>
 <p><input type="button" value="Non-loxodromic: OFF" onclick="onNonLoxodromicButton(this)" /></p>
+<p><input type="button" value="Unit circle group: OFF" onclick="onUnitCircleGroupButton(this)" /></p>
 <p><input type="button" value="Show a+d: OFF" onclick="onShowAPlusDButton(this)" /></p>
 <p><input type="button" value="Show in 3D: OFF" onclick="onShowIn3DButton(this)" /></p>
 <p><input type="button" value="Spinning: ON" onclick="onSpinningButton(this)" /></p>
@@ -678,9 +767,9 @@ them give a similarity transformation: <b>a</b> controls the scale and rotation 
 
 <p>A <i>unitary</i> Möbius transformation has <b>c = -b&#773;</b> and <b>d = a&#773;</b> (where <b>z&#773;</b> is the <a href="https://en.wikipedia.org/wiki/Complex_conjugate">complex conjugate</a> of <b>z</b>).</p>
 
-<p>A normalized Möbius transformation is <i>loxodromic</i> if <b>a+d</b> is not on the real line. Set <b>Non-loxodromic: ON</b> to enforce that <b>a+d</b> is real, and <b>Normalize: ON</b> to ensure that the transformation is normalized. Then if <b>|a+d| < 2</b> the Möbius transformation is <i>elliptic</i>. If <b>|a+b|=2</b> then it is <i>parabolic</i>. Otherwise, with <b>|a+d| > 2</b>, it is <i>hyperbolic</i>.
+<p>A normalized Möbius transformation is <i>loxodromic</i> if <b>a+d</b> is not on the real line. Set <b>Non-loxodromic: ON</b> to enforce that <b>a+d</b> is real, and <b>Normalize: ON</b> to ensure that the transformation is normalized. Then if <b>|a+d| &lt; 2</b> the Möbius transformation is <i>elliptic</i>. If <b>|a+b|=2</b> then it is <i>parabolic</i>. Otherwise, with <b>|a+d| > 2</b>, it is <i>hyperbolic</i>.
 
-<p>If the unit circle is the Poincare disk model of the hyperbolic plane, then the Möbius transformation with <b>c = b&#773;</b> and <b>a = d = 1</b> is an isometry of the hyperbolic plane corresponding to a translation of the origin by <b>b</b>.</p>
+<p>A Möbius transformation with <b>|a|² - |b|² = 1, c = b&#773;, d = a&#773;</b> maps the unit circle to itself. Set <b>Unit circle group: ON</b> to enforce this contraint. When <b>a</b> is real this gives a translation of the hyperbolic plane in the Poincaré disk model.</p>
 
 <p>With <b>Drawing mode: ON</b>, draw on the screen. Multiple copies of the drawing (blue) under iterations of the Möbius transformation (green) and its inverse (red) are shown.
 
