@@ -264,9 +264,11 @@ function init() {
     canvas.addEventListener( 'touchcancel',  onMouseUp, false );
 
     num_transforms = 3;
-    control_points = []
+    control_points = [];
+    velocities = [];
     for(var i = 0; i < num_transforms * 4; i++) {
-        control_points.push( p2( Math.random()*4.0 - 2.0, Math.random()*4.0 - 2.0) );
+        control_points.push( p2( Math.random()*4.0 - 2.0, Math.random()*4.0 - 2.0 ) );
+        velocities.push( p2( Math.random()*0.02 - 0.01, Math.random()*0.02 - 0.01 ) );
     }
 
     origin_screen = p2( canvas.width/2, canvas.height/2 );
@@ -313,6 +315,7 @@ function init() {
     draw();
 
     is_spinning = true;
+    move_points = false;
     animate();
 }
 
@@ -741,6 +744,15 @@ function onHighQualityModeButton(element) {
     draw();
 }
 
+function onAnimateModeButton(element) {
+    move_points = !move_points;
+    element.value = move_points ? "Animate control points: ON" : "Animate control points: OFF";
+    draw();
+    if( move_points) {
+        animate();
+    }
+}
+
 function animate( currentFrameTime ) {
     if( show_3D && is_spinning ) {
         // rotate round
@@ -756,6 +768,32 @@ function animate( currentFrameTime ) {
         }
         draw();
         requestAnimationFrame( animate );
+    }
+
+    if( move_points ) {
+        for( var i = 0; i < control_points.length; i++) {
+            control_points[i] = add( control_points[i], velocities[i] );
+            if( control_points[i].x < -2 ) {
+                control_points[i].x = -4.0 - control_points[i].x;
+                velocities[i].x *= -1.0;
+            }
+            else if( control_points[i].x > 2 ) {
+                control_points[i].x = 4.0 - control_points[i].x;
+                velocities[i].x *= -1.0;
+            }
+            if( control_points[i].y < -2 ) {
+                control_points[i].y = -4.0 - control_points[i].y;
+                velocities[i].y *= -1.0;
+            }
+            else if( control_points[i].y > 2 ) {
+                control_points[i].y = 4.0 - control_points[i].y;
+                velocities[i].y *= -1.0;
+            }
+        }
+        clearIFS();
+        runIFS( num_ifs_iterations );
+        draw();
+        setTimeout( animate, 50 );
     }
 }
 
@@ -808,6 +846,7 @@ input[type='button'] {
 
 <p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
 <p><input type="button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
+<p><input type="button" value="Animate control points: OFF" onclick="onAnimateModeButton(this)" /></p>
 
 </div>
 
