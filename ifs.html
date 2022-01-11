@@ -143,7 +143,7 @@ function onMove( pos ) {
     else if( point_is_being_dragged ) {
         control_points[ i_point ] = fromScreen( add( pos, drag_offset ) );
         clearIFS();
-        runIFS( num_ifs_iterations );
+        runIFS();
         enforce_constraints();
         draw();
     }
@@ -268,7 +268,8 @@ function init() {
     velocities = [];
     for(var i = 0; i < num_transforms * 4; i++) {
         control_points.push( p2( Math.random()*4.0 - 2.0, Math.random()*4.0 - 2.0 ) );
-        velocities.push( p2( Math.random()*0.02 - 0.01, Math.random()*0.02 - 0.01 ) );
+        var dir = Math.random() * 2.0 * Math.PI;
+        velocities.push( p2( Math.cos( dir ) * 0.005, Math.sin( dir ) * 0.005 ) );
     }
 
     origin_screen = p2( canvas.width/2, canvas.height/2 );
@@ -308,9 +309,9 @@ function init() {
 
     hq_mode = false;
     num_ifs_iterations = 100000;
-    inc = 20;
+    inc = 100;
     clearIFS();
-    runIFS( num_ifs_iterations );
+    runIFS();
 
     draw();
 
@@ -740,7 +741,7 @@ function onHighQualityModeButton(element) {
         inc = 100;
     }
     clearIFS();
-    runIFS( num_ifs_iterations );
+    runIFS();
     draw();
 }
 
@@ -791,9 +792,9 @@ function animate( currentFrameTime ) {
             }
         }
         clearIFS();
-        runIFS( num_ifs_iterations );
+        runIFS();
         draw();
-        setTimeout( animate, 50 );
+        requestAnimationFrame( animate );
     }
 }
 
@@ -803,14 +804,14 @@ function clearIFS() {
     }
 }
 
-function runIFS( num_iterations ) {
+function runIFS() {
     // do IFS
     var transforms = [];
     for( var i = 0; i < num_transforms; i++) {
         transforms.push( [control_points[i * 4 + 0], control_points[i * 4 + 1], control_points[i * 4 + 2], control_points[i * 4 + 3]] );
     }
     var p = p2(0.0, 0.0);
-    for( var i = 0; i < num_iterations; i++) {
+    for( var i = 0; i < num_ifs_iterations; i++) {
         p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
         var sp = toScreen( p );
         var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
