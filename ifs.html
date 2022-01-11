@@ -316,9 +316,7 @@ function animate( currentFrameTime ) {
 }
 
 function clearIFS() {
-    for( var i = 0; i < pixels.length; i++ ) {
-        pixels[i] = 255;
-    }
+    pixels.fill( 255 );
 }
 
 function runIFS() {
