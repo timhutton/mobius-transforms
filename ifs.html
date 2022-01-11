@@ -332,9 +332,8 @@ function runIFS() {
         p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
         var sp = toScreen( p );
         var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-        pixels[pixel_offset + 0] = Math.max( 0, pixels[pixel_offset + 0] - inc );
-        pixels[pixel_offset + 1] = Math.max( 0, pixels[pixel_offset + 1] - inc );
-        pixels[pixel_offset + 2] = Math.max( 0, pixels[pixel_offset + 2] - inc );
+        var gray = Math.max( 0, pixels[pixel_offset + 0] - inc );
+        pixels[pixel_offset + 0] = pixels[pixel_offset + 1] = pixels[pixel_offset + 2] = gray;
     }
 }
 
