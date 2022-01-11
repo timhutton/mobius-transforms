@@ -142,10 +142,17 @@ function onMove( pos ) {
     }
     else if( point_is_being_dragged ) {
         control_points[ i_point ] = fromScreen( add( pos, drag_offset ) );
-        clearIFS();
-        runIFS();
-        enforce_constraints();
-        draw();
+        if(hq_mode) {
+            document.getElementById('hq_mode_button').value = "Rendering...";
+        }
+        setTimeout(() => { // (delay to allow the button text to update)
+                clearIFS();
+                runIFS();
+                draw();
+                if(hq_mode) {
+                    document.getElementById('hq_mode_button').value = "High quality mode: ON";
+                }
+            }, 1);
     }
     else {
         // find the closest point, if within a minimum radius
@@ -740,9 +747,17 @@ function onHighQualityModeButton(element) {
         num_ifs_iterations = 100000;
         inc = 100;
     }
-    clearIFS();
-    runIFS();
-    draw();
+    if(hq_mode) {
+        element.value = "Rendering...";
+    }
+    setTimeout(() => { // (delay to allow the button text to update)
+            clearIFS();
+            runIFS();
+            draw();
+            if(hq_mode) {
+                element.value = "High quality mode: ON";
+            }
+        }, 1);
 }
 
 function onAnimateModeButton(element) {
@@ -846,7 +861,7 @@ input[type='button'] {
 <div style="float:left;padding-left: 20px">
 
 <p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
-<p><input type="button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
+<p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
 <p><input type="button" value="Animate control points: OFF" onclick="onAnimateModeButton(this)" /></p>
 
 </div>
