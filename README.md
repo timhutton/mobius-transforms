@@ -9,6 +9,11 @@ Videos showing how the drawing feature works:
 Live demo: https://timhutton.github.io/mobius-transforms/ifs.html
 [![IFS fractal](https://user-images.githubusercontent.com/647092/148929511-d36615ad-322b-4e82-9f33-5983493a6ba2.png)](https://timhutton.github.io/mobius-transforms/ifs.html)
 
+For higher resolution images, there's a GPU version here: https://observablehq.com/@timhutton/mobius-ifs
+
+[![mobius_ifs_observable7](https://user-images.githubusercontent.com/647092/149247664-d9f6f0c3-e386-4280-a6ac-48e5d48a30f6.jpg)
+](https://observablehq.com/@timhutton/mobius-ifs)
+
 ### More images: ###
 ![mobius_ifs3](https://user-images.githubusercontent.com/647092/148971212-415f49d5-42a1-4787-8836-3a8e0ffbbb95.png)
 ![mobius_ifs4](https://user-images.githubusercontent.com/647092/148971221-e75ca8d5-5cc4-456a-a0df-fbc62d0470da.png)
