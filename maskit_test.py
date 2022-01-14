@@ -35,7 +35,7 @@ for i in range(num_pts):
     pts[i] = p
 
 # approach 2: start with points from a region, iterate a few times
-# (fast on a GPU but has ghosting effects on systems with sharp limit sets like Maskit)
+# (would be fast on a GPU but has ghosting effects on systems with sharp limit sets like Maskit)
 pts2 = []
 ps = np.random.uniform(low=-5, high=5, size=(n)) + 1j * np.random.uniform(low=-5, high=5, size=(n))
 for it in range(m):
