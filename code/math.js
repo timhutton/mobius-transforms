@@ -82,6 +82,18 @@ function mobius_on_circle(m, c) {
     return {p:q, r:s};
 }
 
+function complex_solve_quadratic( a, b, c ) {
+    // return both solutions of ax^2 + bx + c = 0
+    var sqrt_term = sqrt_complex( sub( mul_complex( b, b ), mul( mul_complex( a, c ), 4.0 ) ) );
+    var x1 = div_complex( add( mul( b, -1.0 ), sqrt_term ),  mul( a, 2.0 ) );
+    var x2 = div_complex( sub( mul( b, -1.0 ), sqrt_term ),  mul( a, 2.0 ) );
+    return [ x1, x2 ];
+}
+
+function complex_apply_quadratic( x, a, b, c ) {
+    return add( add( mul_complex( a, mul_complex( x, x ) ), mul_complex( b, x ) ), c );
+}
+
 function pair_circles(a, b) {
     // return the Mobius transformation that pairs these two circles. Indra's Pearls, p.90
     var P = a.p;

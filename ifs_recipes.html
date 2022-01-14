@@ -177,6 +177,13 @@ function init() {
 
     draw_control_points = true;
 
+    recipe = "theta-Schottky"
+    control_points = [ p2(0.6, 0.5) ];
+    recipe = "gasket"
+    control_points = [];
+    recipe = "Grandma's recipe"
+    control_points = [ p2(1.87, 0.1), p2(1.87, -0.1) ];
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     image = ctx.getImageData(0, 0, canvas.width, canvas.height);
     pixels = image.data;
@@ -322,25 +329,53 @@ function clearIFS() {
 
 function runIFS() {
 
-    // construct the four Mobius transformations we will be using
-    var transforms = [];
-    for( var i = 0; i < 2; i++) {
-        transforms.push( [control_points[i * 4 + 0], control_points[i * 4 + 1], control_points[i * 4 + 2], control_points[i * 4 + 3]] );
-    }
-    transforms[2] = get_mobius_inverse( transforms[0] );
-    transforms[3] = get_mobius_inverse( transforms[1] );
-    // run IFS
-    var p = p2(0.0,0.0);
-    for( var i = 0; i < num_ifs_iterations; i++) {
-        p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
-        var sp = toScreen( p );
-        if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-            var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-            // sort of log-mapping: pixels get darker at a slower rate the darker they get
-            // avoids saturating too much
-            var gray = pixels[pixel_offset + 0];
-            if( Math.random() < gray / 255.0 ) {
-                pixels[pixel_offset + 0] = pixels[pixel_offset + 1] = pixels[pixel_offset + 2] = Math.max( 0, gray - inc );
+    // for recipes that use a solution of a quadratic equation, we don't know which one to use, so use both
+    for( var which_solution = 0; which_solution < 2; which_solution++ ) {
+
+        // construct the four Mobius transformations we will be using
+        var transforms = [];
+        if( recipe == "theta-Schottky" ) {
+            // Indra's Pearls, page 118
+            var theta = Math.atan2( control_points[0].y, control_points[0].x );
+            var sin_theta = Math.sin( theta );
+            var cos_theta = Math.cos( theta );
+            transforms[0] = [ p2( 1.0 / sin_theta, 0.0 ), p2( 0.0, cos_theta / sin_theta), p2( 0.0, -cos_theta / sin_theta ), p2( 1.0 / sin_theta, 0.0 ) ];
+            transforms[1] = [ p2( 1.0 / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( 1.0 / sin_theta, 0.0 ) ];
+        }
+        else if( recipe == "gasket" ) {
+            transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
+            transforms[1] = [ p2( 1.0, -1.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, 1.0 ) ];
+        }
+        else if( recipe == "Grandma's recipe" ) {
+            var t_a = control_points[0];
+            var t_b = control_points[1];
+            // solve x^2 - t_a * t_b * x + t_a^2 + t_b^2 = 0 for x
+            var solutions = complex_solve_quadratic( p2( 1.0, 0.0 ), mul( mul_complex( t_a, t_b ), -1.0 ), add( mul_complex( t_a, t_a ), mul_complex( t_b, t_b ) ) );
+            var t_ab = solutions[which_solution]; // pick one
+            var z0 = div_complex( mul_complex( sub( t_ab, p2( 2.0, 0.0 ) ), t_b ),
+                                  add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( p2( 0.0, 2.0 ), t_ab ) ) );
+            transforms[0] = [ mul( t_a, 0.5 ),
+                              div_complex( add( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), p2( 0.0, 4.0 ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
+                              div_complex( mul_complex( sub( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), p2( 0.0, 4.0 ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
+                              mul( t_a, 0.5 ) ];
+            transforms[1] = [ mul( sub( t_b, p2( 0.0, 2.0 ) ), 0.5 ), mul( t_b, 0.5 ), mul( t_b, 0.5 ), mul( add( t_b, p2( 0.0, 2.0 ) ), 0.5 ) ];
+        }
+        transforms[2] = get_mobius_inverse( transforms[0] );
+        transforms[3] = get_mobius_inverse( transforms[1] );
+
+        // run IFS
+        var p = p2(0.0,0.0);
+        for( var i = 0; i < num_ifs_iterations; i++) {
+            p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
+            var sp = toScreen( p );
+            if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+                var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+                // sort of log-mapping: pixels get darker at a slower rate the darker they get
+                // avoids saturating too much
+                var val = pixels[pixel_offset + which_solution];
+                if( Math.random() < val / 255.0 ) {
+                    pixels[pixel_offset + which_solution] = Math.max( 0, val - inc );
+                }
             }
         }
     }
@@ -378,9 +413,11 @@ input[type='button'] {
 
 <div style="clear:both">
 
-<p>The image shows the points generated by an <a href="https://en.wikipedia.org/wiki/Iterated_function_system">IFS</a> using four <a href="index.html">Möbius transformations</a>. Two of the transformations are controlled by points A-H - try dragging them around. The other two are inverses of the first two.</p>
+<p>This is work in progress. Get in touch if you have questions.</p>
 
-<p>See <a href="http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf">a paper by Jos Leys</a> for details of a better way to render these images. See <a href="ifs.html">this page</a> for a more general Möbius-IFS system.</p>
+<p>The image shows the points generated by an <a href="https://en.wikipedia.org/wiki/Iterated_function_system">IFS</a> using four <a href="index.html">Möbius transformations</a>. Try dragging the control points around.</p>
+
+<p>See the book Indra's Pearls for details of what this is about. See <a href="ifs.html">this page</a> for a more general Möbius-IFS system.</p>
 
 <hr>
 
