@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script src="code/math.js"></script>
+<script>
+
+function toScreen( p ) {
+    return add( origin_screen, complex_conjugate( mul( p, scale ) ) );
+}
+
+function fromScreen( p ) {
+    return mul( complex_conjugate( sub( p, origin_screen ) ), 1.0 / scale );
+}
+
+function inViewingFrustrum( p ) {
+    return true;
+}
+
+function getMousePos(canvas, evt) {
+    var rect = canvas.getBoundingClientRect();
+    return p2( evt.clientX - rect.left, evt.clientY - rect.top );
+}
+
+function onMouseMove( evt ) {
+    var pos = getMousePos( canvas, evt );
+    onMove( pos );
+}
+
+function onTouchMove( evt ) {
+    if( point_is_being_dragged )
+        evt.preventDefault();
+    onMove( fixTouch( evt.changedTouches[0] ) );
+}
+
+function onMove( pos ) {
+    if( point_is_being_dragged ) {
+        control_points[ i_point ] = fromScreen( add( pos, drag_offset ) );
+        if(hq_mode) {
+            document.getElementById('hq_mode_button').value = "Rendering...";
+        }
+        setTimeout(() => { // (delay to allow the button text to update)
+                clearIFS();
+                runIFS();
+                draw();
+                if(hq_mode) {
+                    document.getElementById('hq_mode_button').value = "High quality mode: ON";
+                }
+            }, 1);
+    }
+    else {
+        // find the closest point, if within a minimum radius
+        var iClosest = -1;
+        var closest_dist2 = touch_radius * touch_radius;
+        var num_control_points = control_points.length;
+        for( var i = 0; i < num_control_points; i++ ) {
+            var d2 = dist2( pos, toScreen( control_points[ i ] ) );
+            if( d2 < closest_dist2 ) {
+                closest_dist2 = d2;
+                iClosest = i;
+            }
+        }
+        if( iClosest >= 0 ) {
+            point_is_highlighted = true;
+            i_point = iClosest;
+            draw();
+        }
+        else if( point_is_highlighted ) {
+            point_is_highlighted = false;
+            draw();
+        }
+    }
+}
+
+function onMouseDown( evt ) {
+    var pos = getMousePos( canvas, evt );
+    onDown( pos );
+}
+
+function onTouchStart( evt ) {
+    onDown( fixTouch( evt.changedTouches[0] ) );
+}
+
+function onDown( pos ) {
+    // find the closest point, if within a minimum radius
+    var iClosest = -1;
+    var closest_dist2 = touch_radius * touch_radius;
+    var num_control_points = control_points.length;
+    for( var i = 0; i < num_control_points; i++ ) {
+        var d2 = dist2( pos, toScreen( control_points[ i ] ) );
+        if( d2 < closest_dist2 ) {
+            closest_dist2 = d2;
+            iClosest = i;
+        }
+    }
+    if( iClosest >= 0 ) {
+        point_is_being_dragged = true;
+        point_is_highlighted = false;
+        i_point = iClosest;
+        drag_offset = sub( toScreen( control_points[ i_point ] ), pos );
+        draw();
+    }
+    else if( point_is_being_dragged ) {
+        point_is_being_dragged = false;
+        draw();
+    }
+    else if( point_is_highlighted ) {
+        point_is_highlighted = false;
+        draw();
+    }
+}
+
+function onMouseUp( evt ) {
+    if( point_is_highlighted || point_is_being_dragged ) {
+        point_is_highlighted = point_is_being_dragged = false;
+        draw();
+    }
+    is_mouse_down = false;
+}
+
+// thanks to: http://stackoverflow.com/a/12714084/126823
+function fixTouch (touch) {
+    var winPageX = window.pageXOffset,
+        winPageY = window.pageYOffset,
+        x = touch.clientX,
+        y = touch.clientY;
+
+    if (touch.pageY === 0 && Math.floor(y) > Math.floor(touch.pageY) ||
+        touch.pageX === 0 && Math.floor(x) > Math.floor(touch.pageX)) {
+        // iOS4 clientX/clientY have the value that should have been
+        // in pageX/pageY. While pageX/page/ have the value 0
+        x = x - winPageX;
+        y = y - winPageY;
+    } else if (y < (touch.pageY - winPageY) || x < (touch.pageX - winPageX) ) {
+        // Some Android browsers have totally bogus values for clientX/Y
+        // when scrolling/zooming a page. Detectable since clientX/clientY
+        // should never be smaller than pageX/pageY minus page scroll
+        x = touch.pageX - winPageX;
+        y = touch.pageY - winPageY;
+    }
+    var rect = canvas.getBoundingClientRect();
+    return p2( x - rect.left, y - rect.top );
+}
+
+function init() {
+    canvas = document.getElementById('canvas');
+    ctx = canvas.getContext('2d');
+    canvas_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
+
+    canvas.addEventListener( 'mousemove', onMouseMove, false );
+    canvas.addEventListener( 'touchmove', onTouchMove, false );
+    canvas.addEventListener( 'mousedown',  onMouseDown, false );
+    canvas.addEventListener( 'touchstart',  onTouchStart, false );
+    canvas.addEventListener( 'mouseup',  onMouseUp, false );
+    canvas.addEventListener( 'mouseout',  onMouseUp, false );
+    canvas.addEventListener( 'touchend',  onMouseUp, false );
+    canvas.addEventListener( 'touchcancel',  onMouseUp, false );
+
+    control_points = [ p2(2.0, 0.0), p2(0.0, -1.0), p2(0.0, -1.0), p2(0.0, 0.0),      // a: z -> (tz-i)/(-iz) for t=2
+                       p2(1.0, 0.0), p2(2.0, 0.0),  p2(0.0, 0.0),  p2(1.0, 0.0)];     // b: z -> z + 2
+
+    velocities = [];
+    for(var i = 0; i < control_points.length; i++) {
+        var dir = Math.random() * 2.0 * Math.PI;
+        velocities.push( p2( Math.cos( dir ) * 0.005, Math.sin( dir ) * 0.005 ) );
+    }
+
+    origin_screen = p2( canvas.width/2, canvas.height/2 );
+    scale = Math.min( canvas.width, canvas.height ) / 4.5;
+
+    point_is_highlighted = false;
+    point_is_being_dragged = false;
+    i_point = -1;
+    grab_offset = p2( 0, 0 );
+
+    touch_radius = 50;
+
+    draw_control_points = true;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    pixels = image.data;
+
+    hq_mode = false;
+    num_ifs_iterations = 100000;
+    inc = 100;
+    clearIFS();
+    runIFS();
+
+    draw();
+
+    move_points = false;
+    animate();
+}
+
+function drawPoint( p, r, t, t_offset ) {
+    ctx.beginPath();
+    ctx.arc( p.x, p.y, r, 0, 2.0 * Math.PI );
+    ctx.fillText( t, p.x + t_offset.x - 5, p.y - t_offset.y );
+    ctx.fill();
+}
+
+function draw() {
+
+    // draw ifs
+    ctx.putImageData(image, 0, 0);
+
+    var extent = 6;
+
+    // draw the axes
+    if( draw_control_points ) {
+        ctx.strokeStyle = "rgba(0,0,0,0.2)";
+        ctx.beginPath();
+        drawLine( p2( -extent, 0 ), p2( extent, 0 ) );
+        drawLine( p2( 0, -extent ), p2( 0, extent ) );
+        // unit marks
+        for( var i = -extent; i <= extent; i++ ) {
+            drawLine( p2( i, -0.05 ), p2( i, 0.05 ) );
+            drawLine( p2( -0.05, i ), p2( 0.05, i ) );
+        }
+        ctx.stroke();
+    }
+
+    // draw the control points
+    if( draw_control_points ) {
+        ctx.font="22px Arial";
+        var rest_color = "rgb(0,0,0)";
+        var highlighted_color = "rgb(0,255,255)";
+        var dragging_color = "rgb(0,255,0)";
+        var num_moveable_control_points = control_points.length;
+        for( var i = 0; i < control_points.length; i++ ) {
+            if( point_is_highlighted && i_point == i )
+                ctx.fillStyle = ctx.strokeStyle = highlighted_color;
+            else if( point_is_being_dragged && i_point == i )
+                ctx.fillStyle = ctx.strokeStyle = dragging_color;
+            else
+                ctx.fillStyle = ctx.strokeStyle = rest_color;
+            var radius = ( i < num_moveable_control_points ) ? 4 : 2;
+            var offset = p2( 20.0 * Math.cos(i * Math.PI), 20.0 * Math.sin(i * Math.PI) );
+            drawPoint( toScreen( control_points[ i ] ), radius, String.fromCharCode(65 + i), offset );
+        }
+    }
+}
+
+function drawLine( a, b ) {
+    var sa = toScreen( a );
+    var sb = toScreen( b );
+    ctx.moveTo( sa.x, sa.y );
+    ctx.lineTo( sb.x, sb.y );
+}
+
+function onDrawControlPointsButton(element) {
+    draw_control_points = !draw_control_points;
+    element.value = draw_control_points ? "Draw control points: ON" : "Draw control points: OFF";
+    draw();
+}
+
+function onHighQualityModeButton(element) {
+    hq_mode = !hq_mode;
+    element.value = hq_mode ? "High quality mode: ON" : "High quality mode: OFF";
+    if( hq_mode ) {
+        num_ifs_iterations = 100000000;
+        inc = 1;
+    }
+    else {
+        num_ifs_iterations = 100000;
+        inc = 100;
+    }
+    if(hq_mode) {
+        element.value = "Rendering...";
+    }
+    setTimeout(() => { // (delay to allow the button text to update)
+            clearIFS();
+            runIFS();
+            draw();
+            if(hq_mode) {
+                element.value = "High quality mode: ON";
+            }
+        }, 1);
+}
+
+function onAnimateModeButton(element) {
+    move_points = !move_points;
+    element.value = move_points ? "Animate control points: ON" : "Animate control points: OFF";
+    draw();
+    if( move_points) {
+        animate();
+    }
+}
+
+function animate( currentFrameTime ) {
+    if( move_points ) {
+        for( var i = 0; i < control_points.length; i++) {
+            control_points[i] = add( control_points[i], velocities[i] );
+            if( control_points[i].x < -2 ) {
+                control_points[i].x = -4.0 - control_points[i].x;
+                velocities[i].x *= -1.0;
+            }
+            else if( control_points[i].x > 2 ) {
+                control_points[i].x = 4.0 - control_points[i].x;
+                velocities[i].x *= -1.0;
+            }
+            if( control_points[i].y < -2 ) {
+                control_points[i].y = -4.0 - control_points[i].y;
+                velocities[i].y *= -1.0;
+            }
+            else if( control_points[i].y > 2 ) {
+                control_points[i].y = 4.0 - control_points[i].y;
+                velocities[i].y *= -1.0;
+            }
+        }
+        clearIFS();
+        runIFS();
+        draw();
+        requestAnimationFrame( animate );
+    }
+}
+
+function clearIFS() {
+    pixels.fill( 255 );
+}
+
+function runIFS() {
+
+    // construct the four Mobius transformations we will be using
+    var transforms = [];
+    for( var i = 0; i < 2; i++) {
+        transforms.push( [control_points[i * 4 + 0], control_points[i * 4 + 1], control_points[i * 4 + 2], control_points[i * 4 + 3]] );
+    }
+    transforms[2] = get_mobius_inverse( transforms[0] );
+    transforms[3] = get_mobius_inverse( transforms[1] );
+    // run IFS
+    var p = p2(0.0,0.0);
+    for( var i = 0; i < num_ifs_iterations; i++) {
+        p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
+        var sp = toScreen( p );
+        if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+            var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+            // sort of log-mapping: pixels get darker at a slower rate the darker they get
+            // avoids saturating too much
+            var gray = pixels[pixel_offset + 0];
+            if( Math.random() < gray / 255.0 ) {
+                pixels[pixel_offset + 0] = pixels[pixel_offset + 1] = pixels[pixel_offset + 2] = Math.max( 0, gray - inc );
+            }
+        }
+    }
+}
+
+window.onload = init;
+</script>
+
+<noscript>
+<p>For full functionality of this site it is necessary to enable JavaScript.
+Here are the <a href="http://www.enable-javascript.com/" target="_blank">
+instructions how to enable JavaScript in your web browser</a>.
+</p></noscript>
+
+<style>
+input[type='button'] {
+    font-size: 20px;
+    font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
+}
+</style>
+
+</head>
+
+<body>
+
+<div style="float:left;touch-action:none"><p><canvas id="canvas" width="700" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
+
+<div style="float:left;padding-left: 20px">
+
+<p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
+<p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
+<p><input type="button" value="Animate control points: OFF" onclick="onAnimateModeButton(this)" /></p>
+
+</div>
+
+<div style="clear:both">
+
+<p>The image shows the points generated by an <a href="https://en.wikipedia.org/wiki/Iterated_function_system">IFS</a> using four <a href="index.html">Möbius transformations</a>. Two of the transformations are controlled by points A-H - try dragging them around. The other two are inverses of the first two.</p>
+
+<p>See <a href="http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf">a paper by Jos Leys</a> for details of a better way to render these images. See <a href="ifs.html">this page</a> for a more general Möbius-IFS system.</p>
+
+<hr>
+
+<p>Source code: <a href="https://github.com/timhutton/mobius-transforms">https://github.com/timhutton/mobius-transforms</a></p>
+
+</div>
+
+</html>
