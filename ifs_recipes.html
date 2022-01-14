@@ -156,11 +156,8 @@ function init() {
     canvas.addEventListener( 'touchend',  onMouseUp, false );
     canvas.addEventListener( 'touchcancel',  onMouseUp, false );
 
-    control_points = [ p2(2.0, 0.0), p2(0.0, -1.0), p2(0.0, -1.0), p2(0.0, 0.0),      // a: z -> (tz-i)/(-iz) for t=2
-                       p2(1.0, 0.0), p2(2.0, 0.0),  p2(0.0, 0.0),  p2(1.0, 0.0)];     // b: z -> z + 2
-
     velocities = [];
-    for(var i = 0; i < control_points.length; i++) {
+    for(var i = 0; i < 10; i++) {
         var dir = Math.random() * 2.0 * Math.PI;
         velocities.push( p2( Math.cos( dir ) * 0.005, Math.sin( dir ) * 0.005 ) );
     }
@@ -177,12 +174,26 @@ function init() {
 
     draw_control_points = true;
 
-    recipe = "theta-Schottky"
-    control_points = [ p2(0.6, 0.5) ];
-    recipe = "gasket"
-    control_points = [];
-    recipe = "Grandma's recipe"
-    control_points = [ p2(1.87, 0.1), p2(1.87, -0.1) ];
+    // initialise the recipes
+    recipes = [];
+    recipes.push( { label: "theta-Schottky", control_points: [ p2(0.6, 0.5) ] } );
+    recipes.push( { label: "gasket", control_points: [] } );
+    recipes.push( { label: "Grandma's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ] } );
+    recipes.push( { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ] } );
+    recipes.push( { label: "Jorgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ] } );
+    //recipes.push( { label: "Grandma's four-alarm special", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1), p2(2.2, 0.0) ] } );
+    var recipes_dropdown = document.getElementById('recipes_dropdown');
+    for( var i = 0; i < recipes.length; i++ ) {
+        var el = document.createElement("option");
+        el.textContent = recipes[i].label;
+        el.value = recipes[i].label;
+        recipes_dropdown.appendChild(el);
+    }
+
+    // default recipe:
+    iRecipe = 2;
+    recipes_dropdown.selectedIndex = iRecipe;
+    control_points = recipes[ iRecipe ].control_points;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     image = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -216,7 +227,7 @@ function draw() {
 
     // draw the axes
     if( draw_control_points ) {
-        ctx.strokeStyle = "rgba(0,0,0,0.2)";
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
         ctx.beginPath();
         drawLine( p2( -extent, 0 ), p2( extent, 0 ) );
         drawLine( p2( 0, -extent ), p2( 0, extent ) );
@@ -231,7 +242,7 @@ function draw() {
     // draw the control points
     if( draw_control_points ) {
         ctx.font="22px Arial";
-        var rest_color = "rgb(0,0,0)";
+        var rest_color = "rgb(255,255,255)";
         var highlighted_color = "rgb(0,255,255)";
         var dragging_color = "rgb(0,255,0)";
         var num_moveable_control_points = control_points.length;
@@ -295,6 +306,14 @@ function onAnimateModeButton(element) {
     }
 }
 
+function onRecipeChanged(element) {
+    iRecipe = recipes_dropdown.selectedIndex;
+    control_points = recipes[ iRecipe ].control_points;
+    clearIFS();
+    runIFS();
+    draw();
+}
+
 function animate( currentFrameTime ) {
     if( move_points ) {
         for( var i = 0; i < control_points.length; i++) {
@@ -324,7 +343,12 @@ function animate( currentFrameTime ) {
 }
 
 function clearIFS() {
-    pixels.fill( 255 );
+    for( var i = 0; i < image.width * image.height; i++) {
+        image.data[ i*4 + 0 ] = 0;
+        image.data[ i*4 + 1 ] = 0;
+        image.data[ i*4 + 2 ] = 0;
+        image.data[ i*4 + 3 ] = 255;
+    }
 }
 
 function runIFS() {
@@ -334,6 +358,7 @@ function runIFS() {
 
         // construct the four Mobius transformations we will be using
         var transforms = [];
+        var recipe = recipes[ iRecipe ].label;
         if( recipe == "theta-Schottky" ) {
             // Indra's Pearls, page 118
             var theta = Math.atan2( control_points[0].y, control_points[0].x );
@@ -347,6 +372,7 @@ function runIFS() {
             transforms[1] = [ p2( 1.0, -1.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, 1.0 ) ];
         }
         else if( recipe == "Grandma's recipe" ) {
+            // Indra's Pearls, p. 227
             var t_a = control_points[0];
             var t_b = control_points[1];
             // solve x^2 - t_a * t_b * x + t_a^2 + t_b^2 = 0 for x
@@ -359,6 +385,37 @@ function runIFS() {
                               div_complex( mul_complex( sub( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), p2( 0.0, 4.0 ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
                               mul( t_a, 0.5 ) ];
             transforms[1] = [ mul( sub( t_b, p2( 0.0, 2.0 ) ), 0.5 ), mul( t_b, 0.5 ), mul( t_b, 0.5 ), mul( add( t_b, p2( 0.0, 2.0 ) ), 0.5 ) ];
+        }
+        else if( recipe == "Riley's recipe" ) {
+            // Indra's Pearls, p. 258
+            var c = control_points[0];
+            transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0 ), c,              p2( 1.0, 0.0 ) ];
+            transforms[1] = [ p2( 1.0, 0.0 ), p2( 2.0, 0.0 ), p2( 0.0, 0.0 ), p2( 1.0, 0.0 ) ];
+        }
+        else if( recipe == "Jorgensen's recipe" ) {
+            // Indra's Pearls, p. 256
+            var t_a = control_points[0];
+            var t_b = control_points[1];
+            // solve x^2 - t_a * t_b * x + t_a^2 + t_b^2 = 0 for x
+            var solutions = complex_solve_quadratic( p2( 1.0, 0.0 ), mul( mul_complex( t_a, t_b ), -1.0 ), add( mul_complex( t_a, t_a ), mul_complex( t_b, t_b ) ) );
+            var t_ab = solutions[which_solution]; // pick one
+            transforms[0] = [ sub( t_a, div_complex( t_b, t_ab ) ), div_complex( t_a, mul_complex( t_ab, t_ab ) ), t_a, div_complex( t_b, t_ab ) ];
+            transforms[1] = [ sub( t_b, div_complex( t_a, t_ab ) ), mul( div_complex( t_b, mul_complex( t_ab, t_ab ) ), -1.0 ), mul( t_b, -1.0 ), div_complex( t_a, t_ab ) ];
+        }
+        else if( recipe == "Grandma's four-alarm special" ) {
+            // Indra's Pearls, p. 260
+            var t_a = control_points[0];
+            var t_b = control_points[1];
+            var t_ab = control_points[2];
+            var t_C = sub( sub( add( add( mul_complex( t_a, t_a ), mul_complex( t_b, t_b ) ), mul_complex( t_ab, t_ab ) ), mul_complex( mul_complex( t_a, t_b ), t_ab ) ), p2(2.0, 0.0) );
+            var Q = sqrt_complex( sub( p2( 2.0, 0.0 ), t_C ) );
+            var sign = 1.0;
+            var sqrt_tc_plus_2 = sqrt_complex( add( t_C, p2( 2.0, 0.0 ) ) );
+            if( magnitude( add( t_C, mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), sqrt_tc_plus_2 ) ) ) < 2.0 ) {
+                sign = -1.0;
+            }
+            var R = mul( sqrt_tc_plus_2, sign );
+            //transforms[0] = [ mul( t_a, 0.5), // ugh, I'm tired. TODO
         }
         transforms[2] = get_mobius_inverse( transforms[0] );
         transforms[3] = get_mobius_inverse( transforms[1] );
@@ -373,8 +430,8 @@ function runIFS() {
                 // sort of log-mapping: pixels get darker at a slower rate the darker they get
                 // avoids saturating too much
                 var val = pixels[pixel_offset + which_solution];
-                if( Math.random() < val / 255.0 ) {
-                    pixels[pixel_offset + which_solution] = Math.max( 0, val - inc );
+                if( Math.random() > val / 255.0 ) {
+                    pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
                 }
             }
         }
@@ -391,9 +448,10 @@ instructions how to enable JavaScript in your web browser</a>.
 </p></noscript>
 
 <style>
-input[type='button'] {
+input[type='button'], select, label {
     font-size: 20px;
     font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
+    padding-right: 7px;
 }
 </style>
 
@@ -408,6 +466,7 @@ input[type='button'] {
 <p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
 <p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
 <p><input type="button" value="Animate control points: OFF" onclick="onAnimateModeButton(this)" /></p>
+<p><label for="recipes_dropdown">Choose a recipe:</label><select id="recipes_dropdown" onchange="onRecipeChanged(this)" /></p>
 
 </div>
 
