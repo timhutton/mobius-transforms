@@ -26,7 +26,7 @@ n = 1000
 m = 100
 
 # approach 1: start with a single point, iterate many times and collect the values
-# (looks good but this approach won't work well on a GPU)
+# (looks good but won't be fast on a GPU)
 p = datatype(0.01+0.01j)
 num_pts = n * m
 pts = np.empty( (num_pts), dtype=datatype )
@@ -35,7 +35,7 @@ for i in range(num_pts):
     pts[i] = p
 
 # approach 2: start with points from a region, iterate a few times
-# (works well on a GPU but has ghosting effects on systems with sharp limit sets like Maskit)
+# (fast on a GPU but has ghosting effects on systems with sharp limit sets like Maskit)
 pts2 = []
 ps = np.random.uniform(low=-5, high=5, size=(n)) + 1j * np.random.uniform(low=-5, high=5, size=(n))
 for it in range(m):
