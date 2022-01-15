@@ -178,6 +178,8 @@ function init() {
     theta_schottky = { label: "\u03B8-Schottky", control_points: [ p2(0.6, 0.5) ], pt_labels: [ '\u03B8' ] };
     gasket = { label: "gasket", control_points: [] };
     maskit = { label: "Maskit parameterization", control_points: [ p2(2.0, 0.0), p2(2.0, 0.0) ], pt_labels: [ 't', 'k' ] };
+    maskit2 = { label: "Maskit parameterization 2", control_points: [ p2(2.0, 0.0), p2(2.0 * Math.cos(Math.PI / 5.0), 0.0) ], pt_labels: [ 't', 'k' ] };
+    maskit3 = { label: "Maskit parameterization 3", control_points: [ p2(2.0, 0.0), p2(2.0 * Math.cos(Math.PI / 4.0), 0.0) ], pt_labels: [ 't', 'k' ] };
     grandma = {
         label: "Grandma's recipe",
         control_points: [ p2(2.4, 0.0), p2(2.4, 0.0) ],
@@ -186,7 +188,7 @@ function init() {
     riley = { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ], pt_labels: [ 'c' ] };
     jorgensen = { label: "Jorgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ] };
     special = { label: "Grandma's four-alarm special", control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ], pt_labels: [ 'ta', 'tb', 't_ab' ] };
-    recipes = [ theta_schottky, gasket, maskit, grandma, riley, jorgensen, special ];
+    recipes = [ theta_schottky, gasket, maskit, maskit2, maskit3, grandma, riley, jorgensen, special ];
     var recipes_dropdown = document.getElementById('recipes_dropdown');
     for( var i = 0; i < recipes.length; i++ ) {
         var el = document.createElement("option");
@@ -196,7 +198,7 @@ function init() {
     }
 
     // default recipe:
-    iRecipe = 3;
+    iRecipe = 5;
     recipes_dropdown.selectedIndex = iRecipe;
     control_points = [];
     for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
@@ -208,6 +210,10 @@ function init() {
     pixels = image.data;
 
     plot_solution = [ true, true ];
+    document.getElementById("which_solution_dropdown").selectedIndex = 2;
+
+    plot_method = [ true, true ];
+    document.getElementById("which_method_dropdown").selectedIndex = 1;
 
     hq_mode = false;
     num_ifs_iterations = 100000;
@@ -346,6 +352,14 @@ function onWhichSolutionChanged(element) {
     draw();
 }
 
+function onWhichMethodChanged(element) {
+    plot_method[0] = element.selectedIndex == 0 || element.selectedIndex == 2;
+    plot_method[1] = element.selectedIndex == 1 || element.selectedIndex == 2;
+    clearIFS();
+    runIFS();
+    draw();
+}
+
 function animate( currentFrameTime ) {
     if( move_points ) {
         for( var i = 0; i < control_points.length; i++) {
@@ -422,7 +436,7 @@ function runIFS() {
             transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
             transforms[1] = [ p2( 1.0, -1.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, 1.0 ) ];
         }
-        else if( recipe == maskit ) {
+        else if( recipe == maskit || recipe == maskit2 || recipe == maskit3 ) {
             // Following Jos Ley's paper: http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf
             var t = control_points[0];
             var k = control_points[1];
@@ -491,7 +505,7 @@ function runIFS() {
         transforms[3] = get_mobius_inverse( transforms[1] );
 
         // run IFS
-        if( false ) {
+        if( plot_method[0] ) {
             var p = p2(0.0,0.0);
             for( var i = 0; i < num_ifs_iterations; i++) {
                 p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
@@ -509,6 +523,7 @@ function runIFS() {
         }
 
         // run DFS, Indra's Pearls, p. 152
+        if( plot_method[1] )
         {
             var fix = [];
             for(var i = 0; i < 4; i++) {
@@ -535,12 +550,12 @@ function runIFS() {
                     var iTransform = (k + 4) % 4;
                     var y = get_mobius_composed( x, transforms[iTransform] )
                     var p = mobius_on_point( y, endpt[iTransform] );
-                    if( level > 0 && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > 0.00002 ) ) {
+                    if( level > 0 && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > 0.00001 ) ) {
                         n_pts += explore_tree( y, iTransform, level-1 );
                     }
                     else {
                         var sp = toScreen( p );
-                        if( have_old_p && dist2(p, old_p) < 0.01 ) {
+                        if( have_old_p && dist2(p, old_p) < 0.01 ) { // avoid drawing lines that are too long
                             // draw line
                             if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height &&
                                 old_sp.x >= 0 && old_sp.y >=0 && old_sp.x < image.width && old_sp.y < image.height) {
@@ -606,7 +621,12 @@ input[type='button'], select, label, p {
 <p><label for="which_solution_dropdown">Which solution to plot:</label><select id="which_solution_dropdown" onchange="onWhichSolutionChanged(this)">
   <option>a</option>
   <option>b</option>
-  <option selected>both</option>
+  <option>both</option>
+</select></p>
+<p><label for="which_method_dropdown">Which method to use:</label><select id="which_method_dropdown" onchange="onWhichMethodChanged(this)">
+  <option>IFS</option>
+  <option>DFS</option>
+  <option>both</option>
 </select></p>
 <p id="num_points_text"></p>
 
