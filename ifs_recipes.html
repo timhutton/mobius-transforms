@@ -178,6 +178,7 @@ function init() {
     recipes = [];
     recipes.push( { label: "theta-Schottky", control_points: [ p2(0.6, 0.5) ] } );
     recipes.push( { label: "gasket", control_points: [] } );
+    recipes.push( { label: "Maskit parameterization", control_points: [ p2(2.0, 0.0), p2(2.0, 0.0) ] } );
     recipes.push( { label: "Grandma's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ] } );
     recipes.push( { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ] } );
     recipes.push( { label: "Jorgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ] } );
@@ -227,7 +228,7 @@ function draw() {
 
     // draw the axes
     if( draw_control_points ) {
-        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.strokeStyle = "rgba(255,255,255,0.4)";
         ctx.beginPath();
         drawLine( p2( -extent, 0 ), p2( extent, 0 ) );
         drawLine( p2( 0, -extent ), p2( 0, extent ) );
@@ -371,6 +372,13 @@ function runIFS() {
             transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
             transforms[1] = [ p2( 1.0, -1.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, 1.0 ) ];
         }
+        else if( recipe = "Maskit parameterization" ) {
+            // Following Jos Ley's paper: http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf
+            var t = control_points[0];
+            var k = control_points[1];
+            transforms[0] = [ t, p2(0.0, -1.0), p2(0.0, -1.0), p2(0.0, 0.0) ];     // a: z -> (tz-i)/(-iz)
+            transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
+        }
         else if( recipe == "Grandma's recipe" ) {
             // Indra's Pearls, p. 227
             var t_a = control_points[0];
@@ -404,6 +412,7 @@ function runIFS() {
         }
         else if( recipe == "Grandma's four-alarm special" ) {
             // Indra's Pearls, p. 260
+            // not sure this is working correctly. will need to explore when have better rendering.
             var t_a = control_points[0];
             var t_b = control_points[1];
             var t_ab = control_points[2];
@@ -465,7 +474,6 @@ instructions how to enable JavaScript in your web browser</a>.
 input[type='button'], select, label {
     font-size: 20px;
     font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
-    padding-right: 7px;
 }
 </style>
 
@@ -480,7 +488,7 @@ input[type='button'], select, label {
 <p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
 <p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
 <p><input type="button" value="Animate control points: OFF" onclick="onAnimateModeButton(this)" /></p>
-<p><label for="recipes_dropdown">Choose a recipe:</label><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
+<p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
 
 </div>
 
