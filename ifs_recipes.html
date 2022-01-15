@@ -423,7 +423,7 @@ function runIFS() {
             var t_b = control_points[1];
             var t_ab = control_points[2];
             var t_C = sub( sub( add( add( mul_complex( t_a, t_a ), mul_complex( t_b, t_b ) ), mul_complex( t_ab, t_ab ) ), mul_complex( mul_complex( t_a, t_b ), t_ab ) ), p2(2.0, 0.0) );
-            var Q = sqrt_complex( sub( p2( 2.0, 0.0 ), t_C ) );
+            var Q = mul( sqrt_complex( sub( p2( 2.0, 0.0 ), t_C ) ), which_solution==0?1.0:-1.0 );
             var sign = 1.0;
             var sqrt_tc_plus_2 = sqrt_complex( add( t_C, p2( 2.0, 0.0 ) ) );
             if( magnitude( add( t_C, mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), sqrt_tc_plus_2 ) ) ) < 2.0 ) {
