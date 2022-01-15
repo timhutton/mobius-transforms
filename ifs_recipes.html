@@ -372,7 +372,7 @@ function runIFS() {
             transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
             transforms[1] = [ p2( 1.0, -1.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, 1.0 ) ];
         }
-        else if( recipe = "Maskit parameterization" ) {
+        else if( recipe == "Maskit parameterization" ) {
             // Following Jos Ley's paper: http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf
             var t = control_points[0];
             var k = control_points[1];
@@ -436,6 +436,7 @@ function runIFS() {
                 div_complex( mul_complex( add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
                 mul( add( t_b, mul_complex( p2( 0.0, 1.0 ), Q ) ), 0.5 ) ];
         }
+        else { throw "Unsupported recipe"; }
         transforms[2] = get_mobius_inverse( transforms[0] );
         transforms[3] = get_mobius_inverse( transforms[1] );
 
