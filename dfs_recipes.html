@@ -178,7 +178,11 @@ function init() {
     theta_schottky = { label: "\u03B8-Schottky", control_points: [ p2(0.6, 0.5) ], pt_labels: [ '\u03B8' ] };
     gasket = { label: "gasket", control_points: [] };
     maskit = { label: "Maskit parameterization", control_points: [ p2(2.0, 0.0), p2(2.0, 0.0) ], pt_labels: [ 't', 'k' ] };
-    grandma = { label: "Grandma's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ] };
+    grandma = {
+        label: "Grandma's recipe",
+        //control_points: [ p2(2.4, 0.0), p2(2.4, 0.0) ],
+        control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ],
+        pt_labels: [ 'ta', 'tb' ] };
     riley = { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ], pt_labels: [ 'c' ] };
     jorgensen = { label: "Jorgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ] };
     special = { label: "Grandma's four-alarm special", control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ], pt_labels: [ 'ta', 'tb', 't_ab' ] };
@@ -192,7 +196,7 @@ function init() {
     }
 
     // default recipe:
-    iRecipe = 2;
+    iRecipe = 3;
     recipes_dropdown.selectedIndex = iRecipe;
     control_points = [];
     for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
@@ -260,6 +264,17 @@ function draw() {
             var radius = ( i < num_moveable_control_points ) ? 4 : 2;
             var offset = p2( 20.0 * Math.cos(i * Math.PI), 20.0 * Math.sin(i * Math.PI) );
             drawPoint( toScreen( control_points[ i ] ), radius, recipes[ iRecipe ].pt_labels[i], offset );
+        }
+    }
+
+    // draw fixed points?
+    if( false ) {
+        ctx.fillStyle = ctx.strokeStyle = "rgb(255, 255, 255)";
+        var f_plus, f_minus;
+        for( var i = 0; i < transforms.length; i++ ) {
+            [ f_plus, f_minus ] = get_mobius_fixed_points( transforms[i] );
+            drawPoint( toScreen( f_plus ), 2, "f+", p2(0,0) );
+            drawPoint( toScreen( f_minus ), 2, "f-", p2(0,0) );
         }
     }
 }
@@ -364,7 +379,7 @@ function runIFS() {
     for( var which_solution = 0; which_solution < 2; which_solution++ ) {
 
         // construct the four Mobius transformations we will be using
-        var transforms = [];
+        transforms = []; // order will be: a, b, A, B
         var recipe = recipes[ iRecipe ];
         if( recipe == theta_schottky ) {
             // Indra's Pearls, page 118
@@ -447,24 +462,57 @@ function runIFS() {
         transforms[3] = get_mobius_inverse( transforms[1] );
 
         // run IFS
-        var p = p2(0.0,0.0);
-        for( var i = 0; i < num_ifs_iterations; i++) {
-            p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
-            var sp = toScreen( p );
-            if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-                var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-                // sort of log-mapping: pixels get darker at a slower rate the darker they get
-                // avoids saturating too much
-                var val = pixels[pixel_offset + which_solution];
-                if( Math.random() > val / 255.0 ) {
-                    pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
+        if( false ) {
+            var p = p2(0.0,0.0);
+            for( var i = 0; i < num_ifs_iterations; i++) {
+                p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
+                var sp = toScreen( p );
+                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+                    var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+                    // sort of log-mapping: pixels get darker at a slower rate the darker they get
+                    // avoids saturating too much
+                    var val = pixels[pixel_offset + which_solution];
+                    if( Math.random() > val / 255.0 ) {
+                        pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
+                    }
                 }
             }
         }
 
-        // run DFS, p. 152
-        // TODO: get Fix+ for all transforms
-
+        // run DFS, Indra's Pearls, p. 152
+        {
+            var fix = [];
+            for(var i = 0; i < 4; i++) {
+                fix[i] = get_mobius_fixed_points( transforms[i] )[0]; // Fix+
+            }
+            function explore_tree( x, prev, level ) {
+                var n_pts = 0;
+                for( var k = prev - 1; k <= prev + 1; k++) {
+                    var iTransform = (k + 4) % 4;
+                    var y = get_mobius_composed( x, transforms[iTransform] )
+                    var circ = mobius_on_circle( y, { p: p2(0.0, 0.0), r:1.0 } ); // not sure how to get C_a etc. for arbitrary transforms
+                    if( level > 0 && circ.r > 0.002) {
+                        n_pts += explore_tree( y, iTransform, level-1 );
+                    }
+                    else {
+                        var p = mobius_on_point( y, fix[iTransform] );
+                        var sp = toScreen( p );
+                        if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+                            var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+                            pixels[pixel_offset + which_solution] = 255;
+                        }
+                        n_pts++;
+                    }
+                }
+                return n_pts;
+            };
+            var n_pts = 0;
+            var level = 10;
+            for( var k = 0; k < 4; k++) {
+                n_pts += explore_tree( transforms[k], k, level );
+            }
+            console.log('n_pts=',n_pts);
+        }
     }
 }
 
