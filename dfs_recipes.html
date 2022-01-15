@@ -514,6 +514,18 @@ function runIFS() {
             for(var i = 0; i < 4; i++) {
                 fix[i] = get_mobius_fixed_points( transforms[i] )[0]; // Fix+
             }
+            /*var begpt = [ // (unused)
+                get_mobius_fixed_points( get_mobius_composed( transforms[1], get_mobius_composed( transforms[2], get_mobius_composed( transforms[3], transforms[0] ) ) ) )[0],
+                get_mobius_fixed_points( get_mobius_composed( transforms[2], get_mobius_composed( transforms[3], get_mobius_composed( transforms[0], transforms[1] ) ) ) )[0],
+                get_mobius_fixed_points( get_mobius_composed( transforms[3], get_mobius_composed( transforms[0], get_mobius_composed( transforms[1], transforms[2] ) ) ) )[0],
+                get_mobius_fixed_points( get_mobius_composed( transforms[0], get_mobius_composed( transforms[1], get_mobius_composed( transforms[2], transforms[3] ) ) ) )[0]
+            ];*/
+            var endpt = [
+                get_mobius_fixed_points( get_mobius_composed( transforms[3], get_mobius_composed( transforms[2], get_mobius_composed( transforms[1], transforms[0] ) ) ) )[0],
+                get_mobius_fixed_points( get_mobius_composed( transforms[0], get_mobius_composed( transforms[3], get_mobius_composed( transforms[2], transforms[1] ) ) ) )[0],
+                get_mobius_fixed_points( get_mobius_composed( transforms[1], get_mobius_composed( transforms[0], get_mobius_composed( transforms[3], transforms[2] ) ) ) )[0],
+                get_mobius_fixed_points( get_mobius_composed( transforms[2], get_mobius_composed( transforms[1], get_mobius_composed( transforms[0], transforms[3] ) ) ) )[0]
+            ];
             var max_pts = 1e6; // need to stop the app becoming unresponsive
             var old_p, old_sp;
             var have_old_p = false;
@@ -522,10 +534,7 @@ function runIFS() {
                 for( var k = prev - 1; k <= prev + 1; k++) {
                     var iTransform = (k + 4) % 4;
                     var y = get_mobius_composed( x, transforms[iTransform] )
-                    var p = mobius_on_point( y, fix[iTransform] );
-                    //if( !have_old_p ) { old_p = p2( p.x, p.y ); old_sp = toScreen( old_p ); have_old_p = true; }
-                    //var circ = mobius_on_circle( y, { p: p2(0.0, 0.0), r:1.0 } ); //l not sure how to get C_a etc. for arbitrary transforms
-                    //if( level > 0 && circ.r > 0.002) {
+                    var p = mobius_on_point( y, endpt[iTransform] );
                     if( level > 0 && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > 0.00002 ) ) {
                         n_pts += explore_tree( y, iTransform, level-1 );
                     }
