@@ -2,7 +2,6 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<script src="code/drawing.js"></script>
 <script src="code/math.js"></script>
 <script>
 
@@ -520,17 +519,15 @@ function draw() {
 
     if( draw_fixed_points ) {
         ctx.fillStyle = ctx.strokeStyle = "rgb(0,0,0)";
-        var cp = control_points.slice();
-        mobius_normalize( cp );
-        var f1 = div_complex( add( sub(cp[0],cp[3]), sqrt_complex( sub( mul_complex( add(cp[0],cp[3]), add(cp[0],cp[3]) ), p2(4,0) ) ) ), mul( cp[2], 2.0 ) );
-        var f2 = div_complex( sub( sub(cp[0],cp[3]), sqrt_complex( sub( mul_complex( add(cp[0],cp[3]), add(cp[0],cp[3]) ), p2(4,0) ) ) ), mul( cp[2], 2.0 ) );
-        drawPoint( toScreen( f1 ), 2, "f1", p2(0,0) );
-        drawPoint( toScreen( f2 ), 2, "f2", p2(0,0) );
+        var f_plus, f_minus;
+        [ f_plus, f_minus ] = get_mobius_fixed_points( control_points );
+        drawPoint( toScreen( f_plus ), 2, "f+", p2(0,0) );
+        drawPoint( toScreen( f_minus ), 2, "f-", p2(0,0) );
         if( show_3D ) {
-            f1 = sphereInversion( f1, riemann_inversion_sphere );
-            f2 = sphereInversion( f2, riemann_inversion_sphere );
-            drawPoint( toScreen( f1 ), 2, "f1", p2(0,0) );
-            drawPoint( toScreen( f2 ), 2, "f2", p2(0,0) );
+            f_plus = sphereInversion( f_plus, riemann_inversion_sphere );
+            f_minus = sphereInversion( f_minus, riemann_inversion_sphere );
+            drawPoint( toScreen( f_plus ), 2, "f+", p2(0,0) );
+            drawPoint( toScreen( f_minus ), 2, "f-", p2(0,0) );
         }
     }
 

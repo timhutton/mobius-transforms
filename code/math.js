@@ -82,6 +82,27 @@ function mobius_on_circle(m, c) {
     return {p:q, r:s};
 }
 
+function get_mobius_trace( m ) {
+    return add( m[0], m[3] );
+}
+
+function get_mobius_fixed_points( T ) {
+    // Indra's Pearls, p. 84, p. 78
+    // returns [ Fix+, Fix- ] (may be the same)
+    var m = [ T[0], T[1], T[2], T[3] ];
+    mobius_normalize( m );
+    var TrT = get_mobius_trace( m );
+    var T2 = get_mobius_composed( m, m );
+    var TrT2 = get_mobius_trace( T2 );
+    var n = mul( add( TrT, sqrt_complex( sub( TrT2, p2( 4.0, 0.0 ) ) ) ), 0.5 );
+    var k = mul_complex( n, n );
+    var st2p4 = sqrt_complex( sub( mul_complex( TrT, TrT ), p2( 4.0, 0.0 ) ) );
+    var z_plus = div_complex( add( sub( m[0], m[3] ), st2p4 ), mul( m[2], 2.0 ) );
+    var z_minus = div_complex( sub( sub( m[0], m[3] ), st2p4 ), mul( m[2], 2.0 ) );
+    if( magnitude( k ) > 1.0 ) { return [ z_plus, z_minus ]; }
+    else { return [ z_minus, z_plus ]; }
+}
+
 function complex_solve_quadratic( a, b, c ) {
     // return both solutions of ax^2 + bx + c = 0
     var sqrt_term = sqrt_complex( sub( mul_complex( b, b ), mul( mul_complex( a, c ), 4.0 ) ) );
