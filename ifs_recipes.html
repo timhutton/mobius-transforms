@@ -175,14 +175,14 @@ function init() {
     draw_control_points = true;
 
     // initialise the recipes
-    recipes = [];
-    recipes.push( { label: "theta-Schottky", control_points: [ p2(0.6, 0.5) ] } );
-    recipes.push( { label: "gasket", control_points: [] } );
-    recipes.push( { label: "Maskit parameterization", control_points: [ p2(2.0, 0.0), p2(2.0, 0.0) ] } );
-    recipes.push( { label: "Grandma's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ] } );
-    recipes.push( { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ] } );
-    recipes.push( { label: "Jorgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ] } );
-    recipes.push( { label: "Grandma's four-alarm special", control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ] } );
+    theta_schottky = { label: "\u03B8-Schottky", control_points: [ p2(0.6, 0.5) ], pt_labels: [ '\u03B8' ] };
+    gasket = { label: "gasket", control_points: [] };
+    maskit = { label: "Maskit parameterization", control_points: [ p2(2.0, 0.0), p2(2.0, 0.0) ], pt_labels: [ 't', 'k' ] };
+    grandma = { label: "Grandma's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ] };
+    riley = { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ], pt_labels: [ 'c' ] };
+    jorgensen = { label: "Jorgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ] };
+    special = { label: "Grandma's four-alarm special", control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ], pt_labels: [ 'ta', 'tb', 't_ab' ] };
+    recipes = [ theta_schottky, gasket, maskit, grandma, riley, jorgensen, special ];
     var recipes_dropdown = document.getElementById('recipes_dropdown');
     for( var i = 0; i < recipes.length; i++ ) {
         var el = document.createElement("option");
@@ -256,7 +256,7 @@ function draw() {
                 ctx.fillStyle = ctx.strokeStyle = rest_color;
             var radius = ( i < num_moveable_control_points ) ? 4 : 2;
             var offset = p2( 20.0 * Math.cos(i * Math.PI), 20.0 * Math.sin(i * Math.PI) );
-            drawPoint( toScreen( control_points[ i ] ), radius, String.fromCharCode(65 + i), offset );
+            drawPoint( toScreen( control_points[ i ] ), radius, recipes[ iRecipe ].pt_labels[i], offset );
         }
     }
 }
@@ -359,8 +359,8 @@ function runIFS() {
 
         // construct the four Mobius transformations we will be using
         var transforms = [];
-        var recipe = recipes[ iRecipe ].label;
-        if( recipe == "theta-Schottky" ) {
+        var recipe = recipes[ iRecipe ];
+        if( recipe == theta_schottky ) {
             // Indra's Pearls, page 118
             var theta = Math.atan2( control_points[0].y, control_points[0].x );
             var sin_theta = Math.sin( theta );
@@ -368,18 +368,18 @@ function runIFS() {
             transforms[0] = [ p2( 1.0 / sin_theta, 0.0 ), p2( 0.0, cos_theta / sin_theta), p2( 0.0, -cos_theta / sin_theta ), p2( 1.0 / sin_theta, 0.0 ) ];
             transforms[1] = [ p2( 1.0 / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( 1.0 / sin_theta, 0.0 ) ];
         }
-        else if( recipe == "gasket" ) {
+        else if( recipe == gasket ) {
             transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
             transforms[1] = [ p2( 1.0, -1.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, 1.0 ) ];
         }
-        else if( recipe == "Maskit parameterization" ) {
+        else if( recipe == maskit ) {
             // Following Jos Ley's paper: http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf
             var t = control_points[0];
             var k = control_points[1];
             transforms[0] = [ t, p2(0.0, -1.0), p2(0.0, -1.0), p2(0.0, 0.0) ];     // a: z -> (tz-i)/(-iz)
             transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
         }
-        else if( recipe == "Grandma's recipe" ) {
+        else if( recipe == grandma ) {
             // Indra's Pearls, p. 227
             var t_a = control_points[0];
             var t_b = control_points[1];
@@ -394,13 +394,13 @@ function runIFS() {
                               mul( t_a, 0.5 ) ];
             transforms[1] = [ mul( sub( t_b, p2( 0.0, 2.0 ) ), 0.5 ), mul( t_b, 0.5 ), mul( t_b, 0.5 ), mul( add( t_b, p2( 0.0, 2.0 ) ), 0.5 ) ];
         }
-        else if( recipe == "Riley's recipe" ) {
+        else if( recipe == riley ) {
             // Indra's Pearls, p. 258
             var c = control_points[0];
             transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0 ), c,              p2( 1.0, 0.0 ) ];
             transforms[1] = [ p2( 1.0, 0.0 ), p2( 2.0, 0.0 ), p2( 0.0, 0.0 ), p2( 1.0, 0.0 ) ];
         }
-        else if( recipe == "Jorgensen's recipe" ) {
+        else if( recipe == jorgensen ) {
             // Indra's Pearls, p. 256
             var t_a = control_points[0];
             var t_b = control_points[1];
@@ -410,7 +410,7 @@ function runIFS() {
             transforms[0] = [ sub( t_a, div_complex( t_b, t_ab ) ), div_complex( t_a, mul_complex( t_ab, t_ab ) ), t_a, div_complex( t_b, t_ab ) ];
             transforms[1] = [ sub( t_b, div_complex( t_a, t_ab ) ), mul( div_complex( t_b, mul_complex( t_ab, t_ab ) ), -1.0 ), mul( t_b, -1.0 ), div_complex( t_a, t_ab ) ];
         }
-        else if( recipe == "Grandma's four-alarm special" ) {
+        else if( recipe == special ) {
             // Indra's Pearls, p. 260
             // not sure this is working correctly. will need to explore when have better rendering.
             var t_a = control_points[0];
