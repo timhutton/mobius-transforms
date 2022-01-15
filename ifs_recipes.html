@@ -194,7 +194,10 @@ function init() {
     // default recipe:
     iRecipe = 2;
     recipes_dropdown.selectedIndex = iRecipe;
-    control_points = recipes[ iRecipe ].control_points;
+    control_points = [];
+    for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
+        control_points.push( p2( recipes[ iRecipe ].control_points[i].x, recipes[ iRecipe ].control_points[i].y ) );
+    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     image = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -309,7 +312,10 @@ function onAnimateModeButton(element) {
 
 function onRecipeChanged(element) {
     iRecipe = recipes_dropdown.selectedIndex;
-    control_points = recipes[ iRecipe ].control_points;
+    control_points = [];
+    for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
+        control_points.push( p2( recipes[ iRecipe ].control_points[i].x, recipes[ iRecipe ].control_points[i].y ) );
+    }
     clearIFS();
     runIFS();
     draw();
