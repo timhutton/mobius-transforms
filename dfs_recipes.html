@@ -180,8 +180,8 @@ function init() {
     maskit = { label: "Maskit parameterization", control_points: [ p2(2.0, 0.0), p2(2.0, 0.0) ], pt_labels: [ 't', 'k' ] };
     grandma = {
         label: "Grandma's recipe",
-        //control_points: [ p2(2.4, 0.0), p2(2.4, 0.0) ],
-        control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ],
+        control_points: [ p2(2.4, 0.0), p2(2.4, 0.0) ],
+        //control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ],
         pt_labels: [ 'ta', 'tb' ] };
     riley = { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ], pt_labels: [ 'c' ] };
     jorgensen = { label: "Jorgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ] };
@@ -373,6 +373,22 @@ function clearIFS() {
     }
 }
 
+function line(x0, y0, x1, y1, func) {
+    var dx = Math.abs(x1 - x0);
+    var dy = Math.abs(y1 - y0);
+    var sx = (x0 < x1) ? 1 : -1;
+    var sy = (y0 < y1) ? 1 : -1;
+    var err = dx - dy;
+
+    while(true) {
+        func(x0, y0);
+        if ((x0 === x1) && (y0 === y1)) break;
+        var e2 = 2*err;
+        if (e2 > -dy) { err -= dy; x0  += sx; }
+        if (e2 < dx) { err += dx; y0  += sy; }
+    }
+}
+
 function runIFS() {
 
     // for recipes that use a solution of a quadratic equation, we don't know which one to use, so use both
@@ -485,33 +501,53 @@ function runIFS() {
             for(var i = 0; i < 4; i++) {
                 fix[i] = get_mobius_fixed_points( transforms[i] )[0]; // Fix+
             }
+            var old_p, old_sp;
+            var have_old_p = false;
             function explore_tree( x, prev, level ) {
                 var n_pts = 0;
                 for( var k = prev - 1; k <= prev + 1; k++) {
                     var iTransform = (k + 4) % 4;
                     var y = get_mobius_composed( x, transforms[iTransform] )
-                    var circ = mobius_on_circle( y, { p: p2(0.0, 0.0), r:1.0 } ); // not sure how to get C_a etc. for arbitrary transforms
-                    if( level > 0 && circ.r > 0.002) {
+                    var p = mobius_on_point( y, fix[iTransform] );
+                    //if( !have_old_p ) { old_p = p2( p.x, p.y ); old_sp = toScreen( old_p ); have_old_p = true; }
+                    //var circ = mobius_on_circle( y, { p: p2(0.0, 0.0), r:1.0 } ); //l not sure how to get C_a etc. for arbitrary transforms
+                    //if( level > 0 && circ.r > 0.002) {
+                    if( level > 0 && ( !have_old_p || dist2(p, old_p) > 0.00002 ) ) {
                         n_pts += explore_tree( y, iTransform, level-1 );
                     }
                     else {
-                        var p = mobius_on_point( y, fix[iTransform] );
                         var sp = toScreen( p );
-                        if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-                            var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-                            pixels[pixel_offset + which_solution] = 255;
+                        if( have_old_p && dist2(p, old_p) < 0.01 ) {
+                            // draw line
+                            if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height &&
+                                old_sp.x >= 0 && old_sp.y >=0 && old_sp.x < image.width && old_sp.y < image.height) {
+                                line( Math.floor(old_sp.x), Math.floor(old_sp.y), Math.floor(sp.x), Math.floor(sp.y), (sx, sy) => {
+                                    var pixel_offset = ( sy * image.width + sx ) * 4;
+                                    pixels[pixel_offset + which_solution] = 255;
+                                } );
+                            }
                         }
+                        else {
+                            // plot pixel
+                            if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+                                var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+                                pixels[pixel_offset + which_solution] = 255;
+                            }
+                        }
+                        old_p = p;
+                        old_sp = sp;
+                        have_old_p = true;
                         n_pts++;
                     }
                 }
                 return n_pts;
             };
             var n_pts = 0;
-            var level = 10;
+            var level = 15;
             for( var k = 0; k < 4; k++) {
                 n_pts += explore_tree( transforms[k], k, level );
             }
-            console.log('n_pts=',n_pts);
+            document.getElementById('num_points_text').textContent = "Number of points: " + n_pts;
         }
     }
 }
@@ -526,7 +562,7 @@ instructions how to enable JavaScript in your web browser</a>.
 </p></noscript>
 
 <style>
-input[type='button'], select, label {
+input[type='button'], select, label, p {
     font-size: 20px;
     font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
 }
@@ -544,6 +580,7 @@ input[type='button'], select, label {
 <p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
 <p><input type="button" value="Animate control points: OFF" onclick="onAnimateModeButton(this)" /></p>
 <p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
+<p id="num_points_text"></p>
 
 </div>
 
