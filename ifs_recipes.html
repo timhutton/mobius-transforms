@@ -181,7 +181,7 @@ function init() {
     recipes.push( { label: "Grandma's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ] } );
     recipes.push( { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ] } );
     recipes.push( { label: "Jorgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ] } );
-    //recipes.push( { label: "Grandma's four-alarm special", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1), p2(2.2, 0.0) ] } );
+    recipes.push( { label: "Grandma's four-alarm special", control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ] } );
     var recipes_dropdown = document.getElementById('recipes_dropdown');
     for( var i = 0; i < recipes.length; i++ ) {
         var el = document.createElement("option");
@@ -415,7 +415,17 @@ function runIFS() {
                 sign = -1.0;
             }
             var R = mul( sqrt_tc_plus_2, sign );
-            //transforms[0] = [ mul( t_a, 0.5), // ugh, I'm tired. TODO
+            var z0 = div_complex( mul_complex( sub( t_ab, p2( 2.0, 0.0 ) ), add( t_b, R ) ), add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ) );
+            transforms[0] = [
+                mul( t_a, 0.5 ),
+                div_complex( add( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), mul_complex( p2( 0.0, 2.0 ), Q ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
+                div_complex( mul_complex( sub( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), mul_complex( p2( 0.0, 2.0 ), Q ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
+                mul( t_a, 0.5 ) ];
+            transforms[1] = [
+                mul( sub( t_b, mul_complex( p2( 0.0, 1.0 ), Q ) ), 0.5 ),
+                div_complex( sub( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
+                div_complex( mul_complex( add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
+                mul( add( t_b, mul_complex( p2( 0.0, 1.0 ), Q ) ), 0.5 ) ];
         }
         transforms[2] = get_mobius_inverse( transforms[0] );
         transforms[3] = get_mobius_inverse( transforms[1] );
@@ -435,6 +445,10 @@ function runIFS() {
                 }
             }
         }
+
+        // run DFS, p. 152
+        // TODO: get Fix+ for all transforms
+
     }
 }
 
