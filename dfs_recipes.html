@@ -207,6 +207,8 @@ function init() {
     image = ctx.getImageData(0, 0, canvas.width, canvas.height);
     pixels = image.data;
 
+    plot_solution = [ true, true ];
+
     hq_mode = false;
     num_ifs_iterations = 100000;
     inc = 100;
@@ -336,6 +338,14 @@ function onRecipeChanged(element) {
     draw();
 }
 
+function onWhichSolutionChanged(element) {
+    plot_solution[0] = element.selectedIndex == 0 || element.selectedIndex == 2;
+    plot_solution[1] = element.selectedIndex == 1 || element.selectedIndex == 2;
+    clearIFS();
+    runIFS();
+    draw();
+}
+
 function animate( currentFrameTime ) {
     if( move_points ) {
         for( var i = 0; i < control_points.length; i++) {
@@ -391,8 +401,11 @@ function line(x0, y0, x1, y1, func) {
 
 function runIFS() {
 
+    var n_pts_plotted = 0;
+
     // for recipes that use a solution of a quadratic equation, we don't know which one to use, so use both
     for( var which_solution = 0; which_solution < 2; which_solution++ ) {
+        if(! plot_solution[which_solution] ) { continue; }
 
         // construct the four Mobius transformations we will be using
         transforms = []; // order will be: a, b, A, B
@@ -501,6 +514,7 @@ function runIFS() {
             for(var i = 0; i < 4; i++) {
                 fix[i] = get_mobius_fixed_points( transforms[i] )[0]; // Fix+
             }
+            var max_pts = 1e6; // need to stop the app becoming unresponsive
             var old_p, old_sp;
             var have_old_p = false;
             function explore_tree( x, prev, level ) {
@@ -512,7 +526,7 @@ function runIFS() {
                     //if( !have_old_p ) { old_p = p2( p.x, p.y ); old_sp = toScreen( old_p ); have_old_p = true; }
                     //var circ = mobius_on_circle( y, { p: p2(0.0, 0.0), r:1.0 } ); //l not sure how to get C_a etc. for arbitrary transforms
                     //if( level > 0 && circ.r > 0.002) {
-                    if( level > 0 && ( !have_old_p || dist2(p, old_p) > 0.00002 ) ) {
+                    if( level > 0 && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > 0.00002 ) ) {
                         n_pts += explore_tree( y, iTransform, level-1 );
                     }
                     else {
@@ -542,14 +556,13 @@ function runIFS() {
                 }
                 return n_pts;
             };
-            var n_pts = 0;
-            var level = 15;
+            var level = 22;
             for( var k = 0; k < 4; k++) {
-                n_pts += explore_tree( transforms[k], k, level );
+                n_pts_plotted += explore_tree( transforms[k], k, level );
             }
-            document.getElementById('num_points_text').textContent = "Number of points: " + n_pts;
         }
     }
+    document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted;
 }
 
 window.onload = init;
@@ -565,6 +578,7 @@ instructions how to enable JavaScript in your web browser</a>.
 input[type='button'], select, label, p {
     font-size: 20px;
     font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
+    padding-right: 5px;
 }
 </style>
 
@@ -580,6 +594,11 @@ input[type='button'], select, label, p {
 <p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
 <p><input type="button" value="Animate control points: OFF" onclick="onAnimateModeButton(this)" /></p>
 <p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
+<p><label for="which_solution_dropdown">Which solution to plot:</label><select id="which_solution_dropdown" onchange="onWhichSolutionChanged(this)">
+  <option>a</option>
+  <option>b</option>
+  <option selected>both</option>
+</select></p>
 <p id="num_points_text"></p>
 
 </div>
