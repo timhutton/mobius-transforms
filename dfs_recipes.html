@@ -178,7 +178,7 @@ function init() {
     riley = { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ], pt_labels: [ 'c' ] };
     jorgensen = { label: "Jorgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ] };
     special = { label: "Grandma's four-alarm special", control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ], pt_labels: [ 'ta', 'tb', 't_ab' ] };
-    recipes = [ theta_schottky, gasket, maskit, maskit2, maskit3, grandma, riley, jorgensen, special ];
+    recipes = [ theta_schottky, gasket, maskit, /*maskit2, maskit3,*/ grandma, riley, jorgensen, /*special*/ ];
     var recipes_dropdown = document.getElementById('recipes_dropdown');
     for( var i = 0; i < recipes.length; i++ ) {
         var el = document.createElement("option");
@@ -188,7 +188,7 @@ function init() {
     }
 
     // default recipe:
-    iRecipe = 5;
+    iRecipe = 3;
     recipes_dropdown.selectedIndex = iRecipe;
     control_points = [];
     for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
@@ -202,11 +202,13 @@ function init() {
     plot_solution = [ true, true ];
     document.getElementById("which_solution_dropdown").selectedIndex = 2;
 
-    plot_method = [ true, true ];
+    plot_method = [ false, true ];
     document.getElementById("which_method_dropdown").selectedIndex = 1;
 
+    hq_mode = false;
     num_ifs_iterations = 100000;
     inc = 100;
+    max_depth = 15;
 
     compute_and_redraw();
 
@@ -305,6 +307,22 @@ function onRecipeChanged(element) {
     compute_and_redraw();
 }
 
+function onHighQualityModeButton(element) {
+    hq_mode = !hq_mode;
+    element.value = hq_mode ? "High quality mode: ON" : "High quality mode: OFF";
+    if( hq_mode ) {
+        num_ifs_iterations = 10000000;
+        inc = 1;
+        max_depth = 30;
+    }
+    else {
+        num_ifs_iterations = 100000;
+        inc = 100;
+        max_depth = 15;
+    }
+    compute_and_redraw();
+}
+
 function onWhichSolutionChanged(element) {
     plot_solution[0] = element.selectedIndex == 0 || element.selectedIndex == 2;
     plot_solution[1] = element.selectedIndex == 1 || element.selectedIndex == 2;
@@ -348,7 +366,6 @@ function compute_and_redraw() {
     setTimeout(function() {
         clearIFS();
         runIFS();
-        document.getElementById('rendering_text').textContent = "";
         draw();
     }, 1 );
 }
@@ -379,6 +396,8 @@ function line(x0, y0, x1, y1, func) {
 }
 
 function runIFS() {
+
+    const time_start = performance.now();
 
     var n_pts_plotted = 0;
 
@@ -491,6 +510,8 @@ function runIFS() {
         // run DFS, Indra's Pearls, p. 152
         if( plot_method[1] )
         {
+            var closeness_epsilon = 0.00001; // if sequential points are closer than this we can stop searching
+            var max_line_length = 0.01; // don't want to draw lines that are too long
             var fix = [];
             for(var i = 0; i < 4; i++) {
                 fix[i] = get_mobius_fixed_points( transforms[i] )[0]; // Fix+
@@ -516,12 +537,12 @@ function runIFS() {
                     var iTransform = (k + 4) % 4;
                     var y = get_mobius_composed( x, transforms[iTransform] )
                     var p = mobius_on_point( y, endpt[iTransform] );
-                    if( level > 0 && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > 0.00001 ) ) {
+                    if( level > 0 && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > closeness_epsilon ) ) {
                         n_pts += explore_tree( y, iTransform, level-1 );
                     }
                     else {
                         var sp = toScreen( p );
-                        if( have_old_p && dist2(p, old_p) < 0.01 ) { // avoid drawing lines that are too long
+                        if( have_old_p && dist2(p, old_p) < max_line_length ) {
                             // draw line
                             if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height &&
                                 old_sp.x >= 0 && old_sp.y >=0 && old_sp.x < image.width && old_sp.y < image.height) {
@@ -546,13 +567,19 @@ function runIFS() {
                 }
                 return n_pts;
             };
-            var level = 22;
             for( var k = 0; k < 4; k++) {
-                n_pts_plotted += explore_tree( transforms[k], k, level );
+                n_pts_plotted += explore_tree( transforms[k], k, max_depth );
             }
         }
     }
-    document.getElementById('rendering_text').textContent = "";
+    const time_end = performance.now();
+    const ms_elapsed = time_end - time_start;
+    if( ms_elapsed > 1000.0 ) {
+        document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed/1000+"s";
+    }
+    else {
+        document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed+"ms";
+    }
     document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted;
 }
 
@@ -582,15 +609,16 @@ input[type='button'], select, label, p {
 <div style="float:left;padding-left: 20px">
 
 <p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
+<p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
+<p><label for="which_method_dropdown">Drawing method:</label><select id="which_method_dropdown" onchange="onWhichMethodChanged(this)">
+  <option>IFS</option>
+  <option>DFS</option>
+  <option>both</option>
+</select></p>
 <p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
 <p><label for="which_solution_dropdown">Which solution to plot:</label><select id="which_solution_dropdown" onchange="onWhichSolutionChanged(this)">
   <option>a</option>
   <option>b</option>
-  <option>both</option>
-</select></p>
-<p><label for="which_method_dropdown">Which method to use:</label><select id="which_method_dropdown" onchange="onWhichMethodChanged(this)">
-  <option>IFS</option>
-  <option>DFS</option>
   <option>both</option>
 </select></p>
 <p id="num_points_text"></p>
