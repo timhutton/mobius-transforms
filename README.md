@@ -1,7 +1,7 @@
 #### Contents: ####
-1. [Explore Möbius transformations](#1-explore-mobius-transformations)
-2. [Use Möbius transformations to make an IFS fractal](#2-use-mobius-transformations-to-make-an-IFS-fractal)
-3. [Draw the limit set of a group of Möbius transformations](#3-draw-the-limit-set-of-a-group-of-Mobius-transformations)
+1. [Explore Möbius transformations](#1-explore-möbius-transformations)
+2. [Use Möbius transformations to make an IFS fractal](#2-use-möbius-transformations-to-make-an-ifs-fractal)
+3. [Draw the limit set of a group of Möbius transformations](#3-draw-the-limit-set-of-a-group-of-möbius-transformations)
 
 # 1. Explore Möbius transformations: #
 Live demo: https://timhutton.github.io/mobius-transforms/
