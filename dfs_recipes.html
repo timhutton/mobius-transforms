@@ -375,6 +375,38 @@ function onSaveAsSVGButton(element) {
     download("dfs.svg", "image/svg+xml", svg);
 }
 
+function onSaveAsPNGButton(element) {
+    var max_image_dimension = 3000;
+    var bounds = getBounds(output_pts);
+    var scale = max_image_dimension / Math.max( bounds.width, bounds.height );
+    var width = bounds.width * scale;
+    var height = bounds.height * scale;
+    var border = 5;
+    // create a large canvas
+    var new_canvas = document.createElement('canvas');
+    new_canvas.width = width + border * 2;
+    new_canvas.height = height + border * 2;
+    var context = new_canvas.getContext('2d');
+    context.fillStyle = 'rgb(255,255,255)';
+    context.fillRect(0, 0, new_canvas.width, new_canvas.height);
+    // draw the whole loop
+    context.strokeStyle = 'rgba(0,0,0,1.0)';
+    context.beginPath();
+    var sp0 = add( mul( sub( output_pts[0], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
+    context.moveTo( sp0.x, sp0.y );
+    for(var i = 1; i < output_pts.length; i++) {
+        var sp = add( mul( sub( output_pts[i], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
+        context.lineTo( sp.x, sp.y );
+    }
+    context.lineTo( sp0.x, sp0.y );
+    context.stroke();
+    // save the png
+    var downloadLink = document.createElement('a');
+    downloadLink.download = 'dfs.png';
+    downloadLink.href = new_canvas.toDataURL();
+    downloadLink.click();
+}
+
 function animate( currentFrameTime ) {
     if( move_points ) {
         for( var i = 0; i < control_points.length; i++) {
@@ -624,6 +656,7 @@ function runIFS() {
     }
     document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted;
     document.getElementById('download_svg_button').disabled = ( output_pts.length == 0 );
+    document.getElementById('download_png_button').disabled = ( output_pts.length == 0 );
 }
 
 window.onload = init;
@@ -666,6 +699,7 @@ input[type='button'], select, label, p {
 </select></p>
 <p id="num_points_text"></p>
 <p id="rendering_text"></p>
+<p><input type="button" id="download_png_button" value="Save as PNG" onclick="onSaveAsPNGButton(this)" /></p>
 <p><input type="button" id="download_svg_button" value="Save as SVG" onclick="onSaveAsSVGButton(this)" /></p>
 
 </div>
