@@ -611,6 +611,8 @@ function runIFS() {
                         var pixel_offset = ( sy * image.width + sx ) * 4;
                         pixels[pixel_offset + which_solution] = 255;
                     } );
+                    output_pts.push( toScreen( sa ) );
+                    output_pts.push( toScreen( sb ) );
                 }
             }
             // main function to recursively search the word tree
@@ -637,7 +639,6 @@ function runIFS() {
                         }
                         draw_image_line( z1, z2 );
                         draw_image_line( z2, z3 );
-                        output_pts.push( toScreen( z2 ) );
                         n_pts++;
                     }
                 }
