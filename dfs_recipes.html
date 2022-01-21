@@ -174,10 +174,18 @@ function init() {
         label: "Grandma's recipe",
         control_points: [ p2(2.4, 0.0), p2(2.4, 0.0) ],
         //control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ],
+        //control_points: [ p2(1.958591030,-0.011278560), p2(2.0, 0.0) ], //Fig. 9.1, p. 269
+        //control_points: [ p2(1.64213876,-0.76658841), p2(2.0, 0.0) ], //Fig. 9.3, p. 272
+        //control_points: [ p2(0.136998688,1.80785524), p2(2.0, 0.0) ], //Fig. 9.16, p. 295 ?
+        //control_points: [ p2(1.5306639,-0.8501047), p2(1.5306639,0.8501047) ], //Fig. 9.19, p. 298
         pt_labels: [ 'ta', 'tb' ] };
     riley = { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ], pt_labels: [ 'c' ] };
     jorgensen = { label: "Jorgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ] };
-    special = { label: "Grandma's four-alarm special", control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ], pt_labels: [ 'ta', 'tb', 't_ab' ] };
+    special = {
+        label: "Grandma's four-alarm special",
+        control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ],
+        //control_points: [ p2(1.924781, -0.047529), p2(2.0, 0.0), p2(0.0, 0.0) ], // Fig. 11.1, p. 354 ?
+        pt_labels: [ 'ta', 'tb', 't_ab' ] };
     recipes = [ theta_schottky, gasket, maskit, /*maskit2, maskit3,*/ grandma, riley, jorgensen, /*special*/ ];
     var recipes_dropdown = document.getElementById('recipes_dropdown');
     for( var i = 0; i < recipes.length; i++ ) {
