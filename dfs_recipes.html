@@ -13,10 +13,6 @@ function fromScreen( p ) {
     return mul( complex_conjugate( sub( p, origin_screen ) ), 1.0 / scale );
 }
 
-function inViewingFrustrum( p ) {
-    return true;
-}
-
 function getMousePos(canvas, evt) {
     var rect = canvas.getBoundingClientRect();
     return p2( evt.clientX - rect.left, evt.clientY - rect.top );
@@ -166,6 +162,7 @@ function init() {
 
     // initialise the recipes
     theta_schottky = { label: "\u03B8-Schottky", control_points: [ p2(0.6, 0.5) ], pt_labels: [ '\u03B8' ] };
+    kissing_schottky = { label: "kissing Schottky", control_points: [ p2(1.0, 1.0) ], pt_labels: [ 'yv' ] };
     gasket = { label: "gasket", control_points: [] };
     maskit = { label: "Maskit parameterization", control_points: [ p2(2.0, 0.0), p2(2.0, 0.0) ], pt_labels: [ 't', 'k' ] };
     maskit2 = { label: "Maskit parameterization 2", control_points: [ p2(2.0, 0.0), p2(2.0 * Math.cos(Math.PI / 5.0), 0.0) ], pt_labels: [ 't', 'k' ] };
@@ -186,7 +183,7 @@ function init() {
         control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ],
         //control_points: [ p2(1.924781, -0.047529), p2(2.0, 0.0), p2(0.0, 0.0) ], // Fig. 11.1, p. 354 ?
         pt_labels: [ 'ta', 'tb', 't_ab' ] };
-    recipes = [ theta_schottky, gasket, maskit, /*maskit2, maskit3,*/ grandma, riley, jorgensen, /*special*/ ];
+    recipes = [ theta_schottky, kissing_schottky, gasket, maskit, /*maskit2, maskit3,*/ grandma, riley, jorgensen, /*special*/ ];
     var recipes_dropdown = document.getElementById('recipes_dropdown');
     for( var i = 0; i < recipes.length; i++ ) {
         var el = document.createElement("option");
@@ -196,7 +193,7 @@ function init() {
     }
 
     // default recipe:
-    iRecipe = 3;
+    iRecipe = 4;
     recipes_dropdown.selectedIndex = iRecipe;
     control_points = [];
     for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
@@ -488,6 +485,23 @@ function make_generators(which_solution) {
         var cos_theta = Math.cos( theta );
         transforms[0] = [ p2( 1.0 / sin_theta, 0.0 ), p2( 0.0, cos_theta / sin_theta), p2( 0.0, -cos_theta / sin_theta ), p2( 1.0 / sin_theta, 0.0 ) ];
         transforms[1] = [ p2( 1.0 / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( 1.0 / sin_theta, 0.0 ) ];
+    }
+    else if( recipe == kissing_schottky ) {
+        // Indra's Pearls, p. 170
+        var y = control_points[0].x;
+        var v = control_points[0].y;
+        var x = Math.sqrt( 1.0 + y * y );
+        var u = Math.sqrt( 1.0 + v * v );
+        // define 2/(yv) = s, then k+1/k = s
+        // hence (k*k+1)/k-s = 0
+        // hence (k*k+1-sk)/k = 0
+        // hence k*k-sk+1 = 0
+        // hence k = (s +/- sqrt(s*s-4) ) / 2
+        var s = 2.0 / ( y * v );
+        var t = Math.max( 0.0, s * s - 4.0 ); // (not sure how to handle complex k)
+        var k = ( s + [1.0, -1.0][which_solution] * Math.sqrt( t ) ) / 2.0;
+        transforms[0] = [ p2(x, 0.0), p2(y, 0.0), p2(y, 0.0), p2(x, 0.0) ];
+        transforms[1] = [ p2(u, 0.0), p2(0.0, k * v), p2(0.0, -v / k), p2(u, 0.0) ];
     }
     else if( recipe == gasket ) {
         transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
