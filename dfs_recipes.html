@@ -398,6 +398,7 @@ function onSaveAsPNGButton(element) {
     context.fillRect(0, 0, new_canvas.width, new_canvas.height);
     // draw the whole loop
     context.strokeStyle = 'rgba(0,0,0,1.0)';
+    context.fillStyle = 'rgba(255, 234, 176, 0.5)';
     context.beginPath();
     var sp0 = add( mul( sub( output_pts[0], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
     context.moveTo( sp0.x, sp0.y );
@@ -407,6 +408,7 @@ function onSaveAsPNGButton(element) {
     }
     context.lineTo( sp0.x, sp0.y );
     context.stroke();
+    context.fill();
     // save the png
     var downloadLink = document.createElement('a');
     downloadLink.download = 'dfs.png';
