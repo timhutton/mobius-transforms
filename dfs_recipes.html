@@ -436,13 +436,13 @@ function animate( currentFrameTime ) {
 function compute_and_redraw() {
     document.getElementById('rendering_text').textContent = "Rendering...";
     setTimeout(function() {
-        clearIFS();
-        runIFS();
+        clear_drawing();
+        compute();
         draw();
     }, 1 );
 }
 
-function clearIFS() {
+function clear_drawing() {
     for( var i = 0; i < image.width * image.height; i++) {
         image.data[ i*4 + 0 ] = 0;
         image.data[ i*4 + 1 ] = 0;
@@ -467,7 +467,92 @@ function line(x0, y0, x1, y1, func) {
     }
 }
 
-function runIFS() {
+function make_generators(which_solution) {
+    // construct the four Mobius transformations we will be using
+    transforms = []; // order will be: a, b, A, B
+    var recipe = recipes[ iRecipe ];
+    if( recipe == theta_schottky ) {
+        // Indra's Pearls, page 118
+        var theta = Math.atan2( control_points[0].y, control_points[0].x );
+        var sin_theta = Math.sin( theta );
+        var cos_theta = Math.cos( theta );
+        transforms[0] = [ p2( 1.0 / sin_theta, 0.0 ), p2( 0.0, cos_theta / sin_theta), p2( 0.0, -cos_theta / sin_theta ), p2( 1.0 / sin_theta, 0.0 ) ];
+        transforms[1] = [ p2( 1.0 / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( 1.0 / sin_theta, 0.0 ) ];
+    }
+    else if( recipe == gasket ) {
+        transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
+        transforms[1] = [ p2( 1.0, -1.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, 1.0 ) ];
+    }
+    else if( recipe == maskit || recipe == maskit2 || recipe == maskit3 ) {
+        // Following Jos Ley's paper: http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf
+        var t = control_points[0];
+        var k = control_points[1];
+        transforms[0] = [ t, p2(0.0, -1.0), p2(0.0, -1.0), p2(0.0, 0.0) ];     // a: z -> (tz-i)/(-iz)
+        transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
+    }
+    else if( recipe == grandma ) {
+        // Indra's Pearls, p. 227
+        var t_a = control_points[0];
+        var t_b = control_points[1];
+        // solve x^2 - t_a * t_b * x + t_a^2 + t_b^2 = 0 for x
+        var solutions = complex_solve_quadratic( p2( 1.0, 0.0 ), mul( mul_complex( t_a, t_b ), -1.0 ), add( mul_complex( t_a, t_a ), mul_complex( t_b, t_b ) ) );
+        var t_ab = solutions[which_solution]; // pick one
+        var z0 = div_complex( mul_complex( sub( t_ab, p2( 2.0, 0.0 ) ), t_b ),
+                              add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( p2( 0.0, 2.0 ), t_ab ) ) );
+        transforms[0] = [ mul( t_a, 0.5 ),
+                          div_complex( add( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), p2( 0.0, 4.0 ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
+                          div_complex( mul_complex( sub( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), p2( 0.0, 4.0 ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
+                          mul( t_a, 0.5 ) ];
+        transforms[1] = [ mul( sub( t_b, p2( 0.0, 2.0 ) ), 0.5 ), mul( t_b, 0.5 ), mul( t_b, 0.5 ), mul( add( t_b, p2( 0.0, 2.0 ) ), 0.5 ) ];
+    }
+    else if( recipe == riley ) {
+        // Indra's Pearls, p. 258
+        var c = control_points[0];
+        transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0 ), c,              p2( 1.0, 0.0 ) ];
+        transforms[1] = [ p2( 1.0, 0.0 ), p2( 2.0, 0.0 ), p2( 0.0, 0.0 ), p2( 1.0, 0.0 ) ];
+    }
+    else if( recipe == jorgensen ) {
+        // Indra's Pearls, p. 256
+        var t_a = control_points[0];
+        var t_b = control_points[1];
+        // solve x^2 - t_a * t_b * x + t_a^2 + t_b^2 = 0 for x
+        var solutions = complex_solve_quadratic( p2( 1.0, 0.0 ), mul( mul_complex( t_a, t_b ), -1.0 ), add( mul_complex( t_a, t_a ), mul_complex( t_b, t_b ) ) );
+        var t_ab = solutions[which_solution]; // pick one
+        transforms[0] = [ sub( t_a, div_complex( t_b, t_ab ) ), div_complex( t_a, mul_complex( t_ab, t_ab ) ), t_a, div_complex( t_b, t_ab ) ];
+        transforms[1] = [ sub( t_b, div_complex( t_a, t_ab ) ), mul( div_complex( t_b, mul_complex( t_ab, t_ab ) ), -1.0 ), mul( t_b, -1.0 ), div_complex( t_a, t_ab ) ];
+    }
+    else if( recipe == special ) {
+        // Indra's Pearls, p. 260
+        // not sure this is working correctly. will need to explore when have better rendering.
+        var t_a = control_points[0];
+        var t_b = control_points[1];
+        var t_ab = control_points[2];
+        var t_C = sub( sub( add( add( mul_complex( t_a, t_a ), mul_complex( t_b, t_b ) ), mul_complex( t_ab, t_ab ) ), mul_complex( mul_complex( t_a, t_b ), t_ab ) ), p2(2.0, 0.0) );
+        var Q = mul( sqrt_complex( sub( p2( 2.0, 0.0 ), t_C ) ), which_solution==0?1.0:-1.0 );
+        var sign = 1.0;
+        var sqrt_tc_plus_2 = sqrt_complex( add( t_C, p2( 2.0, 0.0 ) ) );
+        if( magnitude( add( t_C, mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), sqrt_tc_plus_2 ) ) ) < 2.0 ) {
+            sign = -1.0;
+        }
+        var R = mul( sqrt_tc_plus_2, sign );
+        var z0 = div_complex( mul_complex( sub( t_ab, p2( 2.0, 0.0 ) ), add( t_b, R ) ), add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ) );
+        transforms[0] = [
+            mul( t_a, 0.5 ),
+            div_complex( add( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), mul_complex( p2( 0.0, 2.0 ), Q ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
+            div_complex( mul_complex( sub( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), mul_complex( p2( 0.0, 2.0 ), Q ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
+            mul( t_a, 0.5 ) ];
+        transforms[1] = [
+            mul( sub( t_b, mul_complex( p2( 0.0, 1.0 ), Q ) ), 0.5 ),
+            div_complex( sub( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
+            div_complex( mul_complex( add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
+            mul( add( t_b, mul_complex( p2( 0.0, 1.0 ), Q ) ), 0.5 ) ];
+    }
+    else { throw "Unsupported recipe"; }
+    transforms[2] = get_mobius_inverse( transforms[0] );
+    transforms[3] = get_mobius_inverse( transforms[1] );
+}
+
+function compute() {
 
     const time_start = performance.now();
 
@@ -478,107 +563,7 @@ function runIFS() {
     for( var which_solution = 0; which_solution < 2; which_solution++ ) {
         if(! plot_solution[which_solution] ) { continue; }
 
-        // construct the four Mobius transformations we will be using
-        transforms = []; // order will be: a, b, A, B
-        var recipe = recipes[ iRecipe ];
-        if( recipe == theta_schottky ) {
-            // Indra's Pearls, page 118
-            var theta = Math.atan2( control_points[0].y, control_points[0].x );
-            var sin_theta = Math.sin( theta );
-            var cos_theta = Math.cos( theta );
-            transforms[0] = [ p2( 1.0 / sin_theta, 0.0 ), p2( 0.0, cos_theta / sin_theta), p2( 0.0, -cos_theta / sin_theta ), p2( 1.0 / sin_theta, 0.0 ) ];
-            transforms[1] = [ p2( 1.0 / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( 1.0 / sin_theta, 0.0 ) ];
-        }
-        else if( recipe == gasket ) {
-            transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
-            transforms[1] = [ p2( 1.0, -1.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, 1.0 ) ];
-        }
-        else if( recipe == maskit || recipe == maskit2 || recipe == maskit3 ) {
-            // Following Jos Ley's paper: http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf
-            var t = control_points[0];
-            var k = control_points[1];
-            transforms[0] = [ t, p2(0.0, -1.0), p2(0.0, -1.0), p2(0.0, 0.0) ];     // a: z -> (tz-i)/(-iz)
-            transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
-        }
-        else if( recipe == grandma ) {
-            // Indra's Pearls, p. 227
-            var t_a = control_points[0];
-            var t_b = control_points[1];
-            // solve x^2 - t_a * t_b * x + t_a^2 + t_b^2 = 0 for x
-            var solutions = complex_solve_quadratic( p2( 1.0, 0.0 ), mul( mul_complex( t_a, t_b ), -1.0 ), add( mul_complex( t_a, t_a ), mul_complex( t_b, t_b ) ) );
-            var t_ab = solutions[which_solution]; // pick one
-            var z0 = div_complex( mul_complex( sub( t_ab, p2( 2.0, 0.0 ) ), t_b ),
-                                  add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( p2( 0.0, 2.0 ), t_ab ) ) );
-            transforms[0] = [ mul( t_a, 0.5 ),
-                              div_complex( add( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), p2( 0.0, 4.0 ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
-                              div_complex( mul_complex( sub( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), p2( 0.0, 4.0 ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
-                              mul( t_a, 0.5 ) ];
-            transforms[1] = [ mul( sub( t_b, p2( 0.0, 2.0 ) ), 0.5 ), mul( t_b, 0.5 ), mul( t_b, 0.5 ), mul( add( t_b, p2( 0.0, 2.0 ) ), 0.5 ) ];
-        }
-        else if( recipe == riley ) {
-            // Indra's Pearls, p. 258
-            var c = control_points[0];
-            transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0 ), c,              p2( 1.0, 0.0 ) ];
-            transforms[1] = [ p2( 1.0, 0.0 ), p2( 2.0, 0.0 ), p2( 0.0, 0.0 ), p2( 1.0, 0.0 ) ];
-        }
-        else if( recipe == jorgensen ) {
-            // Indra's Pearls, p. 256
-            var t_a = control_points[0];
-            var t_b = control_points[1];
-            // solve x^2 - t_a * t_b * x + t_a^2 + t_b^2 = 0 for x
-            var solutions = complex_solve_quadratic( p2( 1.0, 0.0 ), mul( mul_complex( t_a, t_b ), -1.0 ), add( mul_complex( t_a, t_a ), mul_complex( t_b, t_b ) ) );
-            var t_ab = solutions[which_solution]; // pick one
-            transforms[0] = [ sub( t_a, div_complex( t_b, t_ab ) ), div_complex( t_a, mul_complex( t_ab, t_ab ) ), t_a, div_complex( t_b, t_ab ) ];
-            transforms[1] = [ sub( t_b, div_complex( t_a, t_ab ) ), mul( div_complex( t_b, mul_complex( t_ab, t_ab ) ), -1.0 ), mul( t_b, -1.0 ), div_complex( t_a, t_ab ) ];
-        }
-        else if( recipe == special ) {
-            // Indra's Pearls, p. 260
-            // not sure this is working correctly. will need to explore when have better rendering.
-            var t_a = control_points[0];
-            var t_b = control_points[1];
-            var t_ab = control_points[2];
-            var t_C = sub( sub( add( add( mul_complex( t_a, t_a ), mul_complex( t_b, t_b ) ), mul_complex( t_ab, t_ab ) ), mul_complex( mul_complex( t_a, t_b ), t_ab ) ), p2(2.0, 0.0) );
-            var Q = mul( sqrt_complex( sub( p2( 2.0, 0.0 ), t_C ) ), which_solution==0?1.0:-1.0 );
-            var sign = 1.0;
-            var sqrt_tc_plus_2 = sqrt_complex( add( t_C, p2( 2.0, 0.0 ) ) );
-            if( magnitude( add( t_C, mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), sqrt_tc_plus_2 ) ) ) < 2.0 ) {
-                sign = -1.0;
-            }
-            var R = mul( sqrt_tc_plus_2, sign );
-            var z0 = div_complex( mul_complex( sub( t_ab, p2( 2.0, 0.0 ) ), add( t_b, R ) ), add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ) );
-            transforms[0] = [
-                mul( t_a, 0.5 ),
-                div_complex( add( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), mul_complex( p2( 0.0, 2.0 ), Q ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
-                div_complex( mul_complex( sub( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), mul_complex( p2( 0.0, 2.0 ), Q ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
-                mul( t_a, 0.5 ) ];
-            transforms[1] = [
-                mul( sub( t_b, mul_complex( p2( 0.0, 1.0 ), Q ) ), 0.5 ),
-                div_complex( sub( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
-                div_complex( mul_complex( add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
-                mul( add( t_b, mul_complex( p2( 0.0, 1.0 ), Q ) ), 0.5 ) ];
-        }
-        else { throw "Unsupported recipe"; }
-        transforms[2] = get_mobius_inverse( transforms[0] );
-        transforms[3] = get_mobius_inverse( transforms[1] );
-
-        // run IFS
-        if( plot_method[0] ) {
-            var p = p2(0.0,0.0);
-            for( var i = 0; i < num_ifs_iterations; i++) {
-                p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
-                var sp = toScreen( p );
-                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-                    var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-                    // sort of log-mapping: pixels get darker at a slower rate the darker they get
-                    // avoids saturating too much
-                    var val = pixels[pixel_offset + which_solution];
-                    if( Math.random() > val / 255.0 ) {
-                        pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
-                    }
-                }
-            }
-            n_pts_plotted += num_ifs_iterations;
-        }
+        make_generators(which_solution);
 
         // run DFS, Indra's Pearls, p. 152
         if( plot_method[1] )
@@ -650,6 +635,34 @@ function runIFS() {
             }
         }
     }
+
+    if(n_pts_plotted == 0 || plot_method[0]) {
+        // run IFS
+        if(n_pts_plotted == 0) {
+            // we're rendering IFS as a fallback from when the DFS rendering goes wrong, so clear the drawing
+            clear_drawing();
+        }
+        for( var which_solution = 0; which_solution < 2; which_solution++ ) {
+            if(! plot_solution[which_solution] ) { continue; }
+            make_generators(which_solution);
+            var p = p2(0.0,0.0);
+            for( var i = 0; i < num_ifs_iterations; i++) {
+                p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
+                var sp = toScreen( p );
+                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+                    var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+                    // sort of log-mapping: pixels get darker at a slower rate the darker they get
+                    // avoids saturating too much
+                    var val = pixels[pixel_offset + which_solution];
+                    if( Math.random() > val / 255.0 ) {
+                        pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
+                    }
+                }
+            }
+            n_pts_plotted += num_ifs_iterations;
+        }
+    }
+
     const time_end = performance.now();
     const ms_elapsed = time_end - time_start;
     if( ms_elapsed > 1000.0 ) {
