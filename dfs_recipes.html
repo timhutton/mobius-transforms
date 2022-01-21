@@ -474,6 +474,10 @@ function line(x0, y0, x1, y1, func) {
     }
 }
 
+function format_complex( a ) {
+    return `${ a.x.toFixed(3) }${ a.y >= 0.0 ? "+" : "" }${ a.y.toFixed(3) }i`;
+}
+
 function make_generators(which_solution) {
     // construct the four Mobius transformations we will be using
     transforms = []; // order will be: a, b, A, B
@@ -485,6 +489,7 @@ function make_generators(which_solution) {
         var cos_theta = Math.cos( theta );
         transforms[0] = [ p2( 1.0 / sin_theta, 0.0 ), p2( 0.0, cos_theta / sin_theta), p2( 0.0, -cos_theta / sin_theta ), p2( 1.0 / sin_theta, 0.0 ) ];
         transforms[1] = [ p2( 1.0 / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( 1.0 / sin_theta, 0.0 ) ];
+        description = `\u03B8-Schottky recipe from Indra's Pearls with \u03B8=${theta.toFixed(3)}`;
     }
     else if( recipe == kissing_schottky ) {
         // Indra's Pearls, p. 170
@@ -502,10 +507,12 @@ function make_generators(which_solution) {
         var k = ( s + [1.0, -1.0][which_solution] * Math.sqrt( t ) ) / 2.0;
         transforms[0] = [ p2(x, 0.0), p2(y, 0.0), p2(y, 0.0), p2(x, 0.0) ];
         transforms[1] = [ p2(u, 0.0), p2(0.0, k * v), p2(0.0, -v / k), p2(u, 0.0) ];
+        description = `Kissing Schottky recipe from Indra's Pearls, p. 170. With x=${x.toFixed(3)}, y=${y.toFixed(3)}, u=${u.toFixed(3)}, v=${v.toFixed(3)}, k=${k.toFixed(3)}`;
     }
     else if( recipe == gasket ) {
         transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
         transforms[1] = [ p2( 1.0, -1.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, 1.0 ) ];
+        description = "Gasket recipe from Indra's Pearls, p. 201";
     }
     else if( recipe == maskit || recipe == maskit2 || recipe == maskit3 ) {
         // Following Jos Ley's paper: http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf
@@ -513,6 +520,8 @@ function make_generators(which_solution) {
         var k = control_points[1];
         transforms[0] = [ t, p2(0.0, -1.0), p2(0.0, -1.0), p2(0.0, 0.0) ];     // a: z -> (tz-i)/(-iz)
         transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
+        description = "Maskit parameterization from Jos Ley's paper (http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf) with t="
+            + format_complex(t) + ", k=" + format_complex(k);
     }
     else if( recipe == grandma ) {
         // Indra's Pearls, p. 227
@@ -528,12 +537,14 @@ function make_generators(which_solution) {
                           div_complex( mul_complex( sub( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), p2( 0.0, 4.0 ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
                           mul( t_a, 0.5 ) ];
         transforms[1] = [ mul( sub( t_b, p2( 0.0, 2.0 ) ), 0.5 ), mul( t_b, 0.5 ), mul( t_b, 0.5 ), mul( add( t_b, p2( 0.0, 2.0 ) ), 0.5 ) ];
+        description = "Grandma's recipe from Indra's Pearls, p. 227. With ta=" + format_complex(t_a) + ", tb=" + format_complex(t_b);
     }
     else if( recipe == riley ) {
         // Indra's Pearls, p. 258
         var c = control_points[0];
         transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0 ), c,              p2( 1.0, 0.0 ) ];
         transforms[1] = [ p2( 1.0, 0.0 ), p2( 2.0, 0.0 ), p2( 0.0, 0.0 ), p2( 1.0, 0.0 ) ];
+        description = "Riley's recipe from Indra's Pearls, p. 258. With c=" + format_complex(c);
     }
     else if( recipe == jorgensen ) {
         // Indra's Pearls, p. 256
@@ -544,6 +555,7 @@ function make_generators(which_solution) {
         var t_ab = solutions[which_solution]; // pick one
         transforms[0] = [ sub( t_a, div_complex( t_b, t_ab ) ), div_complex( t_a, mul_complex( t_ab, t_ab ) ), t_a, div_complex( t_b, t_ab ) ];
         transforms[1] = [ sub( t_b, div_complex( t_a, t_ab ) ), mul( div_complex( t_b, mul_complex( t_ab, t_ab ) ), -1.0 ), mul( t_b, -1.0 ), div_complex( t_a, t_ab ) ];
+        description = "Jorgensen's recipe from Indra's Pearls, p. 256. With ta=" + format_complex(t_a) + ", tb=" + format_complex(t_b);
     }
     else if( recipe == special ) {
         // Indra's Pearls, p. 260
@@ -570,6 +582,7 @@ function make_generators(which_solution) {
             div_complex( sub( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
             div_complex( mul_complex( add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
             mul( add( t_b, mul_complex( p2( 0.0, 1.0 ), Q ) ), 0.5 ) ];
+        description = "Grandma's four alarm special from Indra's Pearls, p. 260. With ta=" + format_complex(t_a) + ", tb=" + format_complex(t_b) + ", tab=" + format_complex(t_ab);
     }
     else { throw "Unsupported recipe"; }
     transforms[2] = get_mobius_inverse( transforms[0] );
@@ -703,6 +716,7 @@ function compute() {
     }
     document.getElementById('download_svg_button').disabled = ( output_pts.length == 0 );
     document.getElementById('download_png_button').disabled = ( output_pts.length == 0 );
+    document.getElementById('description_text').textContent = "Description: " + description;
 }
 
 window.onload = init;
@@ -751,6 +765,8 @@ input[type='button'], select, label, p {
 </div>
 
 <div style="clear:both">
+
+<p id="description_text"></p>
 
 <p>This is work in progress. Get in touch if you have questions.</p>
 
