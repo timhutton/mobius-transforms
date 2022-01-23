@@ -419,8 +419,8 @@ function draw_image_line( a, b, rgb, output_pts ) {
             var pixel_offset = ( sy * image.width + sx ) * 4;
             pixels[pixel_offset + rgb] = 255;
         } );
-        output_pts.push( toScreen( sa ) );
-        output_pts.push( toScreen( sb ) );
+        output_pts.push( toScreen( mul( sa, 1.5 ) ) );
+        output_pts.push( toScreen( mul( sb, 1.5 ) ) );
     }
 }
 
@@ -631,8 +631,8 @@ function compute() {
             [transforms, description] = make_generators(which_solution);
 
             //n_pts_plotted += plot_dfs_fix( transforms, max_d2, which_solution, output_pts );
-            //n_pts_plotted += plot_dfs_endpts( transforms, max_d2, which_solution, output_pts );
-            n_pts_plotted += plot_dfs_repetends( transforms, max_d2, which_solution, output_pts );
+            n_pts_plotted += plot_dfs_endpts( transforms, max_d2, which_solution, output_pts );
+            //n_pts_plotted += plot_dfs_repetends( transforms, max_d2, which_solution, output_pts );
         }
     }
 
