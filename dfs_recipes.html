@@ -166,6 +166,7 @@ function init() {
     }
     iRecipe = 6;
     recipes_dropdown.selectedIndex = iRecipe;
+
     control_points = [];
     for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
         control_points.push( p2( recipes[ iRecipe ].control_points[i].x, recipes[ iRecipe ].control_points[i].y ) );
@@ -183,11 +184,7 @@ function init() {
     document.getElementById("which_method_dropdown").selectedIndex = 1;
 
     hq_mode = false;
-    num_ifs_iterations = 100000;
-    inc = 100;
-    max_depth = 15;
-    closeness_epsilon = 0.003; // if sequential points are closer than this we can stop searching
-    closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
+    set_quality_parameters( hq_mode );
 
     compute_and_redraw();
 }
@@ -201,13 +198,12 @@ function drawPoint( p, r, t, t_offset ) {
 
 function draw(output_pts) {
 
-    // draw ifs
+    // draw the computed image
     ctx.putImageData(image, 0, 0);
-
-    var extent = 6;
 
     // draw the axes
     if( draw_control_points ) {
+        var extent = 6;
         ctx.strokeStyle = "rgba(255,255,255,0.4)";
         ctx.beginPath();
         drawLine( p2( -extent, 0 ), p2( extent, 0 ) );
@@ -262,9 +258,7 @@ function onRecipeChanged(element) {
     compute_and_redraw();
 }
 
-function onHighQualityModeButton(element) {
-    hq_mode = !hq_mode;
-    element.value = hq_mode ? "High quality mode: ON" : "High quality mode: OFF";
+function set_quality_parameters(hq_mode) {
     if( hq_mode ) {
         num_ifs_iterations = 10000000;
         inc = 1;
@@ -278,6 +272,12 @@ function onHighQualityModeButton(element) {
         closeness_epsilon = 0.003; // if sequential points are closer than this we can stop searching
     }
     closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
+}
+
+function onHighQualityModeButton(element) {
+    hq_mode = !hq_mode;
+    element.value = hq_mode ? "High quality mode: ON" : "High quality mode: OFF";
+    set_quality_parameters( hq_mode );
     compute_and_redraw();
 }
 
