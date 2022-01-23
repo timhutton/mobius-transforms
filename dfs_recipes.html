@@ -156,7 +156,7 @@ function init() {
 
     origin_screen = p2( canvas.width/2, canvas.height/2 );
     scale = Math.min( canvas.width, canvas.height ) / 4.5;
-    offset = p2( 1.0, 0.0 );
+    offset = p2( 0.0, 0.0 );
 
     point_is_highlighted = false;
     point_is_being_dragged = false;
@@ -217,18 +217,23 @@ function draw() {
     for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
         if( output_pts[which_solution].length == 0 ) { continue; }
         // draw the loop
-        var a = toScreen( output_pts[which_solution][0] );
-        var b;
+        var a = output_pts[which_solution][0];
+        var sa = toScreen( a );
+        var b, sb;
         for(var i = 1; i < output_pts[which_solution].length; i++) {
-            b = toScreen( output_pts[which_solution][i] );
-            if( a.x >= 0 && a.y >=0 && a.x < image.width && a.y < image.height &&
-                b.x >= 0 && b.y >=0 && b.x < image.width && b.y < image.height ) {
-                line( Math.floor(a.x), Math.floor(a.y), Math.floor(b.x), Math.floor(b.y), (sx, sy) => {
-                    var pixel_offset = ( sy * image.width + sx ) * 4;
-                    pixels[pixel_offset + which_solution] = 255;
-                } );
+            b = output_pts[which_solution][i];
+            sb = toScreen( b );
+            if( (sa.x >= 0 && sa.y >=0 && sa.x < image.width && sa.y < image.height) ||
+                (sb.x >= 0 && sb.y >=0 && sb.x < image.width && sb.y < image.height) ) {
+                if( dist( a, b ) < 0.1 ) {
+                    line( Math.floor(sa.x), Math.floor(sa.y), Math.floor(sb.x), Math.floor(sb.y), (sx, sy) => {
+                        var pixel_offset = ( sy * image.width + sx ) * 4;
+                        pixels[pixel_offset + which_solution] = 255;
+                    } );
+                }
             }
             a = b;
+            sa = sb;
         }
     }
 
@@ -654,9 +659,9 @@ function plot_dfs_repetends(transforms, max_d2, which_solution, output_pts) {
                 if( d2_z2_z1 > max_d2 || d2_z3_z2 > max_d2 ) {
                     return -1; // immediate abort, lines are too long
                 }
-                output_pts[which_solution].push( z1 ); // TODO: reduce duplication, debug
-                output_pts[which_solution].push( z2 );
                 output_pts[which_solution].push( z3 );
+                output_pts[which_solution].push( z2 );
+                output_pts[which_solution].push( z1 ); // (not sure why the order is reversed here)
                 n_pts++;
             }
         }
@@ -695,8 +700,8 @@ function compute() {
             [transforms, description] = make_generators(which_solution);
 
             //n_pts_plotted += plot_dfs_fix( transforms, max_d2, which_solution, output_pts );
-            n_pts_plotted += plot_dfs_endpts( transforms, max_d2, which_solution, output_pts );
-            //n_pts_plotted += plot_dfs_repetends( transforms, max_d2, which_solution, output_pts );
+            //n_pts_plotted += plot_dfs_endpts( transforms, max_d2, which_solution, output_pts );
+            n_pts_plotted += plot_dfs_repetends( transforms, max_d2, which_solution, output_pts );
         }
     }
 
