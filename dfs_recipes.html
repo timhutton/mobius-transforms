@@ -186,8 +186,6 @@ function init() {
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
-    draw_separately = false;
-
     compute_and_redraw();
 }
 
@@ -200,44 +198,44 @@ function drawPoint( p, r, t, t_offset ) {
 
 function draw() {
 
-    if( draw_separately ) {
-        clear_drawing();
-        // draw the loop into the image buffer
-        for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-            if( output_pts[which_solution].length == 0 ) { continue; }
-            // draw the loop
-            var a = toScreen( output_pts[which_solution][0] );
-            var b;
-            for(var i = 1; i < output_pts[which_solution].length; i++) {
-                b = toScreen( output_pts[which_solution][i] );
-                if( a.x >= 0 && a.y >=0 && a.x < image.width && a.y < image.height &&
-                    b.x >= 0 && b.y >=0 && b.x < image.width && b.y < image.height ) {
-                    line( Math.floor(a.x), Math.floor(a.y), Math.floor(b.x), Math.floor(b.y), (sx, sy) => {
-                        var pixel_offset = ( sy * image.width + sx ) * 4;
-                        pixels[pixel_offset + which_solution] = 255;
-                    } );
-                }
-                a = b;
-            }
+    clear_drawing();
 
+    // draw the loop into the image buffer
+    for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+        if( output_pts[which_solution].length == 0 ) { continue; }
+        // draw the loop
+        var a = toScreen( output_pts[which_solution][0] );
+        var b;
+        for(var i = 1; i < output_pts[which_solution].length; i++) {
+            b = toScreen( output_pts[which_solution][i] );
+            if( a.x >= 0 && a.y >=0 && a.x < image.width && a.y < image.height &&
+                b.x >= 0 && b.y >=0 && b.x < image.width && b.y < image.height ) {
+                line( Math.floor(a.x), Math.floor(a.y), Math.floor(b.x), Math.floor(b.y), (sx, sy) => {
+                    var pixel_offset = ( sy * image.width + sx ) * 4;
+                    pixels[pixel_offset + which_solution] = 255;
+                } );
+            }
+            a = b;
         }
-        // draw the cloud points
-        for( var which_solution = 0; which_solution < cloud_pts.length; which_solution++) {
-            for( var i = 0; i < cloud_pts[which_solution].length; i++) {
-                var sp = toScreen( cloud_pts[which_solution][i] );
-                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-                    var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-                    // sort of log-mapping: pixels get brighter at a slower rate the brighter they get,
-                    // avoids saturating too quickly
-                    var val = pixels[pixel_offset + which_solution];
-                    if( Math.random() > val / 255.0 ) {
-                        pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
-                    }
+    }
+
+    // draw the cloud points into the image buffer
+    for( var which_solution = 0; which_solution < cloud_pts.length; which_solution++) {
+        for( var i = 0; i < cloud_pts[which_solution].length; i++) {
+            var sp = toScreen( cloud_pts[which_solution][i] );
+            if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+                var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+                // sort of log-mapping: pixels get brighter at a slower rate the brighter they get,
+                // avoids saturating too quickly
+                var val = pixels[pixel_offset + which_solution];
+                if( Math.random() > val / 255.0 ) {
+                    pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
                 }
             }
         }
     }
 
+    // blit the image to the screen
     ctx.putImageData(image, 0, 0);
 
     // draw the axes
@@ -271,32 +269,6 @@ function draw() {
             var radius = 4;
             var offset = p2( 20.0 * Math.cos(i * Math.PI), 20.0 * Math.sin(i * Math.PI) );
             drawPoint( toScreen( control_points[ i ] ), radius, recipes[ iRecipe ].pt_labels[i], offset );
-        }
-    }
-
-    if( false ) {
-        for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-            if( output_pts[which_solution].length == 0 ) { continue; }
-            // draw the loop
-            ctx.strokeStyle = which_solution==0 ? "rgb(255,0,0)" : "rgb(0,255,0)";
-            ctx.beginPath();
-            var sp0 = toScreen( output_pts[which_solution][0] );
-            ctx.moveTo( sp0.x, sp0.y );
-            for(var i = 1; i < output_pts[which_solution].length; i++) {
-                var sp = toScreen( output_pts[which_solution][i] );
-                ctx.lineTo( sp.x, sp.y );
-            }
-            ctx.lineTo( sp0.x, sp0.y );
-            ctx.stroke();
-
-        }
-        // draw the cloud points
-        for( var which_solution = 0; which_solution < cloud_pts.length; which_solution++) {
-            ctx.fillStyle = which_solution==0 ? "rgb(255,0,0)" : "rgb(0,255,0)";
-            for( var i = 0; i < cloud_pts[which_solution].length; i++) {
-                var sp = toScreen( cloud_pts[which_solution][i] );
-                ctx.fillRect( sp.x, sp.y, 1, 1 );
-            }
         }
     }
 }
@@ -343,12 +315,6 @@ function onHighQualityModeButton(element) {
     hq_mode = !hq_mode;
     element.value = hq_mode ? "High quality mode: ON" : "High quality mode: OFF";
     set_quality_parameters( hq_mode );
-    compute_and_redraw();
-}
-
-function onDrawSeparatelyButton(element) {
-    draw_separately = !draw_separately;
-    element.value = draw_separately ? "Draw separately: ON" : "Draw separately: OFF";
     compute_and_redraw();
 }
 
@@ -469,7 +435,6 @@ function compute_and_redraw() {
 
         const time_start = performance.now();
 
-        clear_drawing();
         var [n_pts_plotted, description] = compute();
         draw();
 
@@ -549,7 +514,7 @@ function plot_dfs_fix(transforms, max_d2, which_solution, output_pts) {
     }
     var n_pts_plotted = 0;
     var max_pts = 1e6; // need to stop the app becoming unresponsive
-    var old_p, old_sp;
+    var old_p;
     var have_old_p = false;
     function explore_tree( x, prev, level ) {
         var n_pts = 0;
@@ -566,25 +531,11 @@ function plot_dfs_fix(transforms, max_d2, which_solution, output_pts) {
             }
             else {
                 output_pts[which_solution].push( p );
-                var sp = toScreen( p );
-                if( have_old_p ) {
-                    if( dist2(p, old_p) > max_d2 ) {
-                        // abort: lines are too long
-                        return -1;
-                    }
-                    // draw line
-                    if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height &&
-                        old_sp.x >= 0 && old_sp.y >=0 && old_sp.x < image.width && old_sp.y < image.height) {
-                        if( !draw_separately ) {
-                            line( Math.floor(old_sp.x), Math.floor(old_sp.y), Math.floor(sp.x), Math.floor(sp.y), (sx, sy) => {
-                                var pixel_offset = ( sy * image.width + sx ) * 4;
-                                pixels[pixel_offset + which_solution] = 255;
-                            } );
-                        }
-                    }
+                if( have_old_p && dist2(p, old_p) > max_d2 ) {
+                    // abort: lines are too long
+                    return -1;
                 }
                 old_p = p;
-                old_sp = sp;
                 have_old_p = true;
                 n_pts++;
             }
@@ -609,7 +560,7 @@ function plot_dfs_endpts(transforms, max_d2, which_solution, output_pts) {
     ];
     var n_pts_plotted = 0;
     var max_pts = 1e6; // need to stop the app becoming unresponsive
-    var old_p, old_sp;
+    var old_p;
     var have_old_p = false;
     function explore_tree( x, prev, level ) {
         var n_pts = 0;
@@ -626,25 +577,11 @@ function plot_dfs_endpts(transforms, max_d2, which_solution, output_pts) {
             }
             else {
                 output_pts[which_solution].push( p );
-                var sp = toScreen( p );
-                if( have_old_p ) {
-                    if( dist2(p, old_p) > max_d2 ) {
-                        // abort: lines are too long
-                        return -1;
-                    }
-                    // draw line
-                    if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height &&
-                        old_sp.x >= 0 && old_sp.y >=0 && old_sp.x < image.width && old_sp.y < image.height) {
-                        if( !draw_separately ) {
-                            line( Math.floor(old_sp.x), Math.floor(old_sp.y), Math.floor(sp.x), Math.floor(sp.y), (sx, sy) => {
-                                var pixel_offset = ( sy * image.width + sx ) * 4;
-                                pixels[pixel_offset + which_solution] = 255;
-                            } );
-                        }
-                    }
+                if( have_old_p && dist2(p, old_p) > max_d2 ) {
+                    // abort: lines are too long
+                    return -1;
                 }
                 old_p = p;
-                old_sp = sp;
                 have_old_p = true;
                 n_pts++;
             }
@@ -697,16 +634,12 @@ function plot_dfs_repetends(transforms, max_d2, which_solution, output_pts) {
             var close_enough = d2_z2_z1 < closeness_epsilon2 && d2_z3_z2 < closeness_epsilon2;
             if( level < max_depth && !close_enough ) {
                 var ret = explore_tree( transforms, y, iTransform, level+1, fp, max_d2, which_solution, output_pts );
-                if( ret == -1 ) { return -1; } // abort
+                if( ret == -1 ) { return -1; } // continue abort
                 n_pts += ret;
             }
             else {
                 if( d2_z2_z1 > max_d2 || d2_z3_z2 > max_d2 ) {
-                    return -1; // immediate abort, have hit a bad region
-                }
-                if( !draw_separately ) {
-                    draw_image_line( z1, z2, which_solution, output_pts );
-                    draw_image_line( z2, z3, which_solution, output_pts );
+                    return -1; // immediate abort, lines are too long
                 }
                 output_pts[which_solution].push( z1 ); // TODO: reduce duplication, debug
                 output_pts[which_solution].push( z2 );
@@ -728,18 +661,6 @@ function draw_ifs(transforms, which_solution) {
     for( var i = 0; i < num_ifs_iterations; i++) {
         p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
         cloud_pts[which_solution].push( p );
-        if( !draw_separately ) {
-            var sp = toScreen( p );
-            if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-                var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-                // sort of log-mapping: pixels get brighter at a slower rate the brighter they get,
-                // avoids saturating too quickly
-                var val = pixels[pixel_offset + which_solution];
-                if( Math.random() > val / 255.0 ) {
-                    pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
-                }
-            }
-        }
     }
     return num_ifs_iterations;
 }
@@ -811,7 +732,6 @@ input[type='button'], select, label, p {
 <div style="float:left;padding-left: 20px">
 
 <p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
-<p><input type="button" id="draw_separately_button" value="Draw separately: OFF" onclick="onDrawSeparatelyButton(this)" /></p>
 <p><input type="button" id="zoom_in_button" value="Zoom in" onclick="onZoomInButton(this)" /></p>
 <p><input type="button" id="zoom_out_button" value="Zoom out" onclick="onZoomOutButton(this)" /></p>
 <p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
