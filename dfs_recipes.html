@@ -321,6 +321,16 @@ function onDrawSeparatelyButton(element) {
     compute_and_redraw();
 }
 
+function onZoomInButton(element) {
+    scale *= 2.0;
+    draw();
+}
+
+function onZoomOutButton(element) {
+    scale /= 2.0;
+    draw();
+}
+
 function onWhichSolutionChanged(element) {
     plot_solution[0] = element.selectedIndex == 0 || element.selectedIndex == 2;
     plot_solution[1] = element.selectedIndex == 1 || element.selectedIndex == 2;
@@ -357,30 +367,42 @@ function getBounds(pts) {
 }
 
 function onSaveAsSVGButton(element) {
-    var pts = [];
-    for(var i = 0; i < output_pts.length; i++) {
-        pts.push( mul( toScreen( output_pts[i] ), 1.5 ) );
+    var all_pts = [];
+    for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+        for(var i = 0; i < output_pts[which_solution].length; i++) {
+            all_pts.push( mul( toScreen( output_pts[which_solution][i] ), 1.5 ) );
+        }
     }
-    var bounds = getBounds(pts);
+    var bounds = getBounds(all_pts);
     var svg = "<!-- SVG produced by https://github.com/timhutton/mobius-transforms -->\n";
     svg += "<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='"+bounds.width.toFixed(1)+"px' height='"+bounds.height.toFixed(1)+"px' viewBox='"
         + bounds.minX.toFixed(1) + " " + bounds.minY.toFixed(1) + " " + bounds.width.toFixed(1) + " " + bounds.height.toFixed(1) + "'>\n";
-    svg += "  <polygon points='";
-    for( var iPt = 0; iPt < pts.length; iPt++) {
-        svg += pts[iPt].x.toFixed(3) + ", " + pts[iPt].y.toFixed(3) + " "
+    for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+        svg += "  <polygon points='";
+        for( var iPt = 0; iPt < output_pts[which_solution].length; iPt++) {
+            var sp = mul( toScreen( output_pts[which_solution][iPt] ), 1.5 );
+            svg += sp.x.toFixed(3) + ", " + sp.y.toFixed(3) + " "
+        }
+        svg += "'\n    fill='rgb(247, 246, 216)' stroke='black' stroke-width='0.3'/>\n";
     }
-    svg += "'\n    fill='rgb(247, 246, 216)' stroke='black' stroke-width='0.3'/>\n";
     svg += "</svg>\n";
     download("dfs.svg", "image/svg+xml", svg);
 }
 
 function onSaveAsPNGButton(element) {
     var max_image_dimension = 3000;
-    var bounds = getBounds(output_pts);
+    var all_pts = [];
+    for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+        for(var i = 0; i < output_pts[which_solution].length; i++) {
+            all_pts.push( output_pts[which_solution][i] );
+        }
+    }
+    var bounds = getBounds(all_pts);
     var scale = max_image_dimension / Math.max( bounds.width, bounds.height );
     var width = bounds.width * scale;
     var height = bounds.height * scale;
     var border = 5;
+    console.log(width, height);
     // create a large canvas
     var new_canvas = document.createElement('canvas');
     new_canvas.width = width + border * 2;
@@ -391,16 +413,20 @@ function onSaveAsPNGButton(element) {
     // draw the whole loop
     context.strokeStyle = 'rgba(0,0,0,1.0)';
     context.fillStyle = 'rgba(247, 246, 216, 1.0)';
-    context.beginPath();
-    var sp0 = add( mul( sub( output_pts[0], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
-    context.moveTo( sp0.x, sp0.y );
-    for(var i = 1; i < output_pts.length; i++) {
-        var sp = add( mul( sub( output_pts[i], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
-        context.lineTo( sp.x, sp.y );
+    for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+        context.beginPath();
+        console.log(output_pts[which_solution].length);
+        if(output_pts[which_solution].length == 0) { continue; }
+        var sp0 = add( mul( sub( output_pts[which_solution][0], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
+        context.moveTo( sp0.x, sp0.y );
+        for(var i = 1; i < output_pts[which_solution].length; i++) {
+            var sp = add( mul( sub( output_pts[which_solution][i], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
+            context.lineTo( sp.x, sp.y );
+        }
+        context.lineTo( sp0.x, sp0.y );
+        context.stroke();
+        context.fill();
     }
-    context.lineTo( sp0.x, sp0.y );
-    context.stroke();
-    context.fill();
     // save the png
     var downloadLink = document.createElement('a');
     downloadLink.download = 'dfs.png';
@@ -510,6 +536,7 @@ function plot_dfs_fix(transforms, max_d2, which_solution, output_pts) {
                 n_pts += ret;
             }
             else {
+                output_pts[which_solution].push( p );
                 var sp = toScreen( p );
                 if( have_old_p ) {
                     if( dist2(p, old_p) > max_d2 ) {
@@ -526,9 +553,6 @@ function plot_dfs_fix(transforms, max_d2, which_solution, output_pts) {
                             } );
                         }
                     }
-                }
-                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-                    output_pts[which_solution].push( p );
                 }
                 old_p = p;
                 old_sp = sp;
@@ -572,6 +596,7 @@ function plot_dfs_endpts(transforms, max_d2, which_solution, output_pts) {
                 n_pts += ret;
             }
             else {
+                output_pts[which_solution].push( p );
                 var sp = toScreen( p );
                 if( have_old_p ) {
                     if( dist2(p, old_p) > max_d2 ) {
@@ -588,9 +613,6 @@ function plot_dfs_endpts(transforms, max_d2, which_solution, output_pts) {
                             } );
                         }
                     }
-                }
-                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-                    output_pts[which_solution].push( p );
                 }
                 old_p = p;
                 old_sp = sp;
@@ -676,12 +698,10 @@ function draw_ifs(transforms, which_solution) {
     var p = p2(0.0,0.0);
     for( var i = 0; i < num_ifs_iterations; i++) {
         p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
-        var sp = toScreen( p );
-        if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-            if( draw_separately ) {
-                cloud_pts[which_solution].push( p );
-            }
-            else {
+        cloud_pts[which_solution].push( p );
+        if( !draw_separately ) {
+            var sp = toScreen( p );
+            if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
                 var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
                 // sort of log-mapping: pixels get brighter at a slower rate the brighter they get,
                 // avoids saturating too quickly
@@ -763,6 +783,8 @@ input[type='button'], select, label, p {
 
 <p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
 <p><input type="button" id="draw_separately_button" value="Draw separately: OFF" onclick="onDrawSeparatelyButton(this)" /></p>
+<p><input type="button" id="zoom_in_button" value="Zoom in" onclick="onZoomInButton(this)" /></p>
+<p><input type="button" id="zoom_out_button" value="Zoom out" onclick="onZoomOutButton(this)" /></p>
 <p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
 <p><label for="which_method_dropdown">Drawing method:</label><select id="which_method_dropdown" onchange="onWhichMethodChanged(this)">
   <option>IFS</option>
