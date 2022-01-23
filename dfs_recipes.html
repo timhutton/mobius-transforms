@@ -668,7 +668,7 @@ function compute() {
     }
     document.getElementById('download_svg_button').disabled = ( output_pts.length == 0 );
     document.getElementById('download_png_button').disabled = ( output_pts.length == 0 );
-    document.getElementById('description_text').textContent = "Description: " + description;
+    document.getElementById('description_text').innerHTML = "Description: " + description;
 
     return output_pts;
 }

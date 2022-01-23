@@ -62,7 +62,7 @@ function get_recipes()
             var transforms = [];
             transforms[0] = [ mu, p2(1.0, 0.0), p2(1.0, 0.0), p2(0.0, 0.0) ];      // a: z -> mu + 1/z = (mu*z+1)/z
             transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
-            var description = "Maskit recipe from Indra's Pearls, p. 259 with mu = " + format_complex(mu);
+            var description = "Maskit recipe from Indra's Pearls, p. 259 with mu = " + format_complex(mu) + ", plus <a href=\"http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf\">Jos Leys' b-variation</a> with k = 2cos(pi/5)";
             return [transforms, description];
         }
     };
@@ -75,7 +75,7 @@ function get_recipes()
             var transforms = [];
             transforms[0] = [ mu, p2(1.0, 0.0), p2(1.0, 0.0), p2(0.0, 0.0) ];      // a: z -> mu + 1/z = (mu*z+1)/z
             transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
-            var description = "Maskit recipe from Indra's Pearls, p. 259 with mu = " + format_complex(mu);
+            var description = "Maskit recipe from Indra's Pearls, p. 259 with mu = " + format_complex(mu) + ", plus <a href=\"http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf\">Jos Leys' b-variation</a> with k = 2cos(pi/4)";
             return [transforms, description];
         }
     };
