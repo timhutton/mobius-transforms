@@ -42,26 +42,43 @@ function get_recipes()
         }
     };
 
-    var maskit_make_generators = (which_solution, control_points) => {
-        // Following Jos Ley's paper: http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf
-        var t = control_points[0];
-        var k = control_points[1];
-        var transforms = [];
-        transforms[0] = [ t, p2(0.0, -1.0), p2(0.0, -1.0), p2(0.0, 0.0) ];     // a: z -> (tz-i)/(-iz)
-        transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
-        var description = "Maskit parameterization from Jos Ley's paper (http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf) with t = "
-            + format_complex(t) + ", k = " + format_complex(k);
-        return [transforms, description];
+    var maskit = { label: "Maskit recipe", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
+        make_generators: (which_solution, control_points) => {
+            // Indra's Pearls, p. 259
+            var mu = control_points[0];
+            var transforms = [];
+            transforms[0] = [ mu, p2(1.0, 0.0), p2(1.0, 0.0), p2(0.0, 0.0) ];              // a: z -> mu + 1/z = (mu*z+1)/z
+            transforms[1] = [ p2(1.0, 0.0), p2(2.0, 0.0), p2(0.0, 0.0),  p2(1.0, 0.0) ];   // b: z -> z + 2
+            var description = "Maskit recipe from Indra's Pearls, p. 259 with mu = " + format_complex(mu);
+            return [transforms, description];
+        }
     };
 
-    var maskit = { label: "Maskit parameterization", control_points: [ p2(2.0, 0.0), p2(2.0, 0.0) ], pt_labels: [ 't', 'k' ],
-        make_generators: maskit_make_generators };
+    var maskit2 = { label: "Maskit recipe 2", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
+        make_generators: (which_solution, control_points) => {
+            // Indra's Pearls, p. 259, plus Jos Leys' b-variation (http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf)
+            var mu = control_points[0];
+            var k = p2(2.0 * Math.cos(Math.PI / 5.0), 0.0);
+            var transforms = [];
+            transforms[0] = [ mu, p2(1.0, 0.0), p2(1.0, 0.0), p2(0.0, 0.0) ];      // a: z -> mu + 1/z = (mu*z+1)/z
+            transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
+            var description = "Maskit recipe from Indra's Pearls, p. 259 with mu = " + format_complex(mu);
+            return [transforms, description];
+        }
+    };
 
-    var maskit2 = { label: "Maskit parameterization 2", control_points: [ p2(2.0, 0.0), p2(2.0 * Math.cos(Math.PI / 5.0), 0.0) ], pt_labels: [ 't', 'k' ],
-        make_generators: maskit_make_generators };
-
-    var maskit3 = { label: "Maskit parameterization 3", control_points: [ p2(2.0, 0.0), p2(2.0 * Math.cos(Math.PI / 4.0), 0.0) ], pt_labels: [ 't', 'k' ],
-        make_generators: maskit_make_generators };
+    var maskit3 = { label: "Maskit recipe 3", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
+        make_generators: (which_solution, control_points) => {
+            // Indra's Pearls, p. 259, plus Jos Leys' b-variation (http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf)
+            var mu = control_points[0];
+            var k = p2(2.0 * Math.cos(Math.PI / 4.0), 0.0);
+            var transforms = [];
+            transforms[0] = [ mu, p2(1.0, 0.0), p2(1.0, 0.0), p2(0.0, 0.0) ];      // a: z -> mu + 1/z = (mu*z+1)/z
+            transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
+            var description = "Maskit recipe from Indra's Pearls, p. 259 with mu = " + format_complex(mu);
+            return [transforms, description];
+        }
+    };
 
     var grandma = {
         label: "Grandma's recipe",
