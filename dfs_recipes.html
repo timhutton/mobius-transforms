@@ -231,7 +231,7 @@ function drawPoint( p, r, t, t_offset ) {
     ctx.fill();
 }
 
-function draw() {
+function draw(output_pts) {
 
     // draw ifs
     ctx.putImageData(image, 0, 0);
@@ -436,8 +436,8 @@ function compute_and_redraw() {
     document.getElementById('rendering_text').textContent = "Rendering...";
     setTimeout(function() {
         clear_drawing();
-        compute();
-        draw();
+        output_pts = compute();
+        draw(output_pts);
     }, 1 );
 }
 
@@ -472,7 +472,7 @@ function format_complex( a ) {
 
 function make_generators(which_solution) {
     // construct the four Mobius transformations we will be using
-    transforms = []; // order will be: a, b, A, B
+    var transforms = []; // order will be: a, b, A, B
     var recipe = recipes[ iRecipe ];
     if( recipe == theta_schottky ) {
         // Indra's Pearls, page 118
@@ -579,9 +579,10 @@ function make_generators(which_solution) {
     else { throw "Unsupported recipe"; }
     transforms[2] = get_mobius_inverse( transforms[0] );
     transforms[3] = get_mobius_inverse( transforms[1] );
+    return transforms;
 }
 
-function draw_image_line( a, b, rgb ) {
+function draw_image_line( a, b, rgb, output_pts ) {
     var sa = toScreen( a );
     var sb = toScreen( b );
     if( sa.x >= 0 && sa.y >=0 && sa.x < image.width && sa.y < image.height &&
@@ -595,7 +596,7 @@ function draw_image_line( a, b, rgb ) {
     }
 }
 
-function explore_tree( x, prevTransform, level, fp, max_d2, rgb ) {
+function explore_tree( transforms, x, prevTransform, level, fp, max_d2, rgb, output_pts ) {
     var n_pts = 0;
     for( var k = prevTransform - 1; k <= prevTransform + 1; k++) {
         var iTransform = (k + 4) % 4;
@@ -607,7 +608,7 @@ function explore_tree( x, prevTransform, level, fp, max_d2, rgb ) {
         var d2_z3_z2 = dist2( z3, z2 );
         var close_enough = d2_z2_z1 < closeness_epsilon2 && d2_z3_z2 < closeness_epsilon2;
         if( level < max_depth && !close_enough ) {
-            var ret = explore_tree( y, iTransform, level+1, fp, max_d2, rgb );
+            var ret = explore_tree( transforms, y, iTransform, level+1, fp, max_d2, rgb, output_pts );
             if( ret == -1 ) { return -1; } // abort
             n_pts += ret;
         }
@@ -615,12 +616,61 @@ function explore_tree( x, prevTransform, level, fp, max_d2, rgb ) {
             if( d2_z2_z1 > max_d2 || d2_z3_z2 > max_d2 ) {
                 return -1; // immediate abort, have hit a bad region
             }
-            draw_image_line( z1, z2, rgb );
-            draw_image_line( z2, z3, rgb );
+            draw_image_line( z1, z2, rgb, output_pts );
+            draw_image_line( z2, z3, rgb, output_pts );
             n_pts++;
         }
     }
     return n_pts;
+}
+
+function compose4(a,b,c,d) {
+    return get_mobius_composed( a, get_mobius_composed( b, get_mobius_composed( c, d ) ) );
+}
+
+function plot_dfs_repetends(transforms, max_d2, rgb, output_pts) {
+    var n_pts_plotted = 0;
+    // define the repetends
+    var [ a, b, A, B ] = transforms;
+    var bABa = compose4(b, A, B, a);
+    var BAba = compose4(B, A, b, a);
+    var ABab = compose4(A, B, a, b);
+    var aBAb = compose4(a, B, A, b);
+    var BabA = compose4(B, a, b, A);
+    var baBA = compose4(b, a, B, A);
+    var abAB = compose4(a, b, A, B);
+    var AbaB = compose4(A, b, A, B);
+    var repetends = [ [ bABa, a, BAba ], [ ABab, b, aBAb ], [ BabA, A, baBA ], [ abAB, B, AbaB ] ]; // p. 218
+    var fp = [];
+    for( var i = 0; i < 4; i++) {
+        fp.push( [] );
+        for( var j = 0; j < 3; j++) {
+            fp[i].push( get_mobius_fixed_points( repetends[i][j] )[0] ); // Fix+ for each repetend
+        }
+    }
+    for( var k = 0; k < 4; k++) {
+        var ret = explore_tree( transforms, transforms[k], k, 0, fp, max_d2, rgb, output_pts );
+        if( ret >= 0 ) { n_pts_plotted += ret; }
+    }
+    return n_pts_plotted;
+}
+
+function draw_ifs(transforms, rgb) {
+    var p = p2(0.0,0.0);
+    for( var i = 0; i < num_ifs_iterations; i++) {
+        p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
+        var sp = toScreen( p );
+        if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+            var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+            // sort of log-mapping: pixels get brighter at a slower rate the brighter they get,
+            // avoids saturating too quickly
+            var val = pixels[pixel_offset + rgb];
+            if( Math.random() > val / 255.0 ) {
+                pixels[pixel_offset + rgb] = Math.min( 255, val + inc );
+            }
+        }
+    }
+    return num_ifs_iterations;
 }
 
 function compute() {
@@ -628,70 +678,33 @@ function compute() {
     const time_start = performance.now();
 
     var n_pts_plotted = 0;
-    output_pts = [];
-    debug_pts = [];
+    var output_pts = [];
+    var max_d2 = 1.0; // abort if any line is longer than this
 
-    // for recipes that use a solution of a quadratic equation, we don't know which one to use, so use both
-    for( var which_solution = 0; which_solution < 2; which_solution++ ) {
-        if(! plot_solution[which_solution] ) { continue; }
+    if( plot_dfs )
+    {
+        for( var which_solution = 0; which_solution < 2; which_solution++ ) {
+            if(! plot_solution[which_solution] ) { continue; }
 
-        make_generators(which_solution);
+            var transforms = make_generators(which_solution);
 
-        // run DFS, Indra's Pearls, p. 152
-        if( plot_dfs )
-        {
-            // define the repetends
-            function compose4(a,b,c,d) { return get_mobius_composed( a, get_mobius_composed( b, get_mobius_composed( c, d ) ) ); }
-            var [ a, b, A, B ] = transforms;
-            var bABa = compose4(b, A, B, a);
-            var BAba = compose4(B, A, b, a);
-            var ABab = compose4(A, B, a, b);
-            var aBAb = compose4(a, B, A, b);
-            var BabA = compose4(B, a, b, A);
-            var baBA = compose4(b, a, B, A);
-            var abAB = compose4(a, b, A, B);
-            var AbaB = compose4(A, b, A, B);
-            var repetends = [ [ bABa, a, BAba ], [ ABab, b, aBAb ], [ BabA, A, baBA ], [ abAB, B, AbaB ] ]; // p. 218
-            var fp = [];
-            for( var i = 0; i < 4; i++) {
-                fp.push( [] );
-                for( var j = 0; j < 3; j++) {
-                    fp[i].push( get_mobius_fixed_points( repetends[i][j] )[0] ); // Fix+ for each repetend
-                }
-            }
-            var max_d2 = 1.0; // abort if any line is longer than this
-            var rgb = which_solution; // 0=red, 1=green
-            for( var k = 0; k < 4; k++) {
-                var ret = explore_tree( transforms[k], k, 0, fp, max_d2, rgb );
-                if( ret >= 0 ) { n_pts_plotted += ret; }
-            }
+            n_pts_plotted += plot_dfs_repetends( transforms, max_d2, which_solution, output_pts );
         }
+    }
+
+    if(n_pts_plotted == 0) {
+        // DFS rendering failed, clear the drawing and draw IFS instead
+        clear_drawing();
     }
 
     if(n_pts_plotted == 0 || plot_ifs) {
         // run IFS
-        if(n_pts_plotted == 0) {
-            // we're rendering IFS as a fallback from when the DFS rendering goes wrong, so clear the drawing
-            clear_drawing();
-        }
         for( var which_solution = 0; which_solution < 2; which_solution++ ) {
             if(! plot_solution[which_solution] ) { continue; }
-            make_generators(which_solution);
-            var p = p2(0.0,0.0);
-            for( var i = 0; i < num_ifs_iterations; i++) {
-                p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
-                var sp = toScreen( p );
-                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-                    var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-                    // sort of log-mapping: pixels get darker at a slower rate the darker they get
-                    // avoids saturating too much
-                    var val = pixels[pixel_offset + which_solution];
-                    if( Math.random() > val / 255.0 ) {
-                        pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
-                    }
-                }
-            }
-            n_pts_plotted += num_ifs_iterations;
+
+            var transforms = make_generators(which_solution);
+
+            n_pts_plotted += draw_ifs(transforms, which_solution);
         }
     }
 
@@ -712,6 +725,8 @@ function compute() {
     document.getElementById('download_svg_button').disabled = ( output_pts.length == 0 );
     document.getElementById('download_png_button').disabled = ( output_pts.length == 0 );
     document.getElementById('description_text').textContent = "Description: " + description;
+
+    return output_pts;
 }
 
 window.onload = init;
