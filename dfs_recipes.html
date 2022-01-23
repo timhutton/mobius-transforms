@@ -155,8 +155,7 @@ function init() {
     canvas.addEventListener( 'touchcancel',  onMouseUp, false );
 
     origin_screen = p2( canvas.width/2, canvas.height/2 );
-    scale = Math.min( canvas.width, canvas.height ) / 4.5;
-    offset = p2( 0.0, 0.0 );
+    reset_viewport();
 
     point_is_highlighted = false;
     point_is_being_dragged = false;
@@ -200,6 +199,11 @@ function init() {
     set_quality_parameters( hq_mode );
 
     compute_and_redraw();
+}
+
+function reset_viewport() {
+    scale = Math.min( canvas.width, canvas.height ) / 4.5;
+    offset = p2( 0.0, 0.0 );
 }
 
 function drawPoint( p, r, t, t_offset ) {
@@ -310,6 +314,10 @@ function onRecipeChanged(element) {
     for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
         control_points.push( p2( recipes[ iRecipe ].control_points[i].x, recipes[ iRecipe ].control_points[i].y ) );
     }
+    hq_mode = false;
+    updateHighQualityModeButton();
+    set_quality_parameters( hq_mode );
+    reset_viewport();
     compute_and_redraw();
 }
 
@@ -331,9 +339,13 @@ function set_quality_parameters(hq_mode) {
 
 function onHighQualityModeButton(element) {
     hq_mode = !hq_mode;
-    element.value = hq_mode ? "High quality mode: ON" : "High quality mode: OFF";
+    updateHighQualityModeButton();
     set_quality_parameters( hq_mode );
     compute_and_redraw();
+}
+
+function updateHighQualityModeButton() {
+    document.getElementById('hq_mode_button').value = hq_mode ? "High quality mode: ON" : "High quality mode: OFF";
 }
 
 function onZoomInButton(element) {
