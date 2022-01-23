@@ -186,6 +186,8 @@ function init() {
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
+    draw_separately = false;
+
     compute_and_redraw();
 }
 
@@ -196,10 +198,16 @@ function drawPoint( p, r, t, t_offset ) {
     ctx.fill();
 }
 
-function draw(output_pts) {
+function draw() {
 
-    // draw the computed image
-    ctx.putImageData(image, 0, 0);
+    if( !draw_separately ) {
+        // draw the computed image
+        ctx.putImageData(image, 0, 0);
+    }
+    else {
+        ctx.fillStyle = 'rgb(0,0,0)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
     // draw the axes
     if( draw_control_points ) {
@@ -232,6 +240,32 @@ function draw(output_pts) {
             var radius = 4;
             var offset = p2( 20.0 * Math.cos(i * Math.PI), 20.0 * Math.sin(i * Math.PI) );
             drawPoint( toScreen( control_points[ i ] ), radius, recipes[ iRecipe ].pt_labels[i], offset );
+        }
+    }
+
+    if( draw_separately) {
+        for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+            if( output_pts[which_solution].length == 0 ) { continue; }
+            // draw the loop
+            ctx.strokeStyle = which_solution==0 ? "rgb(255,0,0)" : "rgb(0,255,0)";
+            ctx.beginPath();
+            var sp0 = toScreen( output_pts[which_solution][0] );
+            ctx.moveTo( sp0.x, sp0.y );
+            for(var i = 1; i < output_pts[which_solution].length; i++) {
+                var sp = toScreen( output_pts[which_solution][i] );
+                ctx.lineTo( sp.x, sp.y );
+            }
+            ctx.lineTo( sp0.x, sp0.y );
+            ctx.stroke();
+
+        }
+        // draw the cloud points
+        for( var which_solution = 0; which_solution < cloud_pts.length; which_solution++) {
+            ctx.fillStyle = which_solution==0 ? "rgb(255,0,0)" : "rgb(0,255,0)";
+            for( var i = 0; i < cloud_pts[which_solution].length; i++) {
+                var sp = toScreen( cloud_pts[which_solution][i] );
+                ctx.fillRect( sp.x, sp.y, 1, 1 );
+            }
         }
     }
 }
@@ -281,6 +315,12 @@ function onHighQualityModeButton(element) {
     compute_and_redraw();
 }
 
+function onDrawSeparatelyButton(element) {
+    draw_separately = !draw_separately;
+    element.value = draw_separately ? "Draw separately: ON" : "Draw separately: OFF";
+    compute_and_redraw();
+}
+
 function onWhichSolutionChanged(element) {
     plot_solution[0] = element.selectedIndex == 0 || element.selectedIndex == 2;
     plot_solution[1] = element.selectedIndex == 1 || element.selectedIndex == 2;
@@ -317,15 +357,19 @@ function getBounds(pts) {
 }
 
 function onSaveAsSVGButton(element) {
-    var bounds = getBounds(output_pts);
+    var pts = [];
+    for(var i = 0; i < output_pts.length; i++) {
+        pts.push( mul( toScreen( output_pts[i] ), 1.5 ) );
+    }
+    var bounds = getBounds(pts);
     var svg = "<!-- SVG produced by https://github.com/timhutton/mobius-transforms -->\n";
     svg += "<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='"+bounds.width.toFixed(1)+"px' height='"+bounds.height.toFixed(1)+"px' viewBox='"
         + bounds.minX.toFixed(1) + " " + bounds.minY.toFixed(1) + " " + bounds.width.toFixed(1) + " " + bounds.height.toFixed(1) + "'>\n";
     svg += "  <polygon points='";
-    for( var iPt = 0; iPt < output_pts.length; iPt++) {
-        svg += output_pts[iPt].x.toFixed(3) + ", " + output_pts[iPt].y.toFixed(3) + " "
+    for( var iPt = 0; iPt < pts.length; iPt++) {
+        svg += pts[iPt].x.toFixed(3) + ", " + pts[iPt].y.toFixed(3) + " "
     }
-    svg += "'\n    fill='none' stroke='black' stroke-width='0.3'/>\n";
+    svg += "'\n    fill='rgb(247, 246, 216)' stroke='black' stroke-width='0.3'/>\n";
     svg += "</svg>\n";
     download("dfs.svg", "image/svg+xml", svg);
 }
@@ -367,9 +411,30 @@ function onSaveAsPNGButton(element) {
 function compute_and_redraw() {
     document.getElementById('rendering_text').textContent = "Rendering...";
     setTimeout(function() {
+
+        const time_start = performance.now();
+
         clear_drawing();
-        output_pts = compute();
-        draw(output_pts);
+        var [n_pts_plotted, description] = compute();
+        draw();
+
+        const time_end = performance.now();
+        const ms_elapsed = time_end - time_start;
+        if( ms_elapsed > 1000.0 ) {
+            document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed/1000+"s";
+        }
+        else {
+            document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed+"ms";
+        }
+        if( n_pts_plotted > 0 ) {
+            document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted;
+        }
+        else {
+            document.getElementById('num_points_text').textContent = "Aborted rendering";
+        }
+        document.getElementById('download_svg_button').disabled = ( output_pts.length == 0 );
+        document.getElementById('download_png_button').disabled = ( output_pts.length == 0 );
+        document.getElementById('description_text').innerHTML = "Description: " + description;
     }, 1 );
 }
 
@@ -419,12 +484,10 @@ function draw_image_line( a, b, rgb, output_pts ) {
             var pixel_offset = ( sy * image.width + sx ) * 4;
             pixels[pixel_offset + rgb] = 255;
         } );
-        output_pts.push( toScreen( mul( sa, 1.5 ) ) );
-        output_pts.push( toScreen( mul( sb, 1.5 ) ) );
     }
 }
 
-function plot_dfs_fix(transforms, max_d2, rgb, output_pts) {
+function plot_dfs_fix(transforms, max_d2, which_solution, output_pts) {
     var fix = [];
     for(var i = 0; i < transforms.length; i++) {
         fix[i] = get_mobius_fixed_points( transforms[i] )[0];
@@ -439,8 +502,8 @@ function plot_dfs_fix(transforms, max_d2, rgb, output_pts) {
             var iTransform = (k + 4) % 4;
             var y = get_mobius_composed( x, transforms[iTransform] )
             var p = mobius_on_point( y, fix[iTransform] );
-            if( level > 0 && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > closeness_epsilon2 ) ) {
-                var ret = explore_tree( y, iTransform, level-1 );
+            if( level < max_depth && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > closeness_epsilon2 ) ) {
+                var ret = explore_tree( y, iTransform, level + 1 );
                 if( ret == -1 ) {
                     return -1; // continue abort
                 }
@@ -456,12 +519,16 @@ function plot_dfs_fix(transforms, max_d2, rgb, output_pts) {
                     // draw line
                     if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height &&
                         old_sp.x >= 0 && old_sp.y >=0 && old_sp.x < image.width && old_sp.y < image.height) {
-                        line( Math.floor(old_sp.x), Math.floor(old_sp.y), Math.floor(sp.x), Math.floor(sp.y), (sx, sy) => {
-                            var pixel_offset = ( sy * image.width + sx ) * 4;
-                            pixels[pixel_offset + rgb] = 255;
-                        } );
-                        output_pts.push( mul( sp, 1.5 ) );
+                        if( !draw_separately ) {
+                            line( Math.floor(old_sp.x), Math.floor(old_sp.y), Math.floor(sp.x), Math.floor(sp.y), (sx, sy) => {
+                                var pixel_offset = ( sy * image.width + sx ) * 4;
+                                pixels[pixel_offset + which_solution] = 255;
+                            } );
+                        }
                     }
+                }
+                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+                    output_pts[which_solution].push( p );
                 }
                 old_p = p;
                 old_sp = sp;
@@ -472,7 +539,7 @@ function plot_dfs_fix(transforms, max_d2, rgb, output_pts) {
         return n_pts;
     };
     for( var k = 0; k < 4; k++) {
-        var ret = explore_tree( transforms[k], k, max_depth );
+        var ret = explore_tree( transforms[k], k, 0 );
         if( ret >= 0 ) {
             n_pts_plotted += ret;
         }
@@ -480,7 +547,7 @@ function plot_dfs_fix(transforms, max_d2, rgb, output_pts) {
     return n_pts_plotted;
 }
 
-function plot_dfs_endpts(transforms, max_d2, rgb, output_pts) {
+function plot_dfs_endpts(transforms, max_d2, which_solution, output_pts) {
     var endpt = [
         get_mobius_fixed_points( get_mobius_composed( transforms[3], get_mobius_composed( transforms[2], get_mobius_composed( transforms[1], transforms[0] ) ) ) )[0],
         get_mobius_fixed_points( get_mobius_composed( transforms[0], get_mobius_composed( transforms[3], get_mobius_composed( transforms[2], transforms[1] ) ) ) )[0],
@@ -497,8 +564,8 @@ function plot_dfs_endpts(transforms, max_d2, rgb, output_pts) {
             var iTransform = (k + 4) % 4;
             var y = get_mobius_composed( x, transforms[iTransform] )
             var p = mobius_on_point( y, endpt[iTransform] );
-            if( level > 0 && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > closeness_epsilon2 ) ) {
-                var ret = explore_tree( y, iTransform, level-1 );
+            if( level < max_depth && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > closeness_epsilon2 ) ) {
+                var ret = explore_tree( y, iTransform, level + 1 );
                 if( ret == -1 ) {
                     return -1; // continue abort
                 }
@@ -514,12 +581,16 @@ function plot_dfs_endpts(transforms, max_d2, rgb, output_pts) {
                     // draw line
                     if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height &&
                         old_sp.x >= 0 && old_sp.y >=0 && old_sp.x < image.width && old_sp.y < image.height) {
-                        line( Math.floor(old_sp.x), Math.floor(old_sp.y), Math.floor(sp.x), Math.floor(sp.y), (sx, sy) => {
-                            var pixel_offset = ( sy * image.width + sx ) * 4;
-                            pixels[pixel_offset + rgb] = 255;
-                        } );
-                        output_pts.push( mul( sp, 1.5 ) );
+                        if( !draw_separately ) {
+                            line( Math.floor(old_sp.x), Math.floor(old_sp.y), Math.floor(sp.x), Math.floor(sp.y), (sx, sy) => {
+                                var pixel_offset = ( sy * image.width + sx ) * 4;
+                                pixels[pixel_offset + which_solution] = 255;
+                            } );
+                        }
                     }
+                }
+                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+                    output_pts[which_solution].push( p );
                 }
                 old_p = p;
                 old_sp = sp;
@@ -530,7 +601,7 @@ function plot_dfs_endpts(transforms, max_d2, rgb, output_pts) {
         return n_pts;
     };
     for( var k = 0; k < 4; k++) {
-        var ret = explore_tree( transforms[k], k, max_depth );
+        var ret = explore_tree( transforms[k], k, 0 );
         if( ret >= 0 ) {
             n_pts_plotted += ret;
         }
@@ -542,7 +613,7 @@ function compose4(a,b,c,d) {
     return get_mobius_composed( a, get_mobius_composed( b, get_mobius_composed( c, d ) ) );
 }
 
-function plot_dfs_repetends(transforms, max_d2, rgb, output_pts) {
+function plot_dfs_repetends(transforms, max_d2, which_solution, output_pts) {
     var n_pts_plotted = 0;
     // define the repetends
     var [ a, b, A, B ] = transforms;
@@ -562,7 +633,7 @@ function plot_dfs_repetends(transforms, max_d2, rgb, output_pts) {
             fp[i].push( get_mobius_fixed_points( repetends[i][j] )[0] ); // Fix+ for each repetend
         }
     }
-    function explore_tree( transforms, x, prevTransform, level, fp, max_d2, rgb, output_pts ) {
+    function explore_tree( transforms, x, prevTransform, level, fp, max_d2, which_solution, output_pts ) {
         var n_pts = 0;
         for( var k = prevTransform - 1; k <= prevTransform + 1; k++) {
             var iTransform = (k + 4) % 4;
@@ -574,7 +645,7 @@ function plot_dfs_repetends(transforms, max_d2, rgb, output_pts) {
             var d2_z3_z2 = dist2( z3, z2 );
             var close_enough = d2_z2_z1 < closeness_epsilon2 && d2_z3_z2 < closeness_epsilon2;
             if( level < max_depth && !close_enough ) {
-                var ret = explore_tree( transforms, y, iTransform, level+1, fp, max_d2, rgb, output_pts );
+                var ret = explore_tree( transforms, y, iTransform, level+1, fp, max_d2, which_solution, output_pts );
                 if( ret == -1 ) { return -1; } // abort
                 n_pts += ret;
             }
@@ -582,32 +653,42 @@ function plot_dfs_repetends(transforms, max_d2, rgb, output_pts) {
                 if( d2_z2_z1 > max_d2 || d2_z3_z2 > max_d2 ) {
                     return -1; // immediate abort, have hit a bad region
                 }
-                draw_image_line( z1, z2, rgb, output_pts );
-                draw_image_line( z2, z3, rgb, output_pts );
+                if( !draw_separately ) {
+                    draw_image_line( z1, z2, which_solution, output_pts );
+                    draw_image_line( z2, z3, which_solution, output_pts );
+                }
+                output_pts[which_solution].push( z1 ); // TODO: reduce duplication, debug
+                output_pts[which_solution].push( z2 );
+                output_pts[which_solution].push( z3 );
                 n_pts++;
             }
         }
         return n_pts;
     };
     for( var k = 0; k < 4; k++) {
-        var ret = explore_tree( transforms, transforms[k], k, 0, fp, max_d2, rgb, output_pts );
+        var ret = explore_tree( transforms, transforms[k], k, 0, fp, max_d2, which_solution, output_pts );
         if( ret >= 0 ) { n_pts_plotted += ret; }
     }
     return n_pts_plotted;
 }
 
-function draw_ifs(transforms, rgb) {
+function draw_ifs(transforms, which_solution) {
     var p = p2(0.0,0.0);
     for( var i = 0; i < num_ifs_iterations; i++) {
         p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
         var sp = toScreen( p );
         if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-            var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-            // sort of log-mapping: pixels get brighter at a slower rate the brighter they get,
-            // avoids saturating too quickly
-            var val = pixels[pixel_offset + rgb];
-            if( Math.random() > val / 255.0 ) {
-                pixels[pixel_offset + rgb] = Math.min( 255, val + inc );
+            if( draw_separately ) {
+                cloud_pts[which_solution].push( p );
+            }
+            else {
+                var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+                // sort of log-mapping: pixels get brighter at a slower rate the brighter they get,
+                // avoids saturating too quickly
+                var val = pixels[pixel_offset + which_solution];
+                if( Math.random() > val / 255.0 ) {
+                    pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
+                }
             }
         }
     }
@@ -616,10 +697,9 @@ function draw_ifs(transforms, rgb) {
 
 function compute() {
 
-    const time_start = performance.now();
-
     var n_pts_plotted = 0;
-    var output_pts = [];
+    output_pts = [[],[]];
+    cloud_pts = [[],[]];
     var max_d2 = 1.0; // abort if any line is longer than this
     var transforms = [];
     var description = "";
@@ -638,6 +718,7 @@ function compute() {
 
     if(n_pts_plotted == 0) {
         // DFS rendering failed, clear the drawing and draw IFS instead
+        output_pts = [[],[]];
         clear_drawing();
     }
 
@@ -652,25 +733,7 @@ function compute() {
         }
     }
 
-    const time_end = performance.now();
-    const ms_elapsed = time_end - time_start;
-    if( ms_elapsed > 1000.0 ) {
-        document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed/1000+"s";
-    }
-    else {
-        document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed+"ms";
-    }
-    if( n_pts_plotted > 0 ) {
-        document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted;
-    }
-    else {
-        document.getElementById('num_points_text').textContent = "Aborted rendering";
-    }
-    document.getElementById('download_svg_button').disabled = ( output_pts.length == 0 );
-    document.getElementById('download_png_button').disabled = ( output_pts.length == 0 );
-    document.getElementById('description_text').innerHTML = "Description: " + description;
-
-    return output_pts;
+    return [n_pts_plotted, description];
 }
 
 window.onload = init;
@@ -699,6 +762,7 @@ input[type='button'], select, label, p {
 <div style="float:left;padding-left: 20px">
 
 <p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
+<p><input type="button" id="draw_separately_button" value="Draw separately: OFF" onclick="onDrawSeparatelyButton(this)" /></p>
 <p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
 <p><label for="which_method_dropdown">Drawing method:</label><select id="which_method_dropdown" onchange="onWhichMethodChanged(this)">
   <option>IFS</option>
