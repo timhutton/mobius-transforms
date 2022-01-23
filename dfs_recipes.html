@@ -143,12 +143,6 @@ function init() {
     canvas.addEventListener( 'touchend',  onMouseUp, false );
     canvas.addEventListener( 'touchcancel',  onMouseUp, false );
 
-    velocities = [];
-    for(var i = 0; i < 10; i++) {
-        var dir = Math.random() * 2.0 * Math.PI;
-        velocities.push( p2( Math.cos( dir ) * 0.005, Math.sin( dir ) * 0.005 ) );
-    }
-
     origin_screen = p2( canvas.width/2, canvas.height/2 );
     scale = Math.min( canvas.width, canvas.height ) / 4.5;
 
@@ -196,9 +190,6 @@ function init() {
     closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
 
     compute_and_redraw();
-
-    move_points = false;
-    animate();
 }
 
 function drawPoint( p, r, t, t_offset ) {
@@ -235,7 +226,6 @@ function draw(output_pts) {
         var rest_color = "rgb(255,255,255)";
         var highlighted_color = "rgb(0,255,255)";
         var dragging_color = "rgb(0,255,0)";
-        var num_moveable_control_points = control_points.length;
         for( var i = 0; i < control_points.length; i++ ) {
             if( point_is_highlighted && i_point == i )
                 ctx.fillStyle = ctx.strokeStyle = highlighted_color;
@@ -243,7 +233,7 @@ function draw(output_pts) {
                 ctx.fillStyle = ctx.strokeStyle = dragging_color;
             else
                 ctx.fillStyle = ctx.strokeStyle = rest_color;
-            var radius = ( i < num_moveable_control_points ) ? 4 : 2;
+            var radius = 4;
             var offset = p2( 20.0 * Math.cos(i * Math.PI), 20.0 * Math.sin(i * Math.PI) );
             drawPoint( toScreen( control_points[ i ] ), radius, recipes[ iRecipe ].pt_labels[i], offset );
         }
@@ -261,15 +251,6 @@ function onDrawControlPointsButton(element) {
     draw_control_points = !draw_control_points;
     element.value = draw_control_points ? "Draw control points: ON" : "Draw control points: OFF";
     draw();
-}
-
-function onAnimateModeButton(element) {
-    move_points = !move_points;
-    element.value = move_points ? "Animate control points: ON" : "Animate control points: OFF";
-    draw();
-    if( move_points) {
-        animate();
-    }
 }
 
 function onRecipeChanged(element) {
@@ -381,32 +362,6 @@ function onSaveAsPNGButton(element) {
     downloadLink.download = 'dfs.png';
     downloadLink.href = new_canvas.toDataURL();
     downloadLink.click();
-}
-
-function animate( currentFrameTime ) {
-    if( move_points ) {
-        for( var i = 0; i < control_points.length; i++) {
-            control_points[i] = add( control_points[i], velocities[i] );
-            if( control_points[i].x < -2 ) {
-                control_points[i].x = -4.0 - control_points[i].x;
-                velocities[i].x *= -1.0;
-            }
-            else if( control_points[i].x > 2 ) {
-                control_points[i].x = 4.0 - control_points[i].x;
-                velocities[i].x *= -1.0;
-            }
-            if( control_points[i].y < -2 ) {
-                control_points[i].y = -4.0 - control_points[i].y;
-                velocities[i].y *= -1.0;
-            }
-            else if( control_points[i].y > 2 ) {
-                control_points[i].y = 4.0 - control_points[i].y;
-                velocities[i].y *= -1.0;
-            }
-        }
-        compute_and_redraw();
-        requestAnimationFrame( animate );
-    }
 }
 
 function compute_and_redraw() {
