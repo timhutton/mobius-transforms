@@ -200,14 +200,45 @@ function drawPoint( p, r, t, t_offset ) {
 
 function draw() {
 
-    if( !draw_separately ) {
-        // draw the computed image
-        ctx.putImageData(image, 0, 0);
+    if( draw_separately ) {
+        clear_drawing();
+        // draw the loop into the image buffer
+        for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+            if( output_pts[which_solution].length == 0 ) { continue; }
+            // draw the loop
+            var a = toScreen( output_pts[which_solution][0] );
+            var b;
+            for(var i = 1; i < output_pts[which_solution].length; i++) {
+                b = toScreen( output_pts[which_solution][i] );
+                if( a.x >= 0 && a.y >=0 && a.x < image.width && a.y < image.height &&
+                    b.x >= 0 && b.y >=0 && b.x < image.width && b.y < image.height ) {
+                    line( Math.floor(a.x), Math.floor(a.y), Math.floor(b.x), Math.floor(b.y), (sx, sy) => {
+                        var pixel_offset = ( sy * image.width + sx ) * 4;
+                        pixels[pixel_offset + which_solution] = 255;
+                    } );
+                }
+                a = b;
+            }
+
+        }
+        // draw the cloud points
+        for( var which_solution = 0; which_solution < cloud_pts.length; which_solution++) {
+            for( var i = 0; i < cloud_pts[which_solution].length; i++) {
+                var sp = toScreen( cloud_pts[which_solution][i] );
+                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+                    var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+                    // sort of log-mapping: pixels get brighter at a slower rate the brighter they get,
+                    // avoids saturating too quickly
+                    var val = pixels[pixel_offset + which_solution];
+                    if( Math.random() > val / 255.0 ) {
+                        pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
+                    }
+                }
+            }
+        }
     }
-    else {
-        ctx.fillStyle = 'rgb(0,0,0)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+
+    ctx.putImageData(image, 0, 0);
 
     // draw the axes
     if( draw_control_points ) {
@@ -243,7 +274,7 @@ function draw() {
         }
     }
 
-    if( draw_separately) {
+    if( false ) {
         for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
             if( output_pts[which_solution].length == 0 ) { continue; }
             // draw the loop
@@ -402,7 +433,6 @@ function onSaveAsPNGButton(element) {
     var width = bounds.width * scale;
     var height = bounds.height * scale;
     var border = 5;
-    console.log(width, height);
     // create a large canvas
     var new_canvas = document.createElement('canvas');
     new_canvas.width = width + border * 2;
@@ -415,7 +445,6 @@ function onSaveAsPNGButton(element) {
     context.fillStyle = 'rgba(247, 246, 216, 1.0)';
     for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
         context.beginPath();
-        console.log(output_pts[which_solution].length);
         if(output_pts[which_solution].length == 0) { continue; }
         var sp0 = add( mul( sub( output_pts[which_solution][0], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
         context.moveTo( sp0.x, sp0.y );
