@@ -7,11 +7,11 @@
 <script>
 
 function toScreen( p ) {
-    return add( origin_screen, complex_conjugate( mul( p, scale ) ) );
+    return add( origin_screen, complex_conjugate( mul( sub( p, offset ), scale ) ) );
 }
 
 function fromScreen( p ) {
-    return mul( complex_conjugate( sub( p, origin_screen ) ), 1.0 / scale );
+    return add( mul( complex_conjugate( sub( p, origin_screen ) ), 1.0 / scale ), offset);
 }
 
 function getMousePos(canvas, evt) {
@@ -34,6 +34,12 @@ function onMove( pos ) {
     if( point_is_being_dragged ) {
         control_points[ i_point ] = fromScreen( add( pos, drag_offset ) );
         compute_and_redraw();
+    }
+    else if( is_panning ) {
+        var move = sub( fromScreen( drag_offset ), fromScreen( pos ) );
+        offset = add( offset, move );
+        draw();
+        drag_offset = pos;
     }
     else {
         // find the closest point, if within a minimum radius
@@ -95,6 +101,10 @@ function onDown( pos ) {
         point_is_highlighted = false;
         draw();
     }
+    else {
+        is_panning = true;
+        drag_offset = pos;
+    }
 }
 
 function onMouseUp( evt ) {
@@ -103,6 +113,7 @@ function onMouseUp( evt ) {
         draw();
     }
     is_mouse_down = false;
+    is_panning = false;
 }
 
 // thanks to: http://stackoverflow.com/a/12714084/126823
@@ -145,9 +156,11 @@ function init() {
 
     origin_screen = p2( canvas.width/2, canvas.height/2 );
     scale = Math.min( canvas.width, canvas.height ) / 4.5;
+    offset = p2( 1.0, 0.0 );
 
     point_is_highlighted = false;
     point_is_being_dragged = false;
+    is_panning = false;
     i_point = -1;
     grab_offset = p2( 0, 0 );
 
@@ -435,7 +448,7 @@ function compute_and_redraw() {
 
         const time_start = performance.now();
 
-        var [n_pts_plotted, description] = compute();
+        var [dfs_succeeded, n_pts_plotted, description] = compute();
         draw();
 
         const time_end = performance.now();
@@ -452,8 +465,8 @@ function compute_and_redraw() {
         else {
             document.getElementById('num_points_text').textContent = "Aborted rendering";
         }
-        document.getElementById('download_svg_button').disabled = ( output_pts.length == 0 );
-        document.getElementById('download_png_button').disabled = ( output_pts.length == 0 );
+        document.getElementById('download_svg_button').disabled = !dfs_succeeded;
+        document.getElementById('download_png_button').disabled = !dfs_succeeded;
         document.getElementById('description_text').innerHTML = "Description: " + description;
     }, 1 );
 }
@@ -673,6 +686,7 @@ function compute() {
     var max_d2 = 1.0; // abort if any line is longer than this
     var transforms = [];
     var description = "";
+    var dfs_succeeded = true;
 
     if( plot_dfs ) {
         for( var which_solution = 0; which_solution < 2; which_solution++ ) {
@@ -688,11 +702,12 @@ function compute() {
 
     if(n_pts_plotted == 0) {
         // DFS rendering failed, clear the drawing and draw IFS instead
+        dfs_succeeded = false;
         output_pts = [[],[]];
         clear_drawing();
     }
 
-    if(n_pts_plotted == 0 || plot_ifs) {
+    if(!dfs_succeeded || plot_ifs) {
         // run IFS
         for( var which_solution = 0; which_solution < 2; which_solution++ ) {
             if(! plot_solution[which_solution] ) { continue; }
@@ -703,7 +718,7 @@ function compute() {
         }
     }
 
-    return [n_pts_plotted, description];
+    return [dfs_succeeded, n_pts_plotted, description];
 }
 
 window.onload = init;
