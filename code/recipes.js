@@ -49,7 +49,7 @@ function get_recipes()
             var transforms = [];
             transforms[0] = [ mu, p2(1.0, 0.0), p2(1.0, 0.0), p2(0.0, 0.0) ];              // a: z -> mu + 1/z = (mu*z+1)/z
             transforms[1] = [ p2(1.0, 0.0), p2(2.0, 0.0), p2(0.0, 0.0),  p2(1.0, 0.0) ];   // b: z -> z + 2
-            var description = "Maskit recipe from Indra's Pearls, p. 259 with mu = " + format_complex(mu);
+            var description = "Maskit recipe from Indra's Pearls, p. 259 with \u03BC = " + format_complex(mu);
             return [transforms, description];
         }
     };
@@ -62,7 +62,7 @@ function get_recipes()
             var transforms = [];
             transforms[0] = [ mu, p2(1.0, 0.0), p2(1.0, 0.0), p2(0.0, 0.0) ];      // a: z -> mu + 1/z = (mu*z+1)/z
             transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
-            var description = "Maskit recipe from Indra's Pearls, p. 259 with mu = " + format_complex(mu) + ", plus <a href=\"http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf\">Jos Leys' b-variation</a> with k = 2cos(pi/5)";
+            var description = "Maskit recipe from Indra's Pearls, p. 259 with \u03BC = " + format_complex(mu) + ", plus <a href=\"http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf\">Jos Leys' b-variation</a> with k = 2cos(pi/5)";
             return [transforms, description];
         }
     };
@@ -75,7 +75,7 @@ function get_recipes()
             var transforms = [];
             transforms[0] = [ mu, p2(1.0, 0.0), p2(1.0, 0.0), p2(0.0, 0.0) ];      // a: z -> mu + 1/z = (mu*z+1)/z
             transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
-            var description = "Maskit recipe from Indra's Pearls, p. 259 with mu = " + format_complex(mu) + ", plus <a href=\"http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf\">Jos Leys' b-variation</a> with k = 2cos(pi/4)";
+            var description = "Maskit recipe from Indra's Pearls, p. 259 with \u03BC = " + format_complex(mu) + ", plus <a href=\"http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf\">Jos Leys' b-variation</a> with k = 2cos(pi/4)";
             return [transforms, description];
         }
     };
@@ -104,7 +104,7 @@ function get_recipes()
                               div_complex( mul_complex( sub( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), p2( 0.0, 4.0 ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
                               mul( t_a, 0.5 ) ];
             transforms[1] = [ mul( sub( t_b, p2( 0.0, 2.0 ) ), 0.5 ), mul( t_b, 0.5 ), mul( t_b, 0.5 ), mul( add( t_b, p2( 0.0, 2.0 ) ), 0.5 ) ];
-            var description = "Grandma's recipe from Indra's Pearls, p. 227. With ta = " + format_complex(t_a) + ", tb = " + format_complex(t_b);
+            var description = "Grandma's recipe from Indra's Pearls, p. 227. With t<sub>a</sub> = " + format_complex(t_a) + ", t<sub>b</sub> = " + format_complex(t_b);
             return [transforms, description];
         }
     };
@@ -132,7 +132,7 @@ function get_recipes()
             var transforms = [];
             transforms[0] = [ sub( t_a, div_complex( t_b, t_ab ) ), div_complex( t_a, mul_complex( t_ab, t_ab ) ), t_a, div_complex( t_b, t_ab ) ];
             transforms[1] = [ sub( t_b, div_complex( t_a, t_ab ) ), mul( div_complex( t_b, mul_complex( t_ab, t_ab ) ), -1.0 ), mul( t_b, -1.0 ), div_complex( t_a, t_ab ) ];
-            var description = "Jorgensen's recipe from Indra's Pearls, p. 256. With ta = " + format_complex(t_a) + ", tb = " + format_complex(t_b);
+            var description = "Jorgensen's recipe from Indra's Pearls, p. 256. With t<sub>a</sub> = " + format_complex(t_a) + ", t<sub>b</sub> = " + format_complex(t_b);
             return [transforms, description];
         }
     };
@@ -141,7 +141,7 @@ function get_recipes()
         label: "Grandma's four-alarm special",
         control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ],
         //control_points: [ p2(1.924781, -0.047529), p2(2.0, 0.0), p2(0.0, 0.0) ], // Fig. 11.1, p. 354 ?
-        pt_labels: [ 'ta', 'tb', 't_ab' ],
+        pt_labels: [ 'ta', 'tb', 'tab' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, p. 260
             // not sure this is working correctly. will need to explore when have better rendering.
@@ -172,8 +172,8 @@ function get_recipes()
                 div_complex( mul_complex( add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), z0 ),
                     sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
                 mul( add( t_b, mul_complex( p2( 0.0, 1.0 ), Q ) ), 0.5 ) ];
-            var description = "Grandma's four alarm special from Indra's Pearls, p. 260. With ta = " + format_complex(t_a) + ", tb = " + format_complex(t_b)
-                + ", tab = " + format_complex(t_ab);
+            var description = "Grandma's four alarm special from Indra's Pearls, p. 260. With t<sub>a</sub> = " + format_complex(t_a) + ", t<sub>b</sub> = " + format_complex(t_b)
+                + ", t<sub>ab</sub> = " + format_complex(t_ab);
             return [transforms, description];
         }
     };
