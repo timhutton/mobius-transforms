@@ -471,10 +471,10 @@ function compute_and_redraw() {
         const time_end = performance.now();
         const ms_elapsed = time_end - time_start;
         if( ms_elapsed > 1000.0 ) {
-            document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed/1000+"s";
+            document.getElementById('rendering_text').textContent = "Last render took: "+(ms_elapsed/1000.0).toFixed(2)+"s";
         }
         else {
-            document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed+"ms";
+            document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed.toFixed(2)+"ms";
         }
         if( n_pts_plotted > 0 ) {
             document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted;
