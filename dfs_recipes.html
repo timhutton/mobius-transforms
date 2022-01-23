@@ -207,7 +207,8 @@ function init() {
     plot_solution = [ true, true ];
     document.getElementById("which_solution_dropdown").selectedIndex = 2;
 
-    plot_method = [ false, true ];
+    plot_ifs = false;
+    plot_dfs = true;
     document.getElementById("which_method_dropdown").selectedIndex = 1;
 
     hq_mode = false;
@@ -270,17 +271,6 @@ function draw() {
             drawPoint( toScreen( control_points[ i ] ), radius, recipes[ iRecipe ].pt_labels[i], offset );
         }
     }
-
-    // draw fixed points?
-    if( false ) {
-        ctx.fillStyle = ctx.strokeStyle = "rgb(255, 255, 255)";
-        var f_plus, f_minus;
-        for( var i = 0; i < transforms.length; i++ ) {
-            [ f_plus, f_minus ] = get_mobius_fixed_points( transforms[i] );
-            drawPoint( toScreen( f_plus ), 2, "f+", p2(0,0) );
-            drawPoint( toScreen( f_minus ), 2, "f-", p2(0,0) );
-        }
-    }
 }
 
 function drawLine( a, b ) {
@@ -340,8 +330,8 @@ function onWhichSolutionChanged(element) {
 }
 
 function onWhichMethodChanged(element) {
-    plot_method[0] = element.selectedIndex == 0 || element.selectedIndex == 2;
-    plot_method[1] = element.selectedIndex == 1 || element.selectedIndex == 2;
+    plot_ifs = element.selectedIndex == 0 || element.selectedIndex == 2;
+    plot_dfs = element.selectedIndex == 1 || element.selectedIndex == 2;
     compute_and_redraw();
 }
 
@@ -398,7 +388,7 @@ function onSaveAsPNGButton(element) {
     context.fillRect(0, 0, new_canvas.width, new_canvas.height);
     // draw the whole loop
     context.strokeStyle = 'rgba(0,0,0,1.0)';
-    context.fillStyle = 'rgba(255, 234, 176, 0.5)';
+    context.fillStyle = 'rgba(247, 246, 216, 1.0)';
     context.beginPath();
     var sp0 = add( mul( sub( output_pts[0], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
     context.moveTo( sp0.x, sp0.y );
@@ -477,7 +467,7 @@ function line(x0, y0, x1, y1, func) {
 }
 
 function format_complex( a ) {
-    return `${ a.x.toFixed(3) }${ a.y >= 0.0 ? "+" : "" }${ a.y.toFixed(3) }i`;
+    return `${ a.x.toFixed(3) } ${ a.y >= 0.0 ? "+" : "" } ${ Math.abs(a.y).toFixed(3) }i`;
 }
 
 function make_generators(which_solution) {
@@ -491,7 +481,7 @@ function make_generators(which_solution) {
         var cos_theta = Math.cos( theta );
         transforms[0] = [ p2( 1.0 / sin_theta, 0.0 ), p2( 0.0, cos_theta / sin_theta), p2( 0.0, -cos_theta / sin_theta ), p2( 1.0 / sin_theta, 0.0 ) ];
         transforms[1] = [ p2( 1.0 / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( 1.0 / sin_theta, 0.0 ) ];
-        description = `\u03B8-Schottky recipe from Indra's Pearls with \u03B8=${theta.toFixed(3)}`;
+        description = `\u03B8-Schottky recipe from Indra's Pearls with \u03B8 = ${theta.toFixed(3)}`;
     }
     else if( recipe == kissing_schottky ) {
         // Indra's Pearls, p. 170
@@ -509,7 +499,7 @@ function make_generators(which_solution) {
         var k = ( s + [1.0, -1.0][which_solution] * Math.sqrt( t ) ) / 2.0;
         transforms[0] = [ p2(x, 0.0), p2(y, 0.0), p2(y, 0.0), p2(x, 0.0) ];
         transforms[1] = [ p2(u, 0.0), p2(0.0, k * v), p2(0.0, -v / k), p2(u, 0.0) ];
-        description = `Kissing Schottky recipe from Indra's Pearls, p. 170. With x=${x.toFixed(3)}, y=${y.toFixed(3)}, u=${u.toFixed(3)}, v=${v.toFixed(3)}, k=${k.toFixed(3)}`;
+        description = `Kissing Schottky recipe from Indra's Pearls, p. 170. With x = ${x.toFixed(3)}, y = ${y.toFixed(3)}, u = ${u.toFixed(3)}, v = ${v.toFixed(3)}, k = ${k.toFixed(3)}`;
     }
     else if( recipe == gasket ) {
         transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
@@ -522,8 +512,8 @@ function make_generators(which_solution) {
         var k = control_points[1];
         transforms[0] = [ t, p2(0.0, -1.0), p2(0.0, -1.0), p2(0.0, 0.0) ];     // a: z -> (tz-i)/(-iz)
         transforms[1] = [ p2(1.0, 0.0), k, p2(0.0, 0.0),  p2(1.0, 0.0) ];      // b: z -> z + k
-        description = "Maskit parameterization from Jos Ley's paper (http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf) with t="
-            + format_complex(t) + ", k=" + format_complex(k);
+        description = "Maskit parameterization from Jos Ley's paper (http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf) with t = "
+            + format_complex(t) + ", k = " + format_complex(k);
     }
     else if( recipe == grandma ) {
         // Indra's Pearls, p. 227
@@ -539,14 +529,14 @@ function make_generators(which_solution) {
                           div_complex( mul_complex( sub( sub( mul_complex( t_a, t_ab ), mul( t_b, 2.0 ) ), p2( 0.0, 4.0 ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
                           mul( t_a, 0.5 ) ];
         transforms[1] = [ mul( sub( t_b, p2( 0.0, 2.0 ) ), 0.5 ), mul( t_b, 0.5 ), mul( t_b, 0.5 ), mul( add( t_b, p2( 0.0, 2.0 ) ), 0.5 ) ];
-        description = "Grandma's recipe from Indra's Pearls, p. 227. With ta=" + format_complex(t_a) + ", tb=" + format_complex(t_b);
+        description = "Grandma's recipe from Indra's Pearls, p. 227. With ta = " + format_complex(t_a) + ", tb = " + format_complex(t_b);
     }
     else if( recipe == riley ) {
         // Indra's Pearls, p. 258
         var c = control_points[0];
         transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0 ), c,              p2( 1.0, 0.0 ) ];
         transforms[1] = [ p2( 1.0, 0.0 ), p2( 2.0, 0.0 ), p2( 0.0, 0.0 ), p2( 1.0, 0.0 ) ];
-        description = "Riley's recipe from Indra's Pearls, p. 258. With c=" + format_complex(c);
+        description = "Riley's recipe from Indra's Pearls, p. 258. With c = " + format_complex(c);
     }
     else if( recipe == jorgensen ) {
         // Indra's Pearls, p. 256
@@ -557,7 +547,7 @@ function make_generators(which_solution) {
         var t_ab = solutions[which_solution]; // pick one
         transforms[0] = [ sub( t_a, div_complex( t_b, t_ab ) ), div_complex( t_a, mul_complex( t_ab, t_ab ) ), t_a, div_complex( t_b, t_ab ) ];
         transforms[1] = [ sub( t_b, div_complex( t_a, t_ab ) ), mul( div_complex( t_b, mul_complex( t_ab, t_ab ) ), -1.0 ), mul( t_b, -1.0 ), div_complex( t_a, t_ab ) ];
-        description = "Jorgensen's recipe from Indra's Pearls, p. 256. With ta=" + format_complex(t_a) + ", tb=" + format_complex(t_b);
+        description = "Jorgensen's recipe from Indra's Pearls, p. 256. With ta = " + format_complex(t_a) + ", tb = " + format_complex(t_b);
     }
     else if( recipe == special ) {
         // Indra's Pearls, p. 260
@@ -584,11 +574,53 @@ function make_generators(which_solution) {
             div_complex( sub( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), mul_complex( add( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ), z0 ) ),
             div_complex( mul_complex( add( sub( mul_complex( t_b, t_ab ), mul( t_a, 2.0 ) ), mul_complex( mul_complex( p2( 0.0, 1.0 ), Q ), t_ab ) ), z0 ), sub( mul( t_ab, 2.0 ), p2( 4.0, 0.0 ) ) ),
             mul( add( t_b, mul_complex( p2( 0.0, 1.0 ), Q ) ), 0.5 ) ];
-        description = "Grandma's four alarm special from Indra's Pearls, p. 260. With ta=" + format_complex(t_a) + ", tb=" + format_complex(t_b) + ", tab=" + format_complex(t_ab);
+        description = "Grandma's four alarm special from Indra's Pearls, p. 260. With ta = " + format_complex(t_a) + ", tb = " + format_complex(t_b) + ", tab = " + format_complex(t_ab);
     }
     else { throw "Unsupported recipe"; }
     transforms[2] = get_mobius_inverse( transforms[0] );
     transforms[3] = get_mobius_inverse( transforms[1] );
+}
+
+function draw_image_line( a, b, rgb ) {
+    var sa = toScreen( a );
+    var sb = toScreen( b );
+    if( sa.x >= 0 && sa.y >=0 && sa.x < image.width && sa.y < image.height &&
+        sb.x >= 0 && sb.y >=0 && sb.x < image.width && sb.y < image.height) {
+        line( Math.floor(sa.x), Math.floor(sa.y), Math.floor(sb.x), Math.floor(sb.y), (sx, sy) => {
+            var pixel_offset = ( sy * image.width + sx ) * 4;
+            pixels[pixel_offset + rgb] = 255;
+        } );
+        output_pts.push( toScreen( sa ) );
+        output_pts.push( toScreen( sb ) );
+    }
+}
+
+function explore_tree( x, prevTransform, level, fp, max_d2, rgb ) {
+    var n_pts = 0;
+    for( var k = prevTransform - 1; k <= prevTransform + 1; k++) {
+        var iTransform = (k + 4) % 4;
+        var y = get_mobius_composed( x, transforms[iTransform] )
+        var z1 = mobius_on_point( y, fp[iTransform][0] );
+        var z2 = mobius_on_point( y, fp[iTransform][1] );
+        var z3 = mobius_on_point( y, fp[iTransform][2] );
+        var d2_z2_z1 = dist2( z2, z1 );
+        var d2_z3_z2 = dist2( z3, z2 );
+        var close_enough = d2_z2_z1 < closeness_epsilon2 && d2_z3_z2 < closeness_epsilon2;
+        if( level < max_depth && !close_enough ) {
+            var ret = explore_tree( y, iTransform, level+1, fp, max_d2, rgb );
+            if( ret == -1 ) { return -1; } // abort
+            n_pts += ret;
+        }
+        else {
+            if( d2_z2_z1 > max_d2 || d2_z3_z2 > max_d2 ) {
+                return -1; // immediate abort, have hit a bad region
+            }
+            draw_image_line( z1, z2, rgb );
+            draw_image_line( z2, z3, rgb );
+            n_pts++;
+        }
+    }
+    return n_pts;
 }
 
 function compute() {
@@ -597,6 +629,7 @@ function compute() {
 
     var n_pts_plotted = 0;
     output_pts = [];
+    debug_pts = [];
 
     // for recipes that use a solution of a quadratic equation, we don't know which one to use, so use both
     for( var which_solution = 0; which_solution < 2; which_solution++ ) {
@@ -605,7 +638,7 @@ function compute() {
         make_generators(which_solution);
 
         // run DFS, Indra's Pearls, p. 152
-        if( plot_method[1] )
+        if( plot_dfs )
         {
             // define the repetends
             function compose4(a,b,c,d) { return get_mobius_composed( a, get_mobius_composed( b, get_mobius_composed( c, d ) ) ); }
@@ -626,56 +659,16 @@ function compute() {
                     fp[i].push( get_mobius_fixed_points( repetends[i][j] )[0] ); // Fix+ for each repetend
                 }
             }
-            function draw_image_line( a, b ) {
-                var sa = toScreen( a );
-                var sb = toScreen( b );
-                if( sa.x >= 0 && sa.y >=0 && sa.x < image.width && sa.y < image.height &&
-                    sb.x >= 0 && sb.y >=0 && sb.x < image.width && sb.y < image.height) {
-                    line( Math.floor(sa.x), Math.floor(sa.y), Math.floor(sb.x), Math.floor(sb.y), (sx, sy) => {
-                        var pixel_offset = ( sy * image.width + sx ) * 4;
-                        pixels[pixel_offset + which_solution] = 255;
-                    } );
-                    output_pts.push( toScreen( sa ) );
-                    output_pts.push( toScreen( sb ) );
-                }
-            }
-            // main function to recursively search the word tree
             var max_d2 = 1.0; // abort if any line is longer than this
-            function explore_tree( x, prevTransform, level ) {
-                var n_pts = 0;
-                for( var k = prevTransform - 1; k <= prevTransform + 1; k++) {
-                    var iTransform = (k + 4) % 4;
-                    var y = get_mobius_composed( x, transforms[iTransform] )
-                    var z1 = mobius_on_point( y, fp[iTransform][0] );
-                    var z2 = mobius_on_point( y, fp[iTransform][1] );
-                    var z3 = mobius_on_point( y, fp[iTransform][2] );
-                    var d2_z2_z1 = dist2( z2, z1 );
-                    var d2_z3_z2 = dist2( z3, z2 );
-                    var close_enough = d2_z2_z1 < closeness_epsilon2 && d2_z3_z2 < closeness_epsilon2;
-                    if( level < max_depth && !close_enough ) {
-                        var ret = explore_tree( y, iTransform, level+1 );
-                        if( ret == -1 ) { return -1; } // abort
-                        n_pts += ret;
-                    }
-                    else {
-                        if( d2_z2_z1 > max_d2 || d2_z3_z2 > max_d2 ) {
-                            return -1; // immediate abort, have hit a bad region
-                        }
-                        draw_image_line( z1, z2 );
-                        draw_image_line( z2, z3 );
-                        n_pts++;
-                    }
-                }
-                return n_pts;
-            };
+            var rgb = which_solution; // 0=red, 1=green
             for( var k = 0; k < 4; k++) {
-                var ret = explore_tree( transforms[k], k, 0 );
+                var ret = explore_tree( transforms[k], k, 0, fp, max_d2, rgb );
                 if( ret >= 0 ) { n_pts_plotted += ret; }
             }
         }
     }
 
-    if(n_pts_plotted == 0 || plot_method[0]) {
+    if(n_pts_plotted == 0 || plot_ifs) {
         // run IFS
         if(n_pts_plotted == 0) {
             // we're rendering IFS as a fallback from when the DFS rendering goes wrong, so clear the drawing
