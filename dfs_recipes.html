@@ -256,15 +256,20 @@ function draw() {
 
     // draw the axes
     if( draw_control_points ) {
-        var extent = 6;
+        var min = fromScreen( p2( 0.0, canvas.height ) );
+        var max = fromScreen( p2( canvas.width, 0.0 ) );
+        min = p2( Math.floor( min.x ), Math.floor( min.y ) );
+        max = p2( Math.ceil( max.x ), Math.ceil( max.y ) );
         ctx.strokeStyle = "rgba(255,255,255,0.4)";
         ctx.beginPath();
-        drawLine( p2( -extent, 0 ), p2( extent, 0 ) );
-        drawLine( p2( 0, -extent ), p2( 0, extent ) );
+        drawLine( p2( min.x, 0 ), p2( max.x, 0 ) );
+        drawLine( p2( 0, min.y ), p2( 0, max.y ) );
         // unit marks
-        for( var i = -extent; i <= extent; i++ ) {
-            drawLine( p2( i, -0.05 ), p2( i, 0.05 ) );
-            drawLine( p2( -0.05, i ), p2( 0.05, i ) );
+        for( var x = min.x; x <= max.x; x++ ) {
+            drawLine( p2( x, -0.05 ), p2( x, 0.05 ) );
+        }
+        for( var y = min.y; y <= max.y; y++ ) {
+            drawLine( p2( -0.05, y ), p2( 0.05, y ) );
         }
         ctx.stroke();
     }
