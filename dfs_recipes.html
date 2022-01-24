@@ -642,7 +642,7 @@ function plot_dfs_repetends(transforms, max_d2, which_solution, output_pts) {
     var BabA = compose4(B, a, b, A);
     var baBA = compose4(b, a, B, A);
     var abAB = compose4(a, b, A, B);
-    var AbaB = compose4(A, b, A, B);
+    var AbaB = compose4(A, b, a, B);
     var repetends = [ [ bABa, a, BAba ], [ ABab, b, aBAb ], [ BabA, A, baBA ], [ abAB, B, AbaB ] ]; // p. 218
     var fp = [];
     for( var i = 0; i < 4; i++) {
