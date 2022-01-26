@@ -568,6 +568,8 @@ function debug_recursive_tree_order() {
     console.log(message);
 }
 
+function last(arr) { return arr[arr.length - 1]; }
+
 function dfs_recursive_tree_order(transforms, which_solution, output_pts) {
     var [ a, b, A, B ] = transforms;
     var gens = [ {t:a, name:'a'}, {t:B, name:'B'}, {t:A, name:'A'}, {t:b, name:'b'} ];
@@ -579,36 +581,37 @@ function dfs_recursive_tree_order(transforms, which_solution, output_pts) {
     var baBA = compose4(b, a, B, A);
     var abAB = compose4(a, b, A, B);
     var AbaB = compose4(A, b, a, B);
-    var begpt = [
+    var repetends = [ [
         { p: get_mobius_fixed_points( abAB )[0], label: '|abAB' }, // beg[a]
-        { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' }, // beg[B]
-        { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' }, // beg[A]
-        { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' }, // beg[b]
-    ];
-    var endpt = [
         { p: get_mobius_fixed_points( aBAb )[0], label: '|aBAb' }, // end[a]
+        ], [
+        { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' }, // beg[B]
         { p: get_mobius_fixed_points( BAba )[0], label: '|BAba' }, // end[B]
+        ], [
+        { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' }, // beg[A]
         { p: get_mobius_fixed_points( AbaB )[0], label: '|AbaB' }, // end[A]
+        ], [
+        { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' }, // beg[b]
         { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' }, // end[b]
+        ]
     ];
-    //var message = '';
-    //console.log('leaf node:', begpt[0].label);
     function explore_tree( x, old_word, prev, level ) {
         var n_pts = 0;
         for( var k = prev - 1; k <= prev + 1; k++) {
             var iTag = ( k + 4 ) % 4;
             var y = get_mobius_composed( x, gens[ iTag ].t );
             var new_word = old_word + gens[ iTag ].name;
-            var p1 = mobius_on_point( y, begpt[ iTag ].p );
-            var p2 = mobius_on_point( y, endpt[ iTag ].p );
+            var z = []
+            for(var i = 0; i < repetends[iTag].length; i++) {
+                z.push( { p: mobius_on_point( y, repetends[iTag][i].p ), label: new_word + repetends[iTag][i].label } );
+            }
             if( level >= max_depth ) {
-                //console.log('leaf nodes:', new_word + begpt[iTag].label, new_word + endpt[iTag].label);
-                output_pts[which_solution].push( { p: p1, label: new_word + begpt[iTag].label } );
-                output_pts[which_solution].push( { p: p2, label: new_word + endpt[iTag].label } );
-                n_pts++;
+                for(var i = 0; i < z.length; i++) {
+                    output_pts[which_solution].push( z[i] );
+                    n_pts++;
+                }
             }
             else {
-                //message = message + ' -> ' + new_word;
                 n_pts += explore_tree( y, new_word, iTag, level + 1 );
             }
         }
@@ -617,13 +620,10 @@ function dfs_recursive_tree_order(transforms, which_solution, output_pts) {
     max_depth = 2;
     var n_pts_plotted = 0;
     for( var k = 0; k < 4; k++) {
-        //message += gens[k].name;
-        output_pts[which_solution].push( { p: begpt[k].p, label: begpt[k].label } );
+        output_pts[which_solution].push( { p: repetends[k][0].p, label: repetends[k][0].label } );
         n_pts_plotted += explore_tree( gens[k].t, gens[k].name, k, 1 );
-        // output_pts[which_solution].push( { p: endpt[k].p, label: endpt[k].label } ); // (not needed in most cases)
-        //message += '\n';
+        output_pts[which_solution].push( { p: last(repetends[k]).p, label: last(repetends[k]).label } ); // (not needed with necklace condition)
     }
-    //console.log(message);
     return n_pts_plotted;
 }
 
