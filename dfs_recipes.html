@@ -570,7 +570,7 @@ function debug_recursive_tree_order() {
 
 function last(arr) { return arr[arr.length - 1]; }
 
-function dfs_recursive_tree_order(transforms, which_solution, output_pts) {
+function dfs_recursive_tree(transforms, which_solution, output_pts) {
     var [ a, b, A, B ] = transforms;
     var gens = [ {t:a, name:'a'}, {t:B, name:'B'}, {t:A, name:'A'}, {t:b, name:'b'} ];
     var bABa = compose4(b, A, B, a);
@@ -582,17 +582,21 @@ function dfs_recursive_tree_order(transforms, which_solution, output_pts) {
     var abAB = compose4(a, b, A, B);
     var AbaB = compose4(A, b, a, B);
     var repetends = [ [
-        { p: get_mobius_fixed_points( abAB )[0], label: '|abAB' }, // beg[a]
-        { p: get_mobius_fixed_points( aBAb )[0], label: '|aBAb' }, // end[a]
+            { p: get_mobius_fixed_points( abAB )[0], label: '|abAB' }, // beg[a]
+            { p: get_mobius_fixed_points( a )[0],    label: '|a' },
+            { p: get_mobius_fixed_points( aBAb )[0], label: '|aBAb' }, // end[a]
         ], [
-        { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' }, // beg[B]
-        { p: get_mobius_fixed_points( BAba )[0], label: '|BAba' }, // end[B]
+            { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' }, // beg[B]
+            { p: get_mobius_fixed_points( B )[0],    label: '|B' },
+            { p: get_mobius_fixed_points( BAba )[0], label: '|BAba' }, // end[B]
         ], [
-        { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' }, // beg[A]
-        { p: get_mobius_fixed_points( AbaB )[0], label: '|AbaB' }, // end[A]
+            { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' }, // beg[A]
+            { p: get_mobius_fixed_points( A )[0],    label: '|A' },
+            { p: get_mobius_fixed_points( AbaB )[0], label: '|AbaB' }, // end[A]
         ], [
-        { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' }, // beg[b]
-        { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' }, // end[b]
+            { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' }, // beg[b]
+            { p: get_mobius_fixed_points( b )[0],    label: '|b' },
+            { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' }, // end[b]
         ]
     ];
     function explore_tree( x, old_word, prev, level ) {
@@ -601,7 +605,7 @@ function dfs_recursive_tree_order(transforms, which_solution, output_pts) {
             var iTag = ( k + 4 ) % 4;
             var y = get_mobius_composed( x, gens[ iTag ].t );
             var new_word = old_word + gens[ iTag ].name;
-            var z = []
+            var z = [];
             for(var i = 0; i < repetends[iTag].length; i++) {
                 z.push( { p: mobius_on_point( y, repetends[iTag][i].p ), label: new_word + repetends[iTag][i].label } );
             }
@@ -622,210 +626,13 @@ function dfs_recursive_tree_order(transforms, which_solution, output_pts) {
     for( var k = 0; k < 4; k++) {
         output_pts[which_solution].push( { p: repetends[k][0].p, label: repetends[k][0].label } );
         n_pts_plotted += explore_tree( gens[k].t, gens[k].name, k, 1 );
-        output_pts[which_solution].push( { p: last(repetends[k]).p, label: last(repetends[k]).label } ); // (not needed with necklace condition)
-    }
-    return n_pts_plotted;
-}
-
-function plot_dfs_fix(transforms, which_solution, output_pts) {
-    // the version shown at the bottom of p. 183
-
-    // first find the starting point, fix+(abAB)
-    var [ a, b, A, B ] = transforms;
-    var abAB = compose4(a, b, A, B);
-    var old_p = get_mobius_fixed_points( abAB )[0];
-    output_pts[which_solution].push( { p: old_p, label: "|abAB" } );
-
-    var gens = [ a, B, A, b ];
-    var fix = [];
-    for(var i = 0; i < gens.length; i++) {
-        fix[i] = get_mobius_fixed_points( gens[i] )[0];
-    }
-    var max_d = 1.0; // abort if any line is longer than this
-    var n_pts_plotted = 0;
-    function explore_tree( x, prev, level, old_word ) {
-        var n_pts = 0;
-        for( var k = prev - 1; k <= prev + 1; k++) {
-            var iTag = (k + 4) % 4;
-            var y = get_mobius_composed( x, gens[iTag] )
-            var new_word = old_word + 'aBAb'[iTag];
-            var p = mobius_on_point( y, fix[iTag] );
-            var d = dist(p, old_p);
-            var close_enough = d < closeness_epsilon;
-            if( !close_enough && level < max_depth ) {
-                var ret = explore_tree( y, iTag, level + 1, new_word );
-                if( ret == -1 ) {
-                    return -1; // continue abort
-                }
-                n_pts += ret;
-            }
-            else {
-                output_pts[which_solution].push( { p: p, label: new_word+'|'+'aBAb'[iTag] } );
-                if( d > max_d ) {
-                    // abort: lines are too long
-                    return -1;
-                }
-                old_p = p;
-                n_pts++;
-            }
-        }
-        return n_pts;
-    };
-    for( var k = 0; k < 4; k++) {
-        var word = 'aBAb'[k];
-        var ret = explore_tree( gens[k], k, 0, word );
-        if( ret >= 0 ) {
-            n_pts_plotted += ret;
-        }
-    }
-    return n_pts_plotted;
-}
-
-function plot_dfs_endpts(transforms, which_solution, output_pts) {
-    // the version shown on p. 185
-    var [ a, b, A, B ] = transforms;
-    var bABa = compose4(b, A, B, a);
-    var BAba = compose4(B, A, b, a);
-    var ABab = compose4(A, B, a, b);
-    var aBAb = compose4(a, B, A, b);
-    var BabA = compose4(B, a, b, A);
-    var baBA = compose4(b, a, B, A);
-    var abAB = compose4(a, b, A, B);
-    var AbaB = compose4(A, b, a, B);
-    var begpt = [
-        { p: get_mobius_fixed_points( abAB )[0], label: '|abAB' }, // beg[a]
-        { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' }, // beg[B]
-        { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' }, // beg[A]
-        { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' }, // beg[b]
-    ];
-    var endpt = [
-        { p: get_mobius_fixed_points( aBAb )[0], label: '|aBAb' }, // end[a]
-        { p: get_mobius_fixed_points( BAba )[0], label: '|BAba' }, // end[B]
-        { p: get_mobius_fixed_points( AbaB )[0], label: '|AbaB' }, // end[A]
-        { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' }, // end[b]
-    ];
-    var gens = [ a, B, A, b ];
-    var n_pts_plotted = 0;
-    var old_p = begpt[0].p;
-    output_pts[which_solution].push( { p: old_p, label: begpt[0].label } );
-    var max_d = 1.0; // abort if any line is longer than this
-    function explore_tree( x, prev, level, old_word ) {
-        var n_pts = 0;
-        for( var k = prev - 1; k <= prev + 1; k++) {
-            var iTag = (k + 4) % 4;
-            var y = get_mobius_composed( x, gens[iTag] )
-            var new_word = old_word + 'aBAb'[iTag];
-            var p = mobius_on_point( y, endpt[iTag].p );
-            var d = dist( old_p, p );
-            old_p = p;
-            var close_enough = d < closeness_epsilon;
-            if( !close_enough && level < max_depth ) {
-                var ret = explore_tree( y, iTag, level + 1, new_word );
-                if( ret == -1 ) {
-                    return -1; // continue abort
-                }
-                n_pts += ret;
-            }
-            else {
-                output_pts[which_solution].push( { p: p, label: new_word + endpt[iTag].label } );
-                if( d > max_d ) {
-                    console.log('aborting, d=',d);
-                    // abort: lines are too long
-                    return -1;
-                }
-                n_pts++;
-            }
-        }
-        return n_pts;
-    };
-    for( var k = 0; k < 4; k++) {
-        var word = 'aBAb'[k];
-        var ret = explore_tree( gens[k], k, 0, word );
-        if( ret >= 0 ) {
-            n_pts_plotted += ret;
-        }
+        output_pts[which_solution].push( { p: last(repetends[k]).p, label: last(repetends[k]).label } ); // (not needed if the necklace condition applies)
     }
     return n_pts_plotted;
 }
 
 function compose4(a,b,c,d) {
     return get_mobius_composed( a, get_mobius_composed( b, get_mobius_composed( c, d ) ) );
-}
-
-function plot_dfs_repetends(transforms, which_solution, output_pts) {
-    var n_pts_plotted = 0;
-    // define the repetends
-    var [ a, b, A, B ] = transforms;
-    var bABa = compose4(b, A, B, a);
-    var BAba = compose4(B, A, b, a);
-    var ABab = compose4(A, B, a, b);
-    var aBAb = compose4(a, B, A, b);
-    var BabA = compose4(B, a, b, A);
-    var baBA = compose4(b, a, B, A);
-    var abAB = compose4(a, b, A, B);
-    var AbaB = compose4(A, b, a, B);
-    //var repetends = [ [ BAba, a, bABa ], [ aBAb, b, ABab ], [ baBA, A, BabA ], [ AbaB, B, abAB ] ]; // p. 218 (but reversed order)
-    //var repetend_labels = [ [ 'BAba', 'a', 'bABa' ], [ 'aBAb', 'b', 'ABab' ], [ 'baBA', 'A', 'BabA' ], [ 'AbaB', 'B', 'abAB' ] ];
-    var repetends = [ [ BAba, bABa ], [ aBAb, ABab ], [ baBA, BabA ], [ AbaB, abAB ] ];
-    var repetend_labels = [ [ 'BAba', 'bABa' ], [ 'aBAb', 'ABab' ], [ 'baBA', 'BabA' ], [ 'AbaB', 'abAB' ] ];
-    var fp = [];
-    for( var i = 0; i < repetends.length; i++) {
-        fp.push( [] );
-        for( var j = 0; j < repetends[i].length; j++) {
-            fp[i].push( { p: get_mobius_fixed_points( repetends[i][j] )[0], // Fix+ for each repetend
-                          label: repetend_labels[i][j] } );
-        }
-    }
-    var max_d = 1.0; // abort if any line is longer than this
-    function explore_tree( transforms, x, prevTransform, level, fp, which_solution, output_pts, old_word ) {
-        var n_pts = 0;
-        for( var k = prevTransform - 1; k <= prevTransform + 1; k++) {
-            var iTransform = (k + 4) % 4;
-            var y = get_mobius_composed( x, transforms[iTransform] );
-            var word = old_word + 'abAB'[iTransform];
-            var z = [];
-            var close_enough = true;
-            var very_long_segment = false;
-            for(var i = 0; i < fp[iTransform].length; i++ ) {
-                var pt = mobius_on_point( y, fp[iTransform][i].p );
-                z.push( { p: pt, label: word+'|'+fp[iTransform][i].label } );
-                if( i > 0 ) {
-                    var d2 = dist2( pt, z[ i - 1 ].p );
-                    console.log( Math.sqrt(d2) );
-                    if( d2 > closeness_epsilon2 ) {
-                        close_enough = false;
-                    }
-                    if( d2 > max_d * max_d ) {
-                        very_long_segment = true;
-                    }
-                }
-            }
-            console.log(level, word, output_pts[which_solution].length, close_enough);
-            // why do i get different results to Fig. 8.18 - more points?
-            if( level < max_depth && !close_enough ) {
-                var ret = explore_tree( transforms, y, iTransform, level+1, fp, which_solution, output_pts, word );
-                if( ret == -1 ) { return -1; } // continue abort
-                n_pts += ret;
-            }
-            else {
-                if( very_long_segment ) {
-                    return -1; // immediate abort, lines are too long but have reach max_depth
-                }
-                for(var i = 0; i < z.length; i++) {
-                    console.log('output ',output_pts[which_solution].length, z[i].label );
-                    output_pts[which_solution].push( z[i] );
-                }
-                n_pts++;
-            }
-        }
-        return n_pts;
-    };
-    for( var k = 0; k < 4; k++) {
-        console.log('exploring branch', 'abAB'[k] );
-        var ret = explore_tree( transforms, transforms[k], k, 0, fp, which_solution, output_pts, 'abAB'[k] );
-        if( ret >= 0 ) { n_pts_plotted += ret; }
-    }
-    return n_pts_plotted;
 }
 
 function draw_ifs(transforms, which_solution) {
@@ -854,10 +661,7 @@ function compute() {
 
             [transforms, description] = make_generators(which_solution);
 
-            n_pts_plotted = dfs_recursive_tree_order( transforms, which_solution, output_pts );
-            //n_pts_plotted += plot_dfs_fix( transforms, which_solution, output_pts );
-            //n_pts_plotted += plot_dfs_endpts( transforms, which_solution, output_pts );
-            //n_pts_plotted += plot_dfs_repetends( transforms, which_solution, output_pts );
+            n_pts_plotted = dfs_recursive_tree( transforms, which_solution, output_pts );
         }
     }
 
