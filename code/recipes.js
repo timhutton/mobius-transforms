@@ -1,5 +1,16 @@
 function get_recipes()
 {
+    var fuchsian = { label: "Fuchsian", control_points: [], pt_labels: [],
+        make_generators: (which_solution, control_points) => {
+            // Indra's Pearls, page 163
+            var transforms = [];
+            var root2 = Math.sqrt( 2.0 );
+            transforms[0] = [ p2(root2, 0.0), p2(0.0, 1.0), p2(0.0, -1.0), p2(root2, 0.0) ];
+            transforms[1] = [ p2(root2, 0.0), p2(1.0, 0.0), p2(1.0, 0.0),  p2(root2, 0.0) ];
+            var description = "Fuchsian recipe from Indra's Pearls, p. 163.";
+            return [transforms, description];
+        }
+    };
     var theta_schottky = { label: "\u03B8-Schottky", control_points: [ p2(0.6, 0.5) ], pt_labels: [ '\u03B8' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, page 118
@@ -82,8 +93,8 @@ function get_recipes()
 
     var grandma = {
         label: "Grandma's recipe",
-        control_points: [ p2(2.4, 0.0), p2(2.4, 0.0) ],
-        //control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ],
+        //control_points: [ p2(2.4, 0.0), p2(2.4, 0.0) ],
+        control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ],
         //control_points: [ p2(1.958591030,-0.011278560), p2(2.0, 0.0) ], //Fig. 9.1, p. 269
         //control_points: [ p2(1.64213876,-0.76658841), p2(2.0, 0.0) ], //Fig. 9.3, p. 272
         //control_points: [ p2(0.136998688,1.80785524), p2(2.0, 0.0) ], //Fig. 9.16, p. 295 ?
@@ -178,5 +189,5 @@ function get_recipes()
         }
     };
 
-    return [ theta_schottky, kissing_schottky, gasket, maskit, maskit2, maskit3, grandma, riley, jorgensen, special ];
+    return [ fuchsian, theta_schottky, kissing_schottky, gasket, maskit, maskit2, maskit3, grandma, riley, jorgensen, special ];
 }

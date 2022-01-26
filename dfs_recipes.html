@@ -176,7 +176,7 @@ function init() {
         el.value = recipes[i].label;
         recipes_dropdown.appendChild(el);
     }
-    iRecipe = 6;
+    iRecipe = 0;
     recipes_dropdown.selectedIndex = iRecipe;
 
     control_points = [];
@@ -188,10 +188,10 @@ function init() {
     image = ctx.getImageData(0, 0, canvas.width, canvas.height);
     pixels = image.data;
 
-    plot_solution = [ true, true ];
+    plot_solution = [ false, true ];
     document.getElementById("which_solution_dropdown").selectedIndex = 2;
 
-    plot_ifs = false;
+    plot_ifs = true;
     plot_dfs = true;
     document.getElementById("which_method_dropdown").selectedIndex = 1;
 
@@ -221,18 +221,18 @@ function draw() {
     for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
         if( output_pts[which_solution].length == 0 ) { continue; }
         // draw the loop
-        var a = output_pts[which_solution][0], b;
+        var a = output_pts[which_solution][0].p, b;
         for(var i = 1; i < output_pts[which_solution].length; i++) {
-            b = output_pts[which_solution][i];
-            if( dist2( a, b ) < 1.0 ) {
+            b = output_pts[which_solution][i].p;
+            //if( dist2( a, b ) < 1.0 ) {
                 draw_image_line( a, b, which_solution );
-            }
+            //}
             a = b;
         }
-        b = output_pts[which_solution][0];
-        if( dist2( a, b ) < 1.0 ) {
+        b = output_pts[which_solution][0].p;
+        //if( dist2( a, b ) < 1.0 ) {
             draw_image_line( a, b, which_solution );
-        }
+        //}
     }
 
     // draw the cloud points into the image buffer
@@ -241,12 +241,7 @@ function draw() {
             var sp = toScreen( cloud_pts[which_solution][i] );
             if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
                 var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-                // sort of log-mapping: pixels get brighter at a slower rate the brighter they get,
-                // avoids saturating too quickly
-                var val = pixels[pixel_offset + which_solution];
-                if( Math.random() > val / 255.0 ) {
-                    pixels[pixel_offset + which_solution] = Math.min( 255, val + inc );
-                }
+                pixels[pixel_offset + which_solution] = 255;
             }
         }
     }
@@ -292,6 +287,17 @@ function draw() {
             drawPoint( toScreen( control_points[ i ] ), radius, recipes[ iRecipe ].pt_labels[i], offset );
         }
     }
+
+    // draw the debug labels
+    if( true ) {
+        ctx.font="16px Arial";
+        ctx.fillStyle = "rgb(255,255,255)";
+        for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+            for( var i = 0; i < output_pts[which_solution].length; i++ ) {
+                drawPoint( toScreen( output_pts[which_solution][ i ].p ), 2, i+':'+output_pts[which_solution][i].label, p2( 0, i%2==1?10:-10 ) );
+            }
+        }
+    }
 }
 
 function drawLine( a, b ) {
@@ -323,15 +329,14 @@ function onRecipeChanged(element) {
 function set_quality_parameters(hq_mode) {
     if( hq_mode ) {
         num_ifs_iterations = 10000000;
-        inc = 1;
         max_depth = 50;
         closeness_epsilon = 0.001; // if sequential points are closer than this we can stop searching
     }
     else {
         num_ifs_iterations = 100000;
-        inc = 100;
         max_depth = 15;
-        closeness_epsilon = 0.003; // if sequential points are closer than this we can stop searching
+        //closeness_epsilon = 0.003; // if sequential points are closer than this we can stop searching
+        closeness_epsilon = 0.4; // debug
     }
     closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
 }
@@ -527,8 +532,10 @@ function make_generators(which_solution) {
 function draw_image_line( a, b, rgb ) {
     var sa = toScreen( a );
     var sb = toScreen( b );
+    // TODO: should also draw if line crosses rectangle with neither point inside
     if( (sa.x >= 0 && sa.y >=0 && sa.x < image.width && sa.y < image.height) ||
         (sb.x >= 0 && sb.y >=0 && sb.x < image.width && sb.y < image.height) ) {
+        // TODO: clip line ends to on-screen parts
         line( Math.floor(sa.x), Math.floor(sa.y), Math.floor(sb.x), Math.floor(sb.y), (sx, sy) => {
             if( sx >= 0 && sy >=0 && sx < image.width && sy < image.height ) {
                 pixels[( sy * image.width + sx ) * 4 + rgb] = 255;
@@ -537,43 +544,136 @@ function draw_image_line( a, b, rgb ) {
     }
 }
 
-function plot_dfs_fix(transforms, max_d2, which_solution, output_pts) {
-    var fix = [];
-    for(var i = 0; i < transforms.length; i++) {
-        fix[i] = get_mobius_fixed_points( transforms[i] )[0];
+function debug_recursive_tree_order() {
+    // generate the order shown on p. 150, walking anti-clockwise around Fig. 6.13
+    // (elsewhere it says gens=[a,b,A,B] but that doesn't work) TODO: implement iterative version, try to understand why
+    var gens = [ 'a', 'B', 'A', 'b' ];
+    var message = '';
+    function explore_tree( old_word, prev, level ) {
+        for( var k = prev - 1; k <= prev + 1; k++) {
+            var iTag = ( k + 4 ) % 4;
+            var new_word = old_word + gens[ iTag ];
+            if( level < max_depth ) {
+                message = message + ' -> ' + new_word;
+                explore_tree( new_word, iTag, level + 1 );
+            }
+        }
+    };
+    max_depth = 2;
+    for( var k = 0; k < 4; k++) {
+        message += gens[k];
+        explore_tree( gens[k], k, 0 );
+        message += '\n';
     }
-    var n_pts_plotted = 0;
-    var max_pts = 1e6; // need to stop the app becoming unresponsive
-    var old_p;
-    var have_old_p = false;
-    function explore_tree( x, prev, level ) {
+    console.log(message);
+}
+
+function dfs_recursive_tree_order(transforms, which_solution, output_pts) {
+    var [ a, b, A, B ] = transforms;
+    var gens = [ {t:a, name:'a'}, {t:B, name:'B'}, {t:A, name:'A'}, {t:b, name:'b'} ];
+    var bABa = compose4(b, A, B, a);
+    var BAba = compose4(B, A, b, a);
+    var ABab = compose4(A, B, a, b);
+    var aBAb = compose4(a, B, A, b);
+    var BabA = compose4(B, a, b, A);
+    var baBA = compose4(b, a, B, A);
+    var abAB = compose4(a, b, A, B);
+    var AbaB = compose4(A, b, a, B);
+    var begpt = [
+        { p: get_mobius_fixed_points( abAB )[0], label: '|abAB' }, // beg[a]
+        { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' }, // beg[B]
+        { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' }, // beg[A]
+        { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' }, // beg[b]
+    ];
+    var endpt = [
+        { p: get_mobius_fixed_points( aBAb )[0], label: '|aBAb' }, // end[a]
+        { p: get_mobius_fixed_points( BAba )[0], label: '|BAba' }, // end[B]
+        { p: get_mobius_fixed_points( AbaB )[0], label: '|AbaB' }, // end[A]
+        { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' }, // end[b]
+    ];
+    //var message = '';
+    //console.log('leaf node:', begpt[0].label);
+    function explore_tree( x, old_word, prev, level ) {
         var n_pts = 0;
         for( var k = prev - 1; k <= prev + 1; k++) {
-            var iTransform = (k + 4) % 4;
-            var y = get_mobius_composed( x, transforms[iTransform] )
-            var p = mobius_on_point( y, fix[iTransform] );
-            if( level < max_depth && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > closeness_epsilon2 ) ) {
-                var ret = explore_tree( y, iTransform, level + 1 );
+            var iTag = ( k + 4 ) % 4;
+            var y = get_mobius_composed( x, gens[ iTag ].t );
+            var new_word = old_word + gens[ iTag ].name;
+            var p1 = mobius_on_point( y, begpt[ iTag ].p );
+            var p2 = mobius_on_point( y, endpt[ iTag ].p );
+            if( level >= max_depth ) {
+                //console.log('leaf nodes:', new_word + begpt[iTag].label, new_word + endpt[iTag].label);
+                output_pts[which_solution].push( { p: p1, label: new_word + begpt[iTag].label } );
+                output_pts[which_solution].push( { p: p2, label: new_word + endpt[iTag].label } );
+                n_pts++;
+            }
+            else {
+                //message = message + ' -> ' + new_word;
+                n_pts += explore_tree( y, new_word, iTag, level + 1 );
+            }
+        }
+        return n_pts;
+    };
+    max_depth = 2;
+    var n_pts_plotted = 0;
+    for( var k = 0; k < 4; k++) {
+        //message += gens[k].name;
+        output_pts[which_solution].push( { p: begpt[k].p, label: begpt[k].label } );
+        n_pts_plotted += explore_tree( gens[k].t, gens[k].name, k, 1 );
+        // output_pts[which_solution].push( { p: endpt[k].p, label: endpt[k].label } ); // (not needed in most cases)
+        //message += '\n';
+    }
+    //console.log(message);
+    return n_pts_plotted;
+}
+
+function plot_dfs_fix(transforms, which_solution, output_pts) {
+    // the version shown at the bottom of p. 183
+
+    // first find the starting point, fix+(abAB)
+    var [ a, b, A, B ] = transforms;
+    var abAB = compose4(a, b, A, B);
+    var old_p = get_mobius_fixed_points( abAB )[0];
+    output_pts[which_solution].push( { p: old_p, label: "|abAB" } );
+
+    var gens = [ a, B, A, b ];
+    var fix = [];
+    for(var i = 0; i < gens.length; i++) {
+        fix[i] = get_mobius_fixed_points( gens[i] )[0];
+    }
+    var max_d = 1.0; // abort if any line is longer than this
+    var n_pts_plotted = 0;
+    function explore_tree( x, prev, level, old_word ) {
+        var n_pts = 0;
+        for( var k = prev - 1; k <= prev + 1; k++) {
+            var iTag = (k + 4) % 4;
+            var y = get_mobius_composed( x, gens[iTag] )
+            var new_word = old_word + 'aBAb'[iTag];
+            var p = mobius_on_point( y, fix[iTag] );
+            var d = dist(p, old_p);
+            var close_enough = d < closeness_epsilon;
+            if( !close_enough && level < max_depth ) {
+                var ret = explore_tree( y, iTag, level + 1, new_word );
                 if( ret == -1 ) {
                     return -1; // continue abort
                 }
                 n_pts += ret;
             }
             else {
-                output_pts[which_solution].push( p );
-                if( have_old_p && dist2(p, old_p) > max_d2 ) {
+                output_pts[which_solution].push( { p: p, label: new_word+'|'+'aBAb'[iTag] } );
+                if( d > max_d ) {
                     // abort: lines are too long
                     return -1;
                 }
                 old_p = p;
-                have_old_p = true;
                 n_pts++;
             }
         }
         return n_pts;
     };
     for( var k = 0; k < 4; k++) {
-        var ret = explore_tree( transforms[k], k, 0 );
+        var word = 'aBAb'[k];
+        var ret = explore_tree( gens[k], k, 0, word );
         if( ret >= 0 ) {
             n_pts_plotted += ret;
         }
@@ -581,45 +681,66 @@ function plot_dfs_fix(transforms, max_d2, which_solution, output_pts) {
     return n_pts_plotted;
 }
 
-function plot_dfs_endpts(transforms, max_d2, which_solution, output_pts) {
-    var endpt = [
-        get_mobius_fixed_points( get_mobius_composed( transforms[3], get_mobius_composed( transforms[2], get_mobius_composed( transforms[1], transforms[0] ) ) ) )[0],
-        get_mobius_fixed_points( get_mobius_composed( transforms[0], get_mobius_composed( transforms[3], get_mobius_composed( transforms[2], transforms[1] ) ) ) )[0],
-        get_mobius_fixed_points( get_mobius_composed( transforms[1], get_mobius_composed( transforms[0], get_mobius_composed( transforms[3], transforms[2] ) ) ) )[0],
-        get_mobius_fixed_points( get_mobius_composed( transforms[2], get_mobius_composed( transforms[1], get_mobius_composed( transforms[0], transforms[3] ) ) ) )[0]
+function plot_dfs_endpts(transforms, which_solution, output_pts) {
+    // the version shown on p. 185
+    var [ a, b, A, B ] = transforms;
+    var bABa = compose4(b, A, B, a);
+    var BAba = compose4(B, A, b, a);
+    var ABab = compose4(A, B, a, b);
+    var aBAb = compose4(a, B, A, b);
+    var BabA = compose4(B, a, b, A);
+    var baBA = compose4(b, a, B, A);
+    var abAB = compose4(a, b, A, B);
+    var AbaB = compose4(A, b, a, B);
+    var begpt = [
+        { p: get_mobius_fixed_points( abAB )[0], label: '|abAB' }, // beg[a]
+        { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' }, // beg[B]
+        { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' }, // beg[A]
+        { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' }, // beg[b]
     ];
+    var endpt = [
+        { p: get_mobius_fixed_points( aBAb )[0], label: '|aBAb' }, // end[a]
+        { p: get_mobius_fixed_points( BAba )[0], label: '|BAba' }, // end[B]
+        { p: get_mobius_fixed_points( AbaB )[0], label: '|AbaB' }, // end[A]
+        { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' }, // end[b]
+    ];
+    var gens = [ a, B, A, b ];
     var n_pts_plotted = 0;
-    var max_pts = 1e6; // need to stop the app becoming unresponsive
-    var old_p;
-    var have_old_p = false;
-    function explore_tree( x, prev, level ) {
+    var old_p = begpt[0].p;
+    output_pts[which_solution].push( { p: old_p, label: begpt[0].label } );
+    var max_d = 1.0; // abort if any line is longer than this
+    function explore_tree( x, prev, level, old_word ) {
         var n_pts = 0;
         for( var k = prev - 1; k <= prev + 1; k++) {
-            var iTransform = (k + 4) % 4;
-            var y = get_mobius_composed( x, transforms[iTransform] )
-            var p = mobius_on_point( y, endpt[iTransform] );
-            if( level < max_depth && n_pts < max_pts && ( !have_old_p || dist2(p, old_p) > closeness_epsilon2 ) ) {
-                var ret = explore_tree( y, iTransform, level + 1 );
+            var iTag = (k + 4) % 4;
+            var y = get_mobius_composed( x, gens[iTag] )
+            var new_word = old_word + 'aBAb'[iTag];
+            var p = mobius_on_point( y, endpt[iTag].p );
+            var d = dist( old_p, p );
+            old_p = p;
+            var close_enough = d < closeness_epsilon;
+            if( !close_enough && level < max_depth ) {
+                var ret = explore_tree( y, iTag, level + 1, new_word );
                 if( ret == -1 ) {
                     return -1; // continue abort
                 }
                 n_pts += ret;
             }
             else {
-                output_pts[which_solution].push( p );
-                if( have_old_p && dist2(p, old_p) > max_d2 ) {
+                output_pts[which_solution].push( { p: p, label: new_word + endpt[iTag].label } );
+                if( d > max_d ) {
+                    console.log('aborting, d=',d);
                     // abort: lines are too long
                     return -1;
                 }
-                old_p = p;
-                have_old_p = true;
                 n_pts++;
             }
         }
         return n_pts;
     };
     for( var k = 0; k < 4; k++) {
-        var ret = explore_tree( transforms[k], k, 0 );
+        var word = 'aBAb'[k];
+        var ret = explore_tree( gens[k], k, 0, word );
         if( ret >= 0 ) {
             n_pts_plotted += ret;
         }
@@ -631,7 +752,7 @@ function compose4(a,b,c,d) {
     return get_mobius_composed( a, get_mobius_composed( b, get_mobius_composed( c, d ) ) );
 }
 
-function plot_dfs_repetends(transforms, max_d2, which_solution, output_pts) {
+function plot_dfs_repetends(transforms, which_solution, output_pts) {
     var n_pts_plotted = 0;
     // define the repetends
     var [ a, b, A, B ] = transforms;
@@ -643,54 +764,77 @@ function plot_dfs_repetends(transforms, max_d2, which_solution, output_pts) {
     var baBA = compose4(b, a, B, A);
     var abAB = compose4(a, b, A, B);
     var AbaB = compose4(A, b, a, B);
-    var repetends = [ [ bABa, a, BAba ], [ ABab, b, aBAb ], [ BabA, A, baBA ], [ abAB, B, AbaB ] ]; // p. 218
+    //var repetends = [ [ BAba, a, bABa ], [ aBAb, b, ABab ], [ baBA, A, BabA ], [ AbaB, B, abAB ] ]; // p. 218 (but reversed order)
+    //var repetend_labels = [ [ 'BAba', 'a', 'bABa' ], [ 'aBAb', 'b', 'ABab' ], [ 'baBA', 'A', 'BabA' ], [ 'AbaB', 'B', 'abAB' ] ];
+    var repetends = [ [ BAba, bABa ], [ aBAb, ABab ], [ baBA, BabA ], [ AbaB, abAB ] ];
+    var repetend_labels = [ [ 'BAba', 'bABa' ], [ 'aBAb', 'ABab' ], [ 'baBA', 'BabA' ], [ 'AbaB', 'abAB' ] ];
     var fp = [];
-    for( var i = 0; i < 4; i++) {
+    for( var i = 0; i < repetends.length; i++) {
         fp.push( [] );
-        for( var j = 0; j < 3; j++) {
-            fp[i].push( get_mobius_fixed_points( repetends[i][j] )[0] ); // Fix+ for each repetend
+        for( var j = 0; j < repetends[i].length; j++) {
+            fp[i].push( { p: get_mobius_fixed_points( repetends[i][j] )[0], // Fix+ for each repetend
+                          label: repetend_labels[i][j] } );
         }
     }
-    function explore_tree( transforms, x, prevTransform, level, fp, max_d2, which_solution, output_pts ) {
+    var max_d = 1.0; // abort if any line is longer than this
+    function explore_tree( transforms, x, prevTransform, level, fp, which_solution, output_pts, old_word ) {
         var n_pts = 0;
         for( var k = prevTransform - 1; k <= prevTransform + 1; k++) {
             var iTransform = (k + 4) % 4;
-            var y = get_mobius_composed( x, transforms[iTransform] )
-            var z1 = mobius_on_point( y, fp[iTransform][0] );
-            var z2 = mobius_on_point( y, fp[iTransform][1] );
-            var z3 = mobius_on_point( y, fp[iTransform][2] );
-            var d2_z2_z1 = dist2( z2, z1 );
-            var d2_z3_z2 = dist2( z3, z2 );
-            var close_enough = d2_z2_z1 < closeness_epsilon2 && d2_z3_z2 < closeness_epsilon2;
+            var y = get_mobius_composed( x, transforms[iTransform] );
+            var word = old_word + 'abAB'[iTransform];
+            var z = [];
+            var close_enough = true;
+            var very_long_segment = false;
+            for(var i = 0; i < fp[iTransform].length; i++ ) {
+                var pt = mobius_on_point( y, fp[iTransform][i].p );
+                z.push( { p: pt, label: word+'|'+fp[iTransform][i].label } );
+                if( i > 0 ) {
+                    var d2 = dist2( pt, z[ i - 1 ].p );
+                    console.log( Math.sqrt(d2) );
+                    if( d2 > closeness_epsilon2 ) {
+                        close_enough = false;
+                    }
+                    if( d2 > max_d * max_d ) {
+                        very_long_segment = true;
+                    }
+                }
+            }
+            console.log(level, word, output_pts[which_solution].length, close_enough);
+            // why do i get different results to Fig. 8.18 - more points?
             if( level < max_depth && !close_enough ) {
-                var ret = explore_tree( transforms, y, iTransform, level+1, fp, max_d2, which_solution, output_pts );
+                var ret = explore_tree( transforms, y, iTransform, level+1, fp, which_solution, output_pts, word );
                 if( ret == -1 ) { return -1; } // continue abort
                 n_pts += ret;
             }
             else {
-                if( d2_z2_z1 > max_d2 || d2_z3_z2 > max_d2 ) {
-                    return -1; // immediate abort, lines are too long
+                if( very_long_segment ) {
+                    return -1; // immediate abort, lines are too long but have reach max_depth
                 }
-                output_pts[which_solution].push( z3 );
-                output_pts[which_solution].push( z2 );
-                output_pts[which_solution].push( z1 ); // (not sure why the order is reversed here)
+                for(var i = 0; i < z.length; i++) {
+                    console.log('output ',output_pts[which_solution].length, z[i].label );
+                    output_pts[which_solution].push( z[i] );
+                }
                 n_pts++;
             }
         }
         return n_pts;
     };
     for( var k = 0; k < 4; k++) {
-        var ret = explore_tree( transforms, transforms[k], k, 0, fp, max_d2, which_solution, output_pts );
+        console.log('exploring branch', 'abAB'[k] );
+        var ret = explore_tree( transforms, transforms[k], k, 0, fp, which_solution, output_pts, 'abAB'[k] );
         if( ret >= 0 ) { n_pts_plotted += ret; }
     }
     return n_pts_plotted;
 }
 
 function draw_ifs(transforms, which_solution) {
+    var discard = 20;
     var p = p2(0.0,0.0);
-    for( var i = 0; i < num_ifs_iterations; i++) {
+    for( var i = 0; i < num_ifs_iterations + discard; i++) {
         p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
-        cloud_pts[which_solution].push( p );
+        if( i > discard )
+            cloud_pts[which_solution].push( p );
     }
     return num_ifs_iterations;
 }
@@ -700,7 +844,6 @@ function compute() {
     var n_pts_plotted = 0;
     output_pts = [[],[]];
     cloud_pts = [[],[]];
-    var max_d2 = 1.0; // abort if any line is longer than this
     var transforms = [];
     var description = "";
     var dfs_succeeded = true;
@@ -711,9 +854,10 @@ function compute() {
 
             [transforms, description] = make_generators(which_solution);
 
-            //n_pts_plotted += plot_dfs_fix( transforms, max_d2, which_solution, output_pts );
-            //n_pts_plotted += plot_dfs_endpts( transforms, max_d2, which_solution, output_pts );
-            n_pts_plotted += plot_dfs_repetends( transforms, max_d2, which_solution, output_pts );
+            n_pts_plotted = dfs_recursive_tree_order( transforms, which_solution, output_pts );
+            //n_pts_plotted += plot_dfs_fix( transforms, which_solution, output_pts );
+            //n_pts_plotted += plot_dfs_endpts( transforms, which_solution, output_pts );
+            //n_pts_plotted += plot_dfs_repetends( transforms, which_solution, output_pts );
         }
     }
 
