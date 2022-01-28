@@ -617,7 +617,7 @@ function find_fixed_points(transforms, which_solution, debug_pts) {
     }
 }
 
-function dfs_recursive_tree(transforms, which_solution, output_pts) {
+function get_repetends( transforms ) {
     var [ a, b, A, B ] = transforms;
     var gens = [ {t:a, name:'a'}, {t:B, name:'B'}, {t:A, name:'A'}, {t:b, name:'b'} ];
     var bABa = get_mobius_composed(b, A, B, a);
@@ -662,6 +662,10 @@ function dfs_recursive_tree(transforms, which_solution, output_pts) {
             { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' }, // end[b]
         ]
     ];
+    return [gens, repetends];
+}
+
+function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
     function explore_tree( x, old_word, prev, level ) {
         var n_pts = 0;
         for( var k = prev - 1; k <= prev + 1; k++) {
@@ -723,9 +727,9 @@ function compute() {
         for( var which_solution = 0; which_solution < 2; which_solution++ ) {
             if(! plot_solution[which_solution] ) { continue; }
 
-            [transforms, description] = make_generators(which_solution);
-
-            n_pts_plotted = dfs_recursive_tree( transforms, which_solution, output_pts );
+            [transforms, description] = make_generators( which_solution );
+            var [gens, repetends] = get_repetends( transforms );
+            n_pts_plotted += dfs_recursive_tree( gens, repetends, which_solution, output_pts );
 
             if( draw_fixed_points ) {
                 find_fixed_points(transforms, which_solution, debug_pts);
@@ -745,9 +749,8 @@ function compute() {
         for( var which_solution = 0; which_solution < 2; which_solution++ ) {
             if(! plot_solution[which_solution] ) { continue; }
 
-            [transforms, description] = make_generators(which_solution);
-
-            n_pts_plotted += draw_ifs(transforms, which_solution);
+            [transforms, description] = make_generators( which_solution );
+            n_pts_plotted += draw_ifs( transforms, which_solution );
         }
     }
 
