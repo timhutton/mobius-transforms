@@ -177,7 +177,7 @@ function init() {
         el.value = recipes[i].label;
         recipes_dropdown.appendChild(el);
     }
-    iRecipe = 0;
+    iRecipe = 8;
     recipes_dropdown.selectedIndex = iRecipe;
 
     control_points = [];
@@ -189,10 +189,10 @@ function init() {
     image = ctx.getImageData(0, 0, canvas.width, canvas.height);
     pixels = image.data;
 
-    plot_solution = [ false, true ];
+    plot_solution = [ true, true ];
     document.getElementById("which_solution_dropdown").selectedIndex = 2;
 
-    plot_ifs = true;
+    plot_ifs = false;
     plot_dfs = true;
     document.getElementById("which_method_dropdown").selectedIndex = 1;
 
@@ -357,9 +357,8 @@ function set_quality_parameters(hq_mode) {
     }
     else {
         num_ifs_iterations = 100000;
-        max_depth = 12;
-        //closeness_epsilon = 0.003; // if sequential points are closer than this we can stop searching
-        closeness_epsilon = 0.01; // debug
+        max_depth = 15;
+        closeness_epsilon = 0.003; // if sequential points are closer than this we can stop searching
     }
     closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
 }
@@ -555,6 +554,7 @@ function make_generators(which_solution) {
 function draw_image_line( a, b, rgb ) {
     var sa = toScreen( a );
     var sb = toScreen( b );
+    // TODO: guard against NaNs
     // TODO: should also draw if line crosses rectangle with neither point inside
     if( (sa.x >= 0 && sa.y >=0 && sa.x < image.width && sa.y < image.height) ||
         (sb.x >= 0 && sb.y >=0 && sb.x < image.width && sb.y < image.height) ) {
@@ -569,7 +569,6 @@ function draw_image_line( a, b, rgb ) {
 
 function debug_recursive_tree_order() {
     // generate the order shown on p. 150, walking anti-clockwise around Fig. 6.13
-    // (elsewhere it says gens=[a,b,A,B] but that doesn't work) TODO: implement iterative version, try to understand why
     var gens = [ 'a', 'B', 'A', 'b' ];
     var message = '';
     function explore_tree( old_word, prev, level ) {
@@ -675,8 +674,8 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
             for(var i = 0; i < repetends[iTag].length; i++) {
                 z.push( { p: mobius_on_point( x, repetends[iTag][i].p ), label: old_word + repetends[iTag][i].label } );
                 if( i > 0 ) {
-                    var d = dist( z[i].p, z[i-1].p );
-                    if( d > closeness_epsilon ) { close_enough = false; }
+                    var d2 = dist2( z[i].p, z[i-1].p );
+                    if( d2 > closeness_epsilon2 ) { close_enough = false; }
                 }
             }
             if( close_enough || level >= max_depth ) {
