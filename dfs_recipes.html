@@ -196,6 +196,8 @@ function init() {
     plot_dfs = true;
     document.getElementById("which_method_dropdown").selectedIndex = 1;
 
+    closed_loop = false;
+
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
@@ -220,20 +222,35 @@ function draw() {
 
     // draw the loop into the image buffer
     for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        if( output_pts[which_solution].length == 0 ) { continue; }
         if( true ) {
-            // draw the loop
-            var a = output_pts[which_solution][0].p, b;
-            for(var i = 1; i < output_pts[which_solution].length; i++) {
-                b = output_pts[which_solution][i].p;
+            if( closed_loop ) {
+                if( output_pts[which_solution].length == 0 ) { continue; }
+                // draw the loop
+                var a = output_pts[which_solution][0].p, b;
+                for(var i = 1; i < output_pts[which_solution].length; i++) {
+                    b = output_pts[which_solution][i].p;
+                    if( dist2( a, b ) < 100.0 ) {
+                        draw_image_line( a, b, which_solution );
+                    }
+                    a = b;
+                }
+                b = output_pts[which_solution][0].p;
                 if( dist2( a, b ) < 100.0 ) {
                     draw_image_line( a, b, which_solution );
                 }
-                a = b;
-            }
-            b = output_pts[which_solution][0].p;
-            if( dist2( a, b ) < 100.0 ) {
-                draw_image_line( a, b, which_solution );
+            } else {
+                // draw the separate line segments
+                for(var i = 0; i < output_pts[which_solution].length; i++) {
+                    if( output_pts[which_solution][i].length == 0 ) { continue; }
+                    var a = output_pts[which_solution][i][0].p, b;
+                    for(var j = 0; j < output_pts[which_solution][i].length; j++) {
+                        b = output_pts[which_solution][i][j].p;
+                        if( dist2( a, b ) < 100.0 ) {
+                            draw_image_line( a, b, which_solution );
+                        }
+                        a = b;
+                    }
+                }
             }
         } else {
             // just draw as a cloud of points, for discrete patterns like Fig. 8.10 or maskit2 and 3
@@ -419,24 +436,51 @@ function getBounds(pts) {
     return bounds;
 }
 
-function onSaveAsSVGButton(element) {
+function getOutputPtsBounds(scale = 1.0) {
     var all_pts = [];
-    for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        for(var i = 0; i < output_pts[which_solution].length; i++) {
-            all_pts.push( mul( toScreen( output_pts[which_solution][i].p ), 1.5 ) );
+    if( closed_loop ) {
+        for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+            for(var i = 0; i < output_pts[which_solution].length; i++) {
+                all_pts.push( mul(output_pts[which_solution][i].p, scale) );
+            }
+        }
+    } else {
+        for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+            for(var i = 0; i < output_pts[which_solution].length; i++) {
+                for(var j = 0; j < output_pts[which_solution][i].length; j++) {
+                    all_pts.push( mul( output_pts[which_solution][i][j].p, scale) );
+                }
+            }
         }
     }
     var bounds = getBounds(all_pts);
+    return bounds;
+}
+
+function onSaveAsSVGButton(element) {
+    var scale = 300;
+    var bounds = getOutputPtsBounds(scale);
     var svg = "<!-- SVG produced by https://github.com/timhutton/mobius-transforms -->\n";
     svg += "<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='"+bounds.width.toFixed(1)+"px' height='"+bounds.height.toFixed(1)+"px' viewBox='"
         + bounds.minX.toFixed(1) + " " + bounds.minY.toFixed(1) + " " + bounds.width.toFixed(1) + " " + bounds.height.toFixed(1) + "'>\n";
     for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        svg += "  <polygon points='";
-        for( var iPt = 0; iPt < output_pts[which_solution].length; iPt++) {
-            var sp = mul( toScreen( output_pts[which_solution][iPt].p ), 1.5 );
-            svg += sp.x.toFixed(3) + ", " + sp.y.toFixed(3) + " "
+        if( closed_loop ) {
+            svg += "  <polygon points='";
+            for( var iPt = 0; iPt < output_pts[which_solution].length; iPt++) {
+                var sp = mul( output_pts[which_solution][iPt].p, scale );
+                svg += sp.x.toFixed(3) + ", " + sp.y.toFixed(3) + " "
+            }
+            svg += "'\n    fill='rgb(247, 246, 216)' stroke='black' stroke-width='0.3'/>\n";
+        } else {
+            for(var i = 0; i < output_pts[which_solution].length; i++) {
+                svg += "  <polyline points='";
+                for( var iPt = 0; iPt < output_pts[which_solution][i].length; iPt++) {
+                    var sp = mul( output_pts[which_solution][i][iPt].p, scale );
+                    svg += sp.x.toFixed(3) + ", " + sp.y.toFixed(3) + " "
+                }
+                svg += "'\n    fill='none' stroke='black' stroke-width='0.3'/>\n";
+            }
         }
-        svg += "'\n    fill='rgb(247, 246, 216)' stroke='black' stroke-width='0.3'/>\n";
     }
     svg += "</svg>\n";
     download("dfs.svg", "image/svg+xml", svg);
@@ -444,13 +488,7 @@ function onSaveAsSVGButton(element) {
 
 function onSaveAsPNGButton(element) {
     var max_image_dimension = 3000;
-    var all_pts = [];
-    for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        for(var i = 0; i < output_pts[which_solution].length; i++) {
-            all_pts.push( output_pts[which_solution][i].p );
-        }
-    }
-    var bounds = getBounds(all_pts);
+    var bounds = getOutputPtsBounds();
     var scale = max_image_dimension / Math.max( bounds.width, bounds.height );
     var width = bounds.width * scale;
     var height = bounds.height * scale;
@@ -466,17 +504,31 @@ function onSaveAsPNGButton(element) {
     context.strokeStyle = 'rgba(0,0,0,1.0)';
     context.fillStyle = 'rgba(247, 246, 216, 1.0)';
     for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        context.beginPath();
-        if(output_pts[which_solution].length == 0) { continue; }
-        var sp0 = add( mul( sub( output_pts[which_solution][0].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
-        context.moveTo( sp0.x, sp0.y );
-        for(var i = 1; i < output_pts[which_solution].length; i++) {
-            var sp = add( mul( sub( output_pts[which_solution][i].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
-            context.lineTo( sp.x, sp.y );
+        if( closed_loop ) {
+            if(output_pts[which_solution].length == 0) { continue; }
+            context.beginPath();
+            var sp0 = add( mul( sub( output_pts[which_solution][0].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
+            context.moveTo( sp0.x, sp0.y );
+            for(var i = 1; i < output_pts[which_solution].length; i++) {
+                var sp = add( mul( sub( output_pts[which_solution][i].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
+                context.lineTo( sp.x, sp.y );
+            }
+            context.lineTo( sp0.x, sp0.y );
+            context.stroke();
+            context.fill();
+        } else {
+            for( var j = 0; j < output_pts[which_solution].length; j++) {
+                if(output_pts[which_solution][j].length == 0) { continue; }
+                context.beginPath();
+                var sp0 = add( mul( sub( output_pts[which_solution][j][0].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
+                context.moveTo( sp0.x, sp0.y );
+                for(var i = 1; i < output_pts[which_solution][j].length; i++) {
+                    var sp = add( mul( sub( output_pts[which_solution][j][i].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
+                    context.lineTo( sp.x, sp.y );
+                }
+                context.stroke();
+            }
         }
-        context.lineTo( sp0.x, sp0.y );
-        context.stroke();
-        context.fill();
     }
     // save the png
     var downloadLink = document.createElement('a');
@@ -685,10 +737,14 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
             }
             if( close_enough || level >= max_depth ) {
                 // draw the line segments, we've reached the bottom
-                for(var i = 0; i < z.length; i++) {
-                    output_pts[which_solution].push( z[i] );
-                    n_pts++;
+                if( closed_loop ) {
+                    for(var i = 0; i < z.length; i++) {
+                        output_pts[which_solution].push( z[i] );
+                    }
+                } else {
+                    output_pts[which_solution].push( z );
                 }
+                n_pts += z.length;
             }
             else {
                 var y = get_mobius_composed( x, gens[ iTag ].t );
@@ -702,13 +758,17 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
     };
     var n_pts_plotted = 0;
     for( var k = 0; k < 4; k++) {
-        output_pts[which_solution].push( { p: repetends[k][0].p, label: repetends[k][0].label } );
+        if( closed_loop ) {
+            output_pts[which_solution].push( { p: repetends[k][0].p, label: repetends[k][0].label } );
+        }
         var ret = explore_tree( gens[k].t, gens[k].name, k, 1 );
         if( ret == -1 ) {
             return 0; // drawing was aborted
         }
         n_pts_plotted += ret;
-        output_pts[which_solution].push( { p: last(repetends[k]).p, label: last(repetends[k]).label } ); // (not needed if the necklace condition applies)
+        if( closed_loop ) {
+            output_pts[which_solution].push( { p: last(repetends[k]).p, label: last(repetends[k]).label } ); // (not needed if the necklace condition applies)
+        }
     }
     return n_pts_plotted;
 }
