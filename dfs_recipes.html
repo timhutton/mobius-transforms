@@ -353,12 +353,12 @@ function set_quality_parameters(hq_mode) {
     if( hq_mode ) {
         num_ifs_iterations = 10000000;
         max_depth = 50;
-        closeness_epsilon = 0.001; // if sequential points are closer than this we can stop searching
+        closeness_epsilon = 0.003; // if sequential points are closer than this we can stop searching
     }
     else {
         num_ifs_iterations = 100000;
         max_depth = 15;
-        closeness_epsilon = 0.003; // if sequential points are closer than this we can stop searching
+        closeness_epsilon = 0.01; // if sequential points are closer than this we can stop searching
     }
     closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
 }
@@ -751,7 +751,7 @@ function compute() {
     if(n_pts_plotted == 0) {
         // DFS rendering failed, clear the drawing and draw IFS instead
         dfs_succeeded = false;
-        output_pts = [[],[]];
+        //output_pts = [[],[]];
         clear_drawing();
     }
 
