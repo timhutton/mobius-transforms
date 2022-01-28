@@ -363,12 +363,12 @@ function onRecipeChanged(element) {
 function set_quality_parameters(hq_mode) {
     if( hq_mode ) {
         num_ifs_iterations = 10000000;
-        max_depth = 50;
+        max_depth = 100;
         closeness_epsilon = 0.003; // if sequential points are closer than this we can stop searching
     }
     else {
         num_ifs_iterations = 100000;
-        max_depth = 15;
+        max_depth = 25;
         closeness_epsilon = 0.01; // if sequential points are closer than this we can stop searching
     }
     closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
