@@ -423,7 +423,7 @@ function onSaveAsSVGButton(element) {
     var all_pts = [];
     for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
         for(var i = 0; i < output_pts[which_solution].length; i++) {
-            all_pts.push( mul( toScreen( output_pts[which_solution][i] ), 1.5 ) );
+            all_pts.push( mul( toScreen( output_pts[which_solution][i].p ), 1.5 ) );
         }
     }
     var bounds = getBounds(all_pts);
@@ -433,7 +433,7 @@ function onSaveAsSVGButton(element) {
     for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
         svg += "  <polygon points='";
         for( var iPt = 0; iPt < output_pts[which_solution].length; iPt++) {
-            var sp = mul( toScreen( output_pts[which_solution][iPt] ), 1.5 );
+            var sp = mul( toScreen( output_pts[which_solution][iPt].p ), 1.5 );
             svg += sp.x.toFixed(3) + ", " + sp.y.toFixed(3) + " "
         }
         svg += "'\n    fill='rgb(247, 246, 216)' stroke='black' stroke-width='0.3'/>\n";
@@ -447,7 +447,7 @@ function onSaveAsPNGButton(element) {
     var all_pts = [];
     for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
         for(var i = 0; i < output_pts[which_solution].length; i++) {
-            all_pts.push( output_pts[which_solution][i] );
+            all_pts.push( output_pts[which_solution][i].p );
         }
     }
     var bounds = getBounds(all_pts);
@@ -468,10 +468,10 @@ function onSaveAsPNGButton(element) {
     for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
         context.beginPath();
         if(output_pts[which_solution].length == 0) { continue; }
-        var sp0 = add( mul( sub( output_pts[which_solution][0], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
+        var sp0 = add( mul( sub( output_pts[which_solution][0].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
         context.moveTo( sp0.x, sp0.y );
         for(var i = 1; i < output_pts[which_solution].length; i++) {
-            var sp = add( mul( sub( output_pts[which_solution][i], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
+            var sp = add( mul( sub( output_pts[which_solution][i].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
             context.lineTo( sp.x, sp.y );
         }
         context.lineTo( sp0.x, sp0.y );
@@ -481,7 +481,7 @@ function onSaveAsPNGButton(element) {
     // save the png
     var downloadLink = document.createElement('a');
     downloadLink.download = 'dfs.png';
-    downloadLink.href = new_canvas.toDataURL();
+    downloadLink.href = new_canvas.toDataURL('image/png');
     downloadLink.click();
 }
 
