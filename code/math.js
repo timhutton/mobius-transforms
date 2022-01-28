@@ -153,3 +153,24 @@ function distanceOfPointFromLine( end1, end2, p ) {
 function roundTowardsZero( x ) {
     return ( x > 0 ) ? Math.floor(x) : Math.ceil(x);
 }
+
+function find_line_segments_intersection( a, b, c, d ) {
+    var dx1 = b.x - a.x;
+    var dy1 = b.y - a.y;
+    var dx2 = d.x - c.x;
+    var dy2 = d.y - c.y;
+    var dx3 = a.x - c.x;
+    var dy3 = a.y - c.y;
+    var d = dx1 * dy2 - dx2 * dy1;
+    if(d !== 0) {
+        var s = dx1 * dy3 - dx3 * dy1;
+        if((s <= 0 && d < 0 && s >= d) || (s >= 0 && d > 0 && s <= d)) {
+            var t = dx2 * dy3 - dx3 * dy2;
+            if((t <= 0 && d < 0 && t > d) || (t >= 0 && d > 0 && t < d)) {
+                t = t / d;
+                return [true, p2( a.x + t * dx1, a.y + t * dy1 ) ];
+            }
+        }
+    }
+    return [false, undefined];
+}
