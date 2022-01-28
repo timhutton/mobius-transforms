@@ -53,6 +53,16 @@ function get_recipes()
         }
     };
 
+    var modular = { label: "modular group", control_points: [],
+        make_generators: (which_solution, control_points) => {
+            var transforms = [];
+            transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( -2.0, 0.0 ), p2( 1.0, 0.0 ) ];
+            transforms[1] = [ p2( 1.0, 0.0 ), p2( 2.0, 0.0 ), p2( 0.0, 0.0 ), p2( 1.0, 0.0 ) ];
+            var description = "The modular group recipe from Indra's Pearls, p. 214";
+            return [transforms, description];
+        }
+    };
+
     var maskit = { label: "Maskit recipe", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, p. 259
@@ -190,5 +200,5 @@ function get_recipes()
         }
     };
 
-    return [ fuchsian, theta_schottky, kissing_schottky, gasket, maskit, maskit2, maskit3, grandma, riley, jorgensen, special ];
+    return [ fuchsian, theta_schottky, kissing_schottky, gasket, modular, maskit, maskit2, maskit3, grandma, riley, jorgensen, special ];
 }

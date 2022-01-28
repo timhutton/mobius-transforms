@@ -221,18 +221,30 @@ function draw() {
     // draw the loop into the image buffer
     for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
         if( output_pts[which_solution].length == 0 ) { continue; }
-        // draw the loop
-        var a = output_pts[which_solution][0].p, b;
-        for(var i = 1; i < output_pts[which_solution].length; i++) {
-            b = output_pts[which_solution][i].p;
+        if( true ) {
+            // draw the loop
+            var a = output_pts[which_solution][0].p, b;
+            for(var i = 1; i < output_pts[which_solution].length; i++) {
+                b = output_pts[which_solution][i].p;
+                if( dist2( a, b ) < 100.0 ) {
+                    draw_image_line( a, b, which_solution );
+                }
+                a = b;
+            }
+            b = output_pts[which_solution][0].p;
             if( dist2( a, b ) < 100.0 ) {
                 draw_image_line( a, b, which_solution );
             }
-            a = b;
-        }
-        b = output_pts[which_solution][0].p;
-        if( dist2( a, b ) < 100.0 ) {
-            draw_image_line( a, b, which_solution );
+        } else {
+            // just draw as a cloud of points, for discrete patterns like Fig. 8.10 or maskit2 and 3
+            // where the order we produce is wrong
+            for( var i = 0; i < output_pts[which_solution].length; i++) {
+                var sp = toScreen( output_pts[which_solution][i].p );
+                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
+                    var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
+                    pixels[pixel_offset + which_solution] = 255;
+                }
+            }
         }
     }
 
@@ -345,7 +357,7 @@ function set_quality_parameters(hq_mode) {
     }
     else {
         num_ifs_iterations = 100000;
-        max_depth = 120;
+        max_depth = 12;
         //closeness_epsilon = 0.003; // if sequential points are closer than this we can stop searching
         closeness_epsilon = 0.01; // debug
     }
@@ -585,6 +597,7 @@ function find_fixed_points(transforms, which_solution, debug_pts) {
     // for debugging which special words are appropriate for a particular pattern
     var [ a, b, A, B ] = transforms;
     var gens = [ {t:a, name:'a'}, {t:B, name:'B'}, {t:A, name:'A'}, {t:b, name:'b'} ];
+    var fixed_points_max_depth = 2;
     function explore_tree( x, old_word, prev, level ) {
         for( var k = prev - 1; k <= prev + 1; k++) {
             var iTag = ( k + 4 ) % 4;
@@ -592,12 +605,11 @@ function find_fixed_points(transforms, which_solution, debug_pts) {
             var new_word = old_word + gens[ iTag ].name;
             var fp = { p: get_mobius_fixed_points( y )[0], label: new_word };
             debug_pts[which_solution].push( fp );
-            if( level < max_depth ) {
+            if( level < fixed_points_max_depth ) {
                 explore_tree( y, new_word, iTag, level + 1 );
             }
         }
     };
-    max_depth = 2;
     for( var k = 0; k < 4; k++) {
         var fp = { p: get_mobius_fixed_points( gens[k].t )[0], label: gens[k].name };
         debug_pts[which_solution].push( fp );
@@ -608,45 +620,45 @@ function find_fixed_points(transforms, which_solution, debug_pts) {
 function dfs_recursive_tree(transforms, which_solution, output_pts) {
     var [ a, b, A, B ] = transforms;
     var gens = [ {t:a, name:'a'}, {t:B, name:'B'}, {t:A, name:'A'}, {t:b, name:'b'} ];
-    var bABa = compose4(b, A, B, a);
-    var BAba = compose4(B, A, b, a);
-    var ABab = compose4(A, B, a, b);
-    var aBAb = compose4(a, B, A, b);
-    var BabA = compose4(B, a, b, A);
-    var baBA = compose4(b, a, B, A);
-    var abAB = compose4(a, b, A, B);
-    var AbaB = compose4(A, b, a, B);
-    var aaB = compose3(a, a, B);
-    var aBa = compose3(a, B, a);
-    var Baa = compose3(B, a, a);
-    var AAb = compose3(A, A, b);
-    var AbA = compose3(A, b, A);
-    var bAA = compose3(b, A, A);
-    var repetends = [ [ // each in alphabetical order per aBAb:
+    var bABa = get_mobius_composed(b, A, B, a);
+    var BAba = get_mobius_composed(B, A, b, a);
+    var ABab = get_mobius_composed(A, B, a, b);
+    var aBAb = get_mobius_composed(a, B, A, b);
+    var BabA = get_mobius_composed(B, a, b, A);
+    var baBA = get_mobius_composed(b, a, B, A);
+    var abAB = get_mobius_composed(a, b, A, B);
+    var AbaB = get_mobius_composed(A, b, a, B);
+    var aaB = get_mobius_composed(a, a, B);
+    var aBa = get_mobius_composed(a, B, a);
+    var Baa = get_mobius_composed(B, a, a);
+    var AAb = get_mobius_composed(A, A, b);
+    var AbA = get_mobius_composed(A, b, A);
+    var bAA = get_mobius_composed(b, A, A);
+    var repetends = [ [ // each in alphabetical order per aBAb with the next letter from [-1,0,1] mod 4, ie:
                         //  after a we get: b,a,B
                         //  after B we get: a,B,A
                         //  after A we get: B,A,b
                         //  after b we get: A,b,a
             { p: get_mobius_fixed_points( abAB )[0], label: '|abAB' }, // beg[a]
-            //{ p: get_mobius_fixed_points( a )[0],    label: '|a' },
-            { p: get_mobius_fixed_points( aaB )[0],  label: '|aaB' },
-            { p: get_mobius_fixed_points( aBa )[0],  label: '|aBa' },
+            { p: get_mobius_fixed_points( a )[0],    label: '|a' },
+            //{ p: get_mobius_fixed_points( aaB )[0],  label: '|aaB' },
+            //{ p: get_mobius_fixed_points( aBa )[0],  label: '|aBa' },
             { p: get_mobius_fixed_points( aBAb )[0], label: '|aBAb' }, // end[a]
         ], [
             { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' }, // beg[B]
-            { p: get_mobius_fixed_points( Baa )[0],  label: '|Baa' },
-            //{ p: get_mobius_fixed_points( B )[0],    label: '|B' },
+            //{ p: get_mobius_fixed_points( Baa )[0],  label: '|Baa' },
+            { p: get_mobius_fixed_points( B )[0],    label: '|B' },
             { p: get_mobius_fixed_points( BAba )[0], label: '|BAba' }, // end[B]
         ], [
             { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' }, // beg[A]
-            //{ p: get_mobius_fixed_points( A )[0],    label: '|A' },
-            { p: get_mobius_fixed_points( AAb )[0],  label: '|AAb' },
-            { p: get_mobius_fixed_points( AbA )[0],  label: '|AbA' },
+            { p: get_mobius_fixed_points( A )[0],    label: '|A' },
+            //{ p: get_mobius_fixed_points( AAb )[0],  label: '|AAb' },
+            //{ p: get_mobius_fixed_points( AbA )[0],  label: '|AbA' },
             { p: get_mobius_fixed_points( AbaB )[0], label: '|AbaB' }, // end[A]
         ], [
             { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' }, // beg[b]
-            { p: get_mobius_fixed_points( bAA )[0],  label: '|bAA' },
-            //{ p: get_mobius_fixed_points( b )[0],    label: '|b' },
+            //{ p: get_mobius_fixed_points( bAA )[0],  label: '|bAA' },
+            { p: get_mobius_fixed_points( b )[0],    label: '|b' },
             { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' }, // end[b]
         ]
     ];
@@ -684,14 +696,6 @@ function dfs_recursive_tree(transforms, which_solution, output_pts) {
         output_pts[which_solution].push( { p: last(repetends[k]).p, label: last(repetends[k]).label } ); // (not needed if the necklace condition applies)
     }
     return n_pts_plotted;
-}
-
-function compose4(a,b,c,d) {
-    return get_mobius_composed( a, get_mobius_composed( b, get_mobius_composed( c, d ) ) );
-}
-
-function compose3(a,b,c) {
-    return get_mobius_composed( a, get_mobius_composed( b, c ) );
 }
 
 function draw_ifs(transforms, which_solution) {

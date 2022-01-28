@@ -43,11 +43,13 @@ function get_mobius_inverse( m ) {
     return [m[3], mul(m[1], -1.0), mul(m[2], -1.0), m[0]];
 }
 
-function get_mobius_composed(a, b) {
-    return [add(mul_complex(a[0], b[0]), mul_complex(a[1], b[2])),
-            add(mul_complex(a[0], b[1]), mul_complex(a[1], b[3])),
-            add(mul_complex(a[2], b[0]), mul_complex(a[3], b[2])),
-            add(mul_complex(a[2], b[1]), mul_complex(a[3], b[3]))];
+function get_mobius_composed(...args) {
+    return args.reduce((a, b) => {
+        return [add(mul_complex(a[0], b[0]), mul_complex(a[1], b[2])),
+                add(mul_complex(a[0], b[1]), mul_complex(a[1], b[3])),
+                add(mul_complex(a[2], b[0]), mul_complex(a[3], b[2])),
+                add(mul_complex(a[2], b[1]), mul_complex(a[3], b[3]))];
+    });
 }
 
 function mobius_make_nonloxodromic( m ) {
