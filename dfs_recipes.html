@@ -665,6 +665,7 @@ function get_repetends( transforms ) {
 }
 
 function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
+    var max_d2 = 1.0;
     function explore_tree( x, old_word, prev, level ) {
         var n_pts = 0;
         for( var k = prev - 1; k <= prev + 1; k++) {
@@ -676,9 +677,14 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
                 if( i > 0 ) {
                     var d2 = dist2( z[i].p, z[i-1].p );
                     if( d2 > closeness_epsilon2 ) { close_enough = false; }
+                    if( d2 > max_d2 && level >= max_depth ) {
+                        // if there are still very long lines at max_depth then we need to abort
+                        return -1;
+                    }
                 }
             }
             if( close_enough || level >= max_depth ) {
+                // draw the line segments, we've reached the bottom
                 for(var i = 0; i < z.length; i++) {
                     output_pts[which_solution].push( z[i] );
                     n_pts++;
@@ -687,7 +693,9 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
             else {
                 var y = get_mobius_composed( x, gens[ iTag ].t );
                 var new_word = old_word + gens[ iTag ].name;
-                n_pts += explore_tree( y, new_word, iTag, level + 1 );
+                var ret = explore_tree( y, new_word, iTag, level + 1 );
+                if( ret == -1) { return -1; } // the abort signal bubbles up the stack
+                n_pts += ret;
             }
         }
         return n_pts;
@@ -695,7 +703,11 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
     var n_pts_plotted = 0;
     for( var k = 0; k < 4; k++) {
         output_pts[which_solution].push( { p: repetends[k][0].p, label: repetends[k][0].label } );
-        n_pts_plotted += explore_tree( gens[k].t, gens[k].name, k, 1 );
+        var ret = explore_tree( gens[k].t, gens[k].name, k, 1 );
+        if( ret == -1 ) {
+            return 0; // drawing was aborted
+        }
+        n_pts_plotted += ret;
         output_pts[which_solution].push( { p: last(repetends[k]).p, label: last(repetends[k]).label } ); // (not needed if the necklace condition applies)
     }
     return n_pts_plotted;
