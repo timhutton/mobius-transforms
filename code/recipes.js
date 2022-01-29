@@ -50,7 +50,10 @@ function get_recipes()
             transforms[1] = [ p2( 1.0, -1.0 ), p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), p2( 1.0, 1.0 ) ];
             var description = "Gasket recipe from Indra's Pearls, p. 201";
             return [transforms, description];
-        }
+        },
+        start_letter: 0,
+        end_letter: 0,
+        duplicate: 'rot180'
     };
 
     var modular = { label: "modular group", control_points: [],
@@ -72,7 +75,10 @@ function get_recipes()
             transforms[1] = [ p2(1.0, 0.0), p2(2.0, 0.0), p2(0.0, 0.0),  p2(1.0, 0.0) ];   // b: z -> z + 2
             var description = "Maskit recipe from Indra's Pearls, p. 259 with \u03BC = " + format_complex(mu);
             return [transforms, description];
-        }
+        },
+        //start_letter: 0,
+        //end_letter: 0,
+        //duplicate: 'rot180_around_i_and_rep_x_2'   TODO
     };
 
     var maskit2 = { label: "Maskit recipe 2", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
@@ -128,10 +134,13 @@ function get_recipes()
             transforms[1] = [ mul( sub( t_b, p2( 0.0, 2.0 ) ), 0.5 ), mul( t_b, 0.5 ), mul( t_b, 0.5 ), mul( add( t_b, p2( 0.0, 2.0 ) ), 0.5 ) ];
             var description = "Grandma's recipe from Indra's Pearls, p. 227. With t<sub>a</sub> = " + format_complex(t_a) + ", t<sub>b</sub> = " + format_complex(t_b);
             return [transforms, description];
-        }
+        },
+        start_letter: 0,
+        end_letter: 0,
+        duplicate: 'rot180'
     };
 
-    var riley = { label: "Riley's recipe", control_points: [ p2(0.05, 0.93) ], pt_labels: [ 'c' ],
+    var riley = { label: "Riley's recipe", control_points: [ p2(0.1, 0.93) ], pt_labels: [ 'c' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, p. 258
             var c = control_points[0];
@@ -140,7 +149,10 @@ function get_recipes()
             transforms[1] = [ p2( 1.0, 0.0 ), p2( 2.0, 0.0 ), p2( 0.0, 0.0 ), p2( 1.0, 0.0 ) ];
             var description = "Riley's recipe from Indra's Pearls, p. 258. With c = " + format_complex(c);
             return [transforms, description];
-        }
+        },
+        start_letter: 0,
+        end_letter: 0,
+        duplicate: 'rot180_and_rep_x_2'
     };
 
     var jorgensen = { label: "Jørgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ],
@@ -157,11 +169,13 @@ function get_recipes()
             var description = "Jørgensen's recipe from Indra's Pearls, p. 256. With t<sub>a</sub> = " + format_complex(t_a) + ", t<sub>b</sub> = " + format_complex(t_b);
             return [transforms, description];
         }
+        // TODO: find stretch of words that contains one copy, and duplicate with rep_x_2
     };
 
     var special = {
         label: "Grandma's four-alarm special",
-        control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ],
+        //control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ],
+        control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(1.79, 1.948) ],
         //control_points: [ p2(1.924781, -0.047529), p2(2.0, 0.0), p2(0.0, 0.0) ], // Fig. 11.1, p. 354 ?
         pt_labels: [ 'ta', 'tb', 'tab' ],
         make_generators: (which_solution, control_points) => {
@@ -197,7 +211,10 @@ function get_recipes()
             var description = "Grandma's four alarm special from Indra's Pearls, p. 260. With t<sub>a</sub> = " + format_complex(t_a) + ", t<sub>b</sub> = " + format_complex(t_b)
                 + ", t<sub>ab</sub> = " + format_complex(t_ab);
             return [transforms, description];
-        }
+        },
+        start_letter: 0,
+        end_letter: 0,
+        duplicate: 'rot180'
     };
 
     return [ fuchsian, theta_schottky, kissing_schottky, gasket, modular, maskit, maskit2, maskit3, grandma, riley, jorgensen, special ];

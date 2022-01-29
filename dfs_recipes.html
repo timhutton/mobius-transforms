@@ -229,11 +229,11 @@ function draw() {
                 var a = output_pts[which_solution][0].p, b;
                 for(var i = 1; i < output_pts[which_solution].length; i++) {
                     b = output_pts[which_solution][i].p;
-                    draw_image_line( a, b, which_solution );
+                    draw_image_line_with_duplication( a, b, which_solution, recipes[iRecipe] );
                     a = b;
                 }
                 b = output_pts[which_solution][0].p;
-                draw_image_line( a, b, which_solution );
+                draw_image_line_with_duplication( a, b, which_solution, recipes[iRecipe] );
             } else {
                 // draw the separate line segments
                 for(var i = 0; i < output_pts[which_solution].length; i++) {
@@ -241,7 +241,7 @@ function draw() {
                     var a = output_pts[which_solution][i][0].p, b;
                     for(var j = 0; j < output_pts[which_solution][i].length; j++) {
                         b = output_pts[which_solution][i][j].p;
-                        draw_image_line( a, b, which_solution );
+                        draw_image_line_with_duplication( a, b, which_solution, recipes[iRecipe] );
                         a = b;
                     }
                 }
@@ -502,12 +502,12 @@ function onSaveAsPNGButton(element) {
             if(output_pts[which_solution].length == 0) { continue; }
             context.beginPath();
             var sp0 = add( mul( sub( output_pts[which_solution][0].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
-            context.moveTo( sp0.x, sp0.y );
+            context.moveTo( sp0.x, new_canvas.height - sp0.y );
             for(var i = 1; i < output_pts[which_solution].length; i++) {
                 var sp = add( mul( sub( output_pts[which_solution][i].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
-                context.lineTo( sp.x, sp.y );
+                context.lineTo( sp.x, new_canvas.height - sp.y );
             }
-            context.lineTo( sp0.x, sp0.y );
+            context.lineTo( sp0.x, new_canvas.height - sp0.y );
             context.stroke();
             context.fill();
         } else {
@@ -515,10 +515,10 @@ function onSaveAsPNGButton(element) {
                 if(output_pts[which_solution][j].length == 0) { continue; }
                 context.beginPath();
                 var sp0 = add( mul( sub( output_pts[which_solution][j][0].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
-                context.moveTo( sp0.x, sp0.y );
+                context.moveTo( sp0.x, new_canvas.height - sp0.y );
                 for(var i = 1; i < output_pts[which_solution][j].length; i++) {
                     var sp = add( mul( sub( output_pts[which_solution][j][i].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
-                    context.lineTo( sp.x, sp.y );
+                    context.lineTo( sp.x, new_canvas.height - sp.y );
                 }
                 context.stroke();
             }
@@ -579,6 +579,28 @@ function make_generators(which_solution) {
     transforms[2] = get_mobius_inverse( transforms[0] );
     transforms[3] = get_mobius_inverse( transforms[1] );
     return [transforms, description];
+}
+
+function draw_image_line_with_duplication( a, b, rgb, recipe) {
+    if( !('duplicate' in recipe) ) {
+        draw_image_line( a, b, rgb );
+    }
+    else {
+        if( recipe.duplicate == 'rot180' ) {
+            draw_image_line( a, b, rgb );
+            draw_image_line( mul(a, -1.0), mul(b, -1.0), rgb );
+        }
+        else if( recipe.duplicate == 'rot180_and_rep_x_2' ) {
+            for( var x_offset = -6; x_offset <= 6; x_offset += 2 ) {
+                draw_image_line( add( a, p2( x_offset, 0.0 ) ), add( b, p2( x_offset, 0.0 ) ), rgb );
+                draw_image_line( add( mul(a, -1.0), p2( x_offset, 0.0 ) ), add( mul(b, -1.0), p2( x_offset, 0.0 ) ), rgb );
+            }
+        }
+        else {
+            console.log('Unknown duplication command:', recipe.duplicate);
+            draw_image_line( a, b, rgb );
+        }
+    }
 }
 
 function draw_image_line( a, b, rgb ) {
@@ -776,7 +798,11 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
         return n_pts;
     };
     var n_pts_plotted = 0;
-    for( var k = 0; k < 4; k++) {
+    var start_letter = 0;
+    var end_letter = 3;
+    if( 'start_letter' in recipes[iRecipe] ) { start_letter = recipes[iRecipe].start_letter; }
+    if( 'end_letter' in recipes[iRecipe] ) { end_letter = recipes[iRecipe].end_letter; }
+    for( var k = start_letter; k <= end_letter; k++) {
         if( closed_loop ) {
             output_pts[which_solution].push( { p: repetends[k][0].p, label: repetends[k][0].label } );
         }
@@ -873,8 +899,10 @@ input[type='button'], select, label, p {
 <div style="float:left;padding-left: 20px">
 
 <p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
-<p><input type="button" id="zoom_in_button" value="Zoom in" onclick="onZoomInButton(this)" /></p>
-<p><input type="button" id="zoom_out_button" value="Zoom out" onclick="onZoomOutButton(this)" /></p>
+<p>
+  <input type="button" id="zoom_in_button" value="Zoom in" onclick="onZoomInButton(this)" />
+  <input type="button" id="zoom_out_button" value="Zoom out" onclick="onZoomOutButton(this)" />
+</p>
 <p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
 <p><label for="which_method_dropdown">Drawing method:</label><select id="which_method_dropdown" onchange="onWhichMethodChanged(this)">
   <option>IFS</option>
@@ -889,8 +917,10 @@ input[type='button'], select, label, p {
 </select></p>
 <p id="num_points_text"></p>
 <p id="rendering_text"></p>
-<p><input type="button" id="download_png_button" value="Save as PNG" onclick="onSaveAsPNGButton(this)" /></p>
-<p><input type="button" id="download_svg_button" value="Save as SVG" onclick="onSaveAsSVGButton(this)" /></p>
+<p>
+  <input type="button" id="download_png_button" value="Save as PNG" onclick="onSaveAsPNGButton(this)" />
+  <input type="button" id="download_svg_button" value="Save as SVG" onclick="onSaveAsSVGButton(this)" />
+</p>
 
 </div>
 
