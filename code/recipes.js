@@ -77,8 +77,8 @@ function get_recipes()
             var description = "Maskit recipe from Indra's Pearls, p. 259 with \u03BC = " + format_complex(mu);
             return [transforms, description];
         },
-        //start_letters: [0],
-        //duplicate: 'rot180_around_i_and_rep_x_2'   // TODO
+        start_letters: [0],
+        duplicate: 'maskit'
     };
 
     var maskit2 = { label: "Maskit recipe 2", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],

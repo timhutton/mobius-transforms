@@ -630,6 +630,13 @@ function draw_image_line_with_duplication( a, b, rgb, recipe) {
                 draw_image_line( add( mul(a, -1.0), p2( x_offset, 0.0 ) ), add( mul(b, -1.0), p2( x_offset, 0.0 ) ), rgb );
             }
         }
+        else if( recipe.duplicate == 'maskit' ) {
+            var mu = control_points[0];
+            for( var x_offset = -6; x_offset <= 6; x_offset += 2 ) {
+                draw_image_line( add( a, p2( x_offset, 0.0 ) ), add( b, p2( x_offset, 0.0 ) ), rgb );
+                draw_image_line( add( mul( sub( a, mu ), -1.0), p2( x_offset, 0.0 ) ), add( mul( sub( b, mu ), -1.0), p2( x_offset, 0.0 ) ), rgb );
+            }
+        }
         else {
             //console.log('Unknown duplication command:', recipe.duplicate);
             draw_image_line( a, b, rgb );
