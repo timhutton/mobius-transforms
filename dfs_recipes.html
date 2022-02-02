@@ -42,6 +42,16 @@ function onMove( pos ) {
         drag_offset = pos;
     }
     else {
+        if( draw_fixed_points ) {
+            debug_pts = [[],[]];
+            for( var which_solution = 0; which_solution < 2; which_solution++) {
+                find_nearby_short_word_fixed_points( pos, transforms, which_solution, debug_pts );
+            }
+            if( debug_pts[0].length > 0 || debug_pts[1].length > 0 ) {
+                //console.log(debug_pts);
+                draw();
+            }
+        }
         // find the closest point, if within a minimum radius
         var iClosest = -1;
         var closest_dist2 = touch_radius * touch_radius;
@@ -324,11 +334,17 @@ function draw() {
 
     // draw the debug labels
     if( false ) {
-        ctx.font="16px Arial";
+        ctx.font="12px Arial";
         ctx.fillStyle = "rgb(255,255,255)";
         for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
             for( var i = 0; i < output_pts[which_solution].length; i++ ) {
-                drawPoint( toScreen( output_pts[which_solution][ i ].p ), 2, i+':'+output_pts[which_solution][i].label, p2( 0, i%2==1?10:-10 ) );
+                if( closed_loop ) {
+                    drawPoint( toScreen( output_pts[which_solution][ i ].p ), 2, i+':'+output_pts[which_solution][i].label, p2( 0, i%2==1?10:-10 ) );
+                } else {
+                    for( var j = 0; j < output_pts[which_solution][i].length; j++ ) {
+                        drawPoint( toScreen( output_pts[which_solution][i][j].p ), 2, i+':'+j+':'+output_pts[which_solution][i][j].label, p2( 0, i%2==1?10:-10 ) );
+                    }
+                }
             }
         }
     }
@@ -660,30 +676,43 @@ function line(a, b, func) {
     }
 }
 
-function debug_recursive_tree_order() {
-    // generate the order shown on p. 150, walking anti-clockwise around Fig. 6.13
-    var gens = [ 'a', 'B', 'A', 'b' ];
-    var message = '';
-    function explore_tree( old_word, prev, level ) {
-        for( var k = prev - 1; k <= prev + 1; k++) {
-            var iTag = ( k + 4 ) % 4;
-            var new_word = old_word + gens[ iTag ];
-            if( level < max_depth ) {
-                message = message + ' -> ' + new_word;
-                explore_tree( new_word, iTag, level + 1 );
-            }
-        }
-    };
-    max_depth = 2;
-    for( var k = 0; k < 4; k++) {
-        message += gens[k];
-        explore_tree( gens[k], k, 0 );
-        message += '\n';
-    }
-    console.log(message);
+function mod4( x ) {
+    while( x < 0 ) { x += 4; }
+    return x % 4;
 }
 
 function last(arr) { return arr[arr.length - 1]; }
+
+function find_nearby_short_word_fixed_points( sp, transforms, which_solution, debug_pts) {
+    var [ a, b, A, B ] = transforms;
+    var gens = [ {t:a, name:'a'}, {t:B, name:'B'}, {t:A, name:'A'}, {t:b, name:'b'} ];
+    var fixed_points_max_depth = 6;
+    var shortest_len = 10000;
+    var p;
+    var found_one = false;
+    function explore_tree( x, old_word, prev, level ) {
+        for( var k = prev - 1; k <= prev + 1; k++) {
+            var iTag = mod4( k );
+            var y = get_mobius_composed( x, gens[ iTag ].t );
+            var new_word = old_word + gens[ iTag ].name;
+            var fp = { p: get_mobius_fixed_points( y )[0], label: new_word };
+            var sfp = toScreen( fp.p );
+            if( dist2( sp, sfp ) < 400.0 && fp.label.length < shortest_len) {
+                shortest_len = fp.label.length;
+                p = fp;
+                found_one = true;
+            }
+            if( level < fixed_points_max_depth ) {
+                explore_tree( y, new_word, iTag, level + 1 );
+            }
+        }
+    };
+    for( var k = 0; k < 4; k++) {
+        explore_tree( gens[k].t, gens[k].name, k, 0 );
+    }
+    if( found_one )
+        debug_pts[which_solution] = [ p ];
+}
 
 function find_fixed_points(transforms, which_solution, debug_pts) {
     // for debugging which special words are appropriate for a particular pattern
@@ -692,7 +721,7 @@ function find_fixed_points(transforms, which_solution, debug_pts) {
     var fixed_points_max_depth = 2;
     function explore_tree( x, old_word, prev, level ) {
         for( var k = prev - 1; k <= prev + 1; k++) {
-            var iTag = ( k + 4 ) % 4;
+            var iTag = mod4( k );
             var y = get_mobius_composed( x, gens[ iTag ].t );
             var new_word = old_word + gens[ iTag ].name;
             var fp = { p: get_mobius_fixed_points( y )[0], label: new_word };
@@ -711,7 +740,7 @@ function find_fixed_points(transforms, which_solution, debug_pts) {
 
 function get_repetends( transforms ) {
     var [ a, b, A, B ] = transforms;
-    var gens = [ {t:a, name:'a'}, {t:B, name:'B'}, {t:A, name:'A'}, {t:b, name:'b'} ];
+    var gens = [ {t:a, name:'a'}, {t:b, name:'b'}, {t:A, name:'A'}, {t:B, name:'B'} ];
     var bABa = get_mobius_composed(b, A, B, a);
     var BAba = get_mobius_composed(B, A, b, a);
     var ABab = get_mobius_composed(A, B, a, b);
@@ -726,32 +755,32 @@ function get_repetends( transforms ) {
     var AAb = get_mobius_composed(A, A, b);
     var AbA = get_mobius_composed(A, b, A);
     var bAA = get_mobius_composed(b, A, A);
-    var repetends = [ [ // each in alphabetical order per aBAb with the next letter from [-1,0,1] mod 4, ie:
+    var repetends = [ [ // each in alphabetical order per abAB with the next letter from [1,0,-1] mod 4, ie:
                         //  after a we get: b,a,B
                         //  after B we get: a,B,A
                         //  after A we get: B,A,b
                         //  after b we get: A,b,a
-            { p: get_mobius_fixed_points( abAB )[0], label: '|abAB' }, // beg[a]
-            { p: get_mobius_fixed_points( a )[0],    label: '|a' },
-            //{ p: get_mobius_fixed_points( aaB )[0],  label: '|aaB' },
+            { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' },
+            //{ p: get_mobius_fixed_points( a )[0],    label: '|a' },
             //{ p: get_mobius_fixed_points( aBa )[0],  label: '|aBa' },
-            { p: get_mobius_fixed_points( aBAb )[0], label: '|aBAb' }, // end[a]
-        ], [
-            { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' }, // beg[B]
             //{ p: get_mobius_fixed_points( Baa )[0],  label: '|Baa' },
-            { p: get_mobius_fixed_points( B )[0],    label: '|B' },
-            { p: get_mobius_fixed_points( BAba )[0], label: '|BAba' }, // end[B]
+            { p: get_mobius_fixed_points( BAba )[0], label: '|BAba' },
         ], [
-            { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' }, // beg[A]
-            { p: get_mobius_fixed_points( A )[0],    label: '|A' },
+            { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' },
+            //{ p: get_mobius_fixed_points( b )[0],    label: '|b' },
             //{ p: get_mobius_fixed_points( AAb )[0],  label: '|AAb' },
-            //{ p: get_mobius_fixed_points( AbA )[0],  label: '|AbA' },
-            { p: get_mobius_fixed_points( AbaB )[0], label: '|AbaB' }, // end[A]
+            { p: get_mobius_fixed_points( aBAb )[0], label: '|aBAb' },
         ], [
-            { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' }, // beg[b]
+            { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' },
+            //{ p: get_mobius_fixed_points( A )[0],    label: '|A' },
+            //{ p: get_mobius_fixed_points( AbA )[0],  label: '|AbA' },
             //{ p: get_mobius_fixed_points( bAA )[0],  label: '|bAA' },
-            { p: get_mobius_fixed_points( b )[0],    label: '|b' },
-            { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' }, // end[b]
+            { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' },
+        ], [
+            { p: get_mobius_fixed_points( abAB )[0], label: '|abAB' },
+            //{ p: get_mobius_fixed_points( B )[0],    label: '|B' },
+            //{ p: get_mobius_fixed_points( aaB )[0],  label: '|aaB' },
+            { p: get_mobius_fixed_points( AbaB )[0], label: '|AbaB' },
         ]
     ];
     return [gens, repetends];
@@ -761,18 +790,19 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
     var max_d2 = 1.0;
     function explore_tree( x, old_word, prev, level ) {
         var n_pts = 0;
-        for( var k = prev - 1; k <= prev + 1; k++) {
-            var iTag = ( k + 4 ) % 4;
+        for( var k = prev + 1; k >= prev - 1; k--) {
+            var iTag = mod4( k );
+            var y = get_mobius_composed( x, gens[ iTag ].t );
             var z = [];
             var close_enough = true;
             for(var i = 0; i < repetends[iTag].length; i++) {
-                z.push( { p: mobius_on_point( x, repetends[iTag][i].p ), label: old_word + repetends[iTag][i].label } );
+                z.push( { p: mobius_on_point( y, repetends[iTag][i].p ), label: old_word + repetends[iTag][i].label } );
                 if( i > 0 ) {
                     var d2 = dist2( z[i].p, z[i-1].p );
                     if( d2 > closeness_epsilon2 ) { close_enough = false; }
                     if( d2 > max_d2 && level >= max_depth ) {
                         // if there are still very long lines at max_depth then we need to abort
-                        return -1;
+                        return -1; // debug: no abort
                     }
                 }
             }
@@ -788,7 +818,6 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
                 n_pts += z.length;
             }
             else {
-                var y = get_mobius_composed( x, gens[ iTag ].t );
                 var new_word = old_word + gens[ iTag ].name;
                 var ret = explore_tree( y, new_word, iTag, level + 1 );
                 if( ret == -1) { return -1; } // the abort signal bubbles up the stack
@@ -798,21 +827,20 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
         return n_pts;
     };
     var n_pts_plotted = 0;
-    var start_letter = 0;
-    var end_letter = 3;
-    if( 'start_letter' in recipes[iRecipe] ) { start_letter = recipes[iRecipe].start_letter; }
-    if( 'end_letter' in recipes[iRecipe] ) { end_letter = recipes[iRecipe].end_letter; }
-    for( var k = start_letter; k <= end_letter; k++) {
+    var start_letters = [0, 3, 2, 1]; // default order: aBAb
+    if( 'start_letters' in recipes[iRecipe] ) { start_letters = recipes[iRecipe].start_letters; }
+    for( var iStartLetter = 0; iStartLetter < start_letters.length; iStartLetter++) {
+        var iTag = start_letters[iStartLetter];
         if( closed_loop ) {
-            output_pts[which_solution].push( { p: repetends[k][0].p, label: repetends[k][0].label } );
+            output_pts[which_solution].push( { p: repetends[iTag][0].p, label: repetends[iTag][0].label } );
         }
-        var ret = explore_tree( gens[k].t, gens[k].name, k, 1 );
+        var ret = explore_tree( gens[iTag].t, gens[iTag].name, iTag, 1 );
         if( ret == -1 ) {
             return 0; // drawing was aborted
         }
         n_pts_plotted += ret;
         if( closed_loop ) {
-            output_pts[which_solution].push( { p: last(repetends[k]).p, label: last(repetends[k]).label } ); // (not needed if the necklace condition applies)
+            output_pts[which_solution].push( { p: last(repetends[iTag]).p, label: last(repetends[iTag]).label } ); // (not needed if the necklace condition applies)
         }
     }
     return n_pts_plotted;
@@ -835,7 +863,7 @@ function compute() {
     output_pts = [[],[]];
     debug_pts = [[],[]];
     cloud_pts = [[],[]];
-    var transforms = [];
+    transforms = [];
     var description = "";
     var dfs_succeeded = true;
 
@@ -856,7 +884,7 @@ function compute() {
     if(n_pts_plotted == 0) {
         // DFS rendering failed, clear the drawing and draw IFS instead
         dfs_succeeded = false;
-        //output_pts = [[],[]];
+        output_pts = [[],[]];
         clear_drawing();
     }
 

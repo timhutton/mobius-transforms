@@ -1,5 +1,7 @@
 function get_recipes()
 {
+    // start_letters: default is [0, 3, 2, 1] ie. aBAb
+
     var fuchsian = { label: "Fuchsian", control_points: [], pt_labels: [],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, page 163
@@ -51,8 +53,7 @@ function get_recipes()
             var description = "Gasket recipe from Indra's Pearls, p. 201";
             return [transforms, description];
         },
-        start_letter: 0,
-        end_letter: 0,
+        start_letters: [0],
         duplicate: 'rot180'
     };
 
@@ -76,9 +77,8 @@ function get_recipes()
             var description = "Maskit recipe from Indra's Pearls, p. 259 with \u03BC = " + format_complex(mu);
             return [transforms, description];
         },
-        //start_letter: 0,
-        //end_letter: 0,
-        //duplicate: 'rot180_around_i_and_rep_x_2'   TODO
+        //start_letters: [0],
+        //duplicate: 'rot180_around_i_and_rep_x_2'   // TODO
     };
 
     var maskit2 = { label: "Maskit recipe 2", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
@@ -111,7 +111,7 @@ function get_recipes()
         label: "Grandma's recipe",
         control_points: [ p2(2.4, 0.0), p2(2.4, 0.0) ],
         //control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], // for debugging the necks
-        //control_points: [ p2(2.0, -1.0), p2(3.0, 0.0) ], // Fig. 8.16, p. 247
+        //control_points: [ p2(2.0, -1.0), p2(3.0, 0.0) ], // Fig. 8.16, p. 247, needing aaB
         //control_points: [ p2(1.958591030,-0.011278560), p2(2.0, 0.0) ], //Fig. 9.1, p. 269
         //control_points: [ p2(1.64213876,-0.76658841), p2(2.0, 0.0) ], //Fig. 9.3, p. 272
         //control_points: [ p2(0.136998688,1.80785524), p2(2.0, 0.0) ], //Fig. 9.16, p. 295 ?
@@ -135,8 +135,7 @@ function get_recipes()
             var description = "Grandma's recipe from Indra's Pearls, p. 227. With t<sub>a</sub> = " + format_complex(t_a) + ", t<sub>b</sub> = " + format_complex(t_b);
             return [transforms, description];
         },
-        start_letter: 0,
-        end_letter: 0,
+        start_letters: [0],
         duplicate: 'rot180'
     };
 
@@ -150,8 +149,7 @@ function get_recipes()
             var description = "Riley's recipe from Indra's Pearls, p. 258. With c = " + format_complex(c);
             return [transforms, description];
         },
-        start_letter: 0,
-        end_letter: 0,
+        start_letters: [0],
         duplicate: 'rot180_and_rep_x_2'
     };
 
@@ -175,7 +173,8 @@ function get_recipes()
     var special = {
         label: "Grandma's four-alarm special",
         //control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ],
-        control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(1.79, 1.948) ],
+        control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(1.79, 1.948) ], // discovered
+        //control_points: [ p2(1.863, -0.072), p2(1.900, 0.1), p2(1.79, 1.948) ], // discovered
         //control_points: [ p2(1.924781, -0.047529), p2(2.0, 0.0), p2(0.0, 0.0) ], // Fig. 11.1, p. 354 ?
         pt_labels: [ 'ta', 'tb', 'tab' ],
         make_generators: (which_solution, control_points) => {
@@ -212,8 +211,7 @@ function get_recipes()
                 + ", t<sub>ab</sub> = " + format_complex(t_ab);
             return [transforms, description];
         },
-        start_letter: 0,
-        end_letter: 0,
+        start_letters: [0],
         duplicate: 'rot180'
     };
 
