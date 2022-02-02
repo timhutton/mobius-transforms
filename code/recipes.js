@@ -167,7 +167,7 @@ function get_recipes()
             var description = "Jørgensen's recipe from Indra's Pearls, p. 256. With t<sub>a</sub> = " + format_complex(t_a) + ", t<sub>b</sub> = " + format_complex(t_b);
             return [transforms, description];
         }
-        // TODO: find stretch of words that contains one copy, and duplicate with rep_x_2
+        // TODO: find a stretch of letters that can be duplicated
     };
 
     var special = {

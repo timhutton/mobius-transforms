@@ -387,7 +387,25 @@ function set_quality_parameters(hq_mode) {
         max_depth = 25;
         closeness_epsilon = 0.01; // if sequential points are closer than this we can stop searching
     }
+    document.getElementById('epsilon_input').value = closeness_epsilon;
+    document.getElementById('maximum_depth_input').value = max_depth;
     closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
+}
+
+function onMaxDepthChanged(element) {
+    max_depth = element.value;
+    compute_and_redraw();
+}
+
+function onEpsilonChanged(element) {
+    closeness_epsilon = element.value;
+    const min_closeness_epsilon = 0.00001;
+    if( closeness_epsilon < min_closeness_epsilon ) {
+        closeness_epsilon = min_closeness_epsilon;
+        element.value = closeness_epsilon;
+    }
+    closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
+    compute_and_redraw();
 }
 
 function onHighQualityModeButton(element) {
@@ -606,14 +624,14 @@ function draw_image_line_with_duplication( a, b, rgb, recipe) {
             draw_image_line( a, b, rgb );
             draw_image_line( mul(a, -1.0), mul(b, -1.0), rgb );
         }
-        else if( recipe.duplicate == 'rot180_and_rep_x_2' ) {
+        else if( recipe.duplicate == 'rot180_and_rep_x_2' ) { // e.g. riley
             for( var x_offset = -6; x_offset <= 6; x_offset += 2 ) {
                 draw_image_line( add( a, p2( x_offset, 0.0 ) ), add( b, p2( x_offset, 0.0 ) ), rgb );
                 draw_image_line( add( mul(a, -1.0), p2( x_offset, 0.0 ) ), add( mul(b, -1.0), p2( x_offset, 0.0 ) ), rgb );
             }
         }
         else {
-            console.log('Unknown duplication command:', recipe.duplicate);
+            //console.log('Unknown duplication command:', recipe.duplicate);
             draw_image_line( a, b, rgb );
         }
     }
@@ -911,7 +929,7 @@ instructions how to enable JavaScript in your web browser</a>.
 </p></noscript>
 
 <style>
-input[type='button'], select, label, p {
+input, select, label, p {
     font-size: 20px;
     font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
     padding-right: 5px;
@@ -932,6 +950,9 @@ input[type='button'], select, label, p {
   <input type="button" id="zoom_out_button" value="Zoom out" onclick="onZoomOutButton(this)" />
 </p>
 <p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
+<p><label for="maximum_depth_input">Max search depth:</label>
+<input type="number" id="maximum_depth_input" min="1" max="500" value="25" size="4" onchange="onMaxDepthChanged(this)"></p>
+<p><label for="epsilon_input">Epsilon:</label><input type="number" id="epsilon_input" min="0" max="10" value="0.01" step="0.001" size="10" onchange="onEpsilonChanged(this)"></p>
 <p><label for="which_method_dropdown">Drawing method:</label><select id="which_method_dropdown" onchange="onWhichMethodChanged(this)">
   <option>IFS</option>
   <option>DFS</option>
