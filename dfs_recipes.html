@@ -206,8 +206,6 @@ function init() {
     plot_dfs = true;
     document.getElementById("which_method_dropdown").selectedIndex = 1;
 
-    closed_loop = false;
-
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
@@ -232,39 +230,15 @@ function draw() {
 
     // draw the loop into the image buffer
     for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        if( true ) {
-            if( closed_loop ) {
-                if( output_pts[which_solution].length == 0 ) { continue; }
-                // draw the loop
-                var a = output_pts[which_solution][0].p, b;
-                for(var i = 1; i < output_pts[which_solution].length; i++) {
-                    b = output_pts[which_solution][i].p;
-                    draw_image_line_with_duplication( a, b, which_solution, recipes[iRecipe] );
-                    a = b;
-                }
-                b = output_pts[which_solution][0].p;
-                draw_image_line_with_duplication( a, b, which_solution, recipes[iRecipe] );
-            } else {
-                // draw the separate line segments
-                for(var i = 0; i < output_pts[which_solution].length; i++) {
-                    if( output_pts[which_solution][i].length == 0 ) { continue; }
-                    var a = output_pts[which_solution][i][0].p, b;
-                    for(var j = 0; j < output_pts[which_solution][i].length; j++) {
-                        b = output_pts[which_solution][i][j].p;
-                        draw_image_line_with_duplication( a, b, which_solution, recipes[iRecipe] );
-                        a = b;
-                    }
-                }
-            }
-        } else {
-            // just draw as a cloud of points, for discrete patterns like Fig. 8.10 or maskit2 and 3
-            // where the order we produce is wrong
-            for( var i = 0; i < output_pts[which_solution].length; i++) {
-                var sp = toScreen( output_pts[which_solution][i].p );
-                if( sp.x >= 0 && sp.y >=0 && sp.x < image.width && sp.y < image.height ) {
-                    var pixel_offset = ( Math.floor(sp.y) * image.width + Math.floor(sp.x) ) * 4;
-                    pixels[pixel_offset + which_solution] = 255;
-                }
+        var duplication_func = p => duplicate_point( p, recipes[ iRecipe ] );
+        // draw the separate line segments
+        for(var i = 0; i < output_pts[which_solution].length; i++) {
+            if( output_pts[which_solution][i].length == 0 ) { continue; }
+            var a = output_pts[which_solution][i][0].p, b;
+            for(var j = 0; j < output_pts[which_solution][i].length; j++) {
+                b = output_pts[which_solution][i][j].p;
+                draw_image_line_with_duplication( a, b, which_solution, duplication_func );
+                a = b;
             }
         }
     }
@@ -338,12 +312,8 @@ function draw() {
         ctx.fillStyle = "rgb(255,255,255)";
         for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
             for( var i = 0; i < output_pts[which_solution].length; i++ ) {
-                if( closed_loop ) {
-                    drawPoint( toScreen( output_pts[which_solution][ i ].p ), 2, i+':'+output_pts[which_solution][i].label, p2( 0, i%2==1?10:-10 ) );
-                } else {
-                    for( var j = 0; j < output_pts[which_solution][i].length; j++ ) {
-                        drawPoint( toScreen( output_pts[which_solution][i][j].p ), 2, i+':'+j+':'+output_pts[which_solution][i][j].label, p2( 0, i%2==1?10:-10 ) );
-                    }
+                for( var j = 0; j < output_pts[which_solution][i].length; j++ ) {
+                    drawPoint( toScreen( output_pts[which_solution][i][j].p ), 2, i+':'+j+':'+output_pts[which_solution][i][j].label, p2( 0, i%2==1?10:-10 ) );
                 }
             }
         }
@@ -451,59 +421,53 @@ function download(filename, type, text) {
     document.body.removeChild(element);
 }
 
-function getBounds(pts) {
+function getBoundsWithDuplication( pts, duplication_func ) {
     var bounds = { minX: Number.MAX_VALUE, minY: Number.MAX_VALUE, maxX: -Number.MAX_VALUE, maxY: -Number.MAX_VALUE };
     for( var i = 0; i < pts.length; i++) {
-        if( !isNaN( pts[i].x ) && pts[i].x < bounds.minX ) { bounds.minX = pts[i].x; }
-        if( !isNaN( pts[i].y ) && pts[i].y < bounds.minY ) { bounds.minY = pts[i].y; }
-        if( !isNaN( pts[i].x ) && pts[i].x > bounds.maxX ) { bounds.maxX = pts[i].x; }
-        if( !isNaN( pts[i].y ) && pts[i].y > bounds.maxY ) { bounds.maxY = pts[i].y; }
+        if( isNaN( pts[i].x ) || isNaN( pts[i].y ) ) { continue; }
+        var pts_dup = duplication_func( pts[i] );
+        for( var j = 0; j < pts_dup.length; j++ ) {
+            if( pts_dup[j].x < bounds.minX ) { bounds.minX = pts_dup[j].x; }
+            if( pts_dup[j].y < bounds.minY ) { bounds.minY = pts_dup[j].y; }
+            if( pts_dup[j].x > bounds.maxX ) { bounds.maxX = pts_dup[j].x; }
+            if( pts_dup[j].y > bounds.maxY ) { bounds.maxY = pts_dup[j].y; }
+        }
     }
     bounds.width = bounds.maxX - bounds.minX;
     bounds.height = bounds.maxY - bounds.minY;
     return bounds;
 }
 
-function getOutputPtsBounds(scale = 1.0) {
+function getOutputPtsBoundsWithDuplication( scale, duplication_func ) {
     var all_pts = [];
-    if( closed_loop ) {
-        for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-            for(var i = 0; i < output_pts[which_solution].length; i++) {
-                all_pts.push( mul(output_pts[which_solution][i].p, scale) );
-            }
-        }
-    } else {
-        for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-            for(var i = 0; i < output_pts[which_solution].length; i++) {
-                for(var j = 0; j < output_pts[which_solution][i].length; j++) {
-                    all_pts.push( mul( output_pts[which_solution][i][j].p, scale) );
-                }
+    for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+        for(var i = 0; i < output_pts[which_solution].length; i++) {
+            for(var j = 0; j < output_pts[which_solution][i].length; j++) {
+                all_pts.push( mul( output_pts[which_solution][i][j].p, scale) );
             }
         }
     }
-    var bounds = getBounds(all_pts);
+    var bounds = getBoundsWithDuplication( all_pts, duplication_func );
     return bounds;
 }
 
 function onSaveAsSVGButton(element) {
     var scale = 300;
-    var bounds = getOutputPtsBounds(scale);
+    var duplication_func = p => duplicate_point( p, recipes[ iRecipe ] );
+    var bounds = getOutputPtsBoundsWithDuplication( scale, duplication_func );
     var svg = "<!-- SVG produced by https://github.com/timhutton/mobius-transforms -->\n";
     svg += "<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='"+bounds.width.toFixed(1)+"px' height='"+bounds.height.toFixed(1)+"px' viewBox='"
         + bounds.minX.toFixed(1) + " " + bounds.minY.toFixed(1) + " " + bounds.width.toFixed(1) + " " + bounds.height.toFixed(1) + "'>\n";
     for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        if( closed_loop ) {
-            svg += "  <polygon points='";
-            for( var iPt = 0; iPt < output_pts[which_solution].length; iPt++) {
-                var sp = mul( output_pts[which_solution][iPt].p, scale );
-                svg += sp.x.toFixed(3) + ", " + sp.y.toFixed(3) + " "
+        for(var i = 0; i < output_pts[which_solution].length; i++) {
+            var pts_dup = [];
+            for( var k = 0; k < output_pts[which_solution][i].length; k++ ) {
+                pts_dup.push( duplication_func( output_pts[which_solution][i][k].p ) );
             }
-            svg += "'\n    fill='rgb(247, 246, 216)' stroke='black' stroke-width='0.3'/>\n";
-        } else {
-            for(var i = 0; i < output_pts[which_solution].length; i++) {
+            for( var k = 0; k < pts_dup[0].length; k++ ) {
                 svg += "  <polyline points='";
-                for( var iPt = 0; iPt < output_pts[which_solution][i].length; iPt++) {
-                    var sp = mul( output_pts[which_solution][i][iPt].p, scale );
+                for( var iPt = 0; iPt < pts_dup.length; iPt++) {
+                    var sp = mul( pts_dup[iPt][k], scale );
                     svg += sp.x.toFixed(3) + ", " + sp.y.toFixed(3) + " "
                 }
                 svg += "'\n    fill='none' stroke='black' stroke-width='0.3'/>\n";
@@ -516,7 +480,8 @@ function onSaveAsSVGButton(element) {
 
 function onSaveAsPNGButton(element) {
     var max_image_dimension = 3000;
-    var bounds = getOutputPtsBounds();
+    var duplication_func = p => duplicate_point( p, recipes[ iRecipe ] );
+    var bounds = getOutputPtsBoundsWithDuplication( 1.0, duplication_func );
     var scale = max_image_dimension / Math.max( bounds.width, bounds.height );
     var width = bounds.width * scale;
     var height = bounds.height * scale;
@@ -532,26 +497,18 @@ function onSaveAsPNGButton(element) {
     context.strokeStyle = 'rgba(0,0,0,1.0)';
     context.fillStyle = 'rgba(247, 246, 216, 1.0)';
     for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        if( closed_loop ) {
-            if(output_pts[which_solution].length == 0) { continue; }
-            context.beginPath();
-            var sp0 = add( mul( sub( output_pts[which_solution][0].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
-            context.moveTo( sp0.x, new_canvas.height - sp0.y );
-            for(var i = 1; i < output_pts[which_solution].length; i++) {
-                var sp = add( mul( sub( output_pts[which_solution][i].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
-                context.lineTo( sp.x, new_canvas.height - sp.y );
+        for( var j = 0; j < output_pts[which_solution].length; j++) {
+            if(output_pts[which_solution][j].length == 0) { continue; }
+            var pts_dup = [];
+            for( var k = 0; k < output_pts[which_solution][j].length; k++ ) {
+                pts_dup.push( duplication_func( output_pts[which_solution][j][k].p ) );
             }
-            context.lineTo( sp0.x, new_canvas.height - sp0.y );
-            context.stroke();
-            context.fill();
-        } else {
-            for( var j = 0; j < output_pts[which_solution].length; j++) {
-                if(output_pts[which_solution][j].length == 0) { continue; }
+            for( var k = 0; k < pts_dup[0].length; k++ ) {
                 context.beginPath();
-                var sp0 = add( mul( sub( output_pts[which_solution][j][0].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
+                var sp0 = add( mul( sub( pts_dup[0][k], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
                 context.moveTo( sp0.x, new_canvas.height - sp0.y );
-                for(var i = 1; i < output_pts[which_solution][j].length; i++) {
-                    var sp = add( mul( sub( output_pts[which_solution][j][i].p, p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
+                for(var i = 1; i < pts_dup.length; i++) {
+                    var sp = add( mul( sub( pts_dup[i][k], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
                     context.lineTo( sp.x, new_canvas.height - sp.y );
                 }
                 context.stroke();
@@ -615,32 +572,41 @@ function make_generators(which_solution) {
     return [transforms, description];
 }
 
-function draw_image_line_with_duplication( a, b, rgb, recipe) {
+function duplicate_point( a, recipe ) {
+    // return a list of the duplicated points according to the duplication method specified in the recipe
+    var pts = [];
     if( !('duplicate' in recipe) ) {
-        draw_image_line( a, b, rgb );
+        pts.push( a );
+    }
+    else if( recipe.duplicate == 'rot180' ) {
+        pts.push( a );
+        pts.push( mul(a, -1.0) );
+    }
+    else if( recipe.duplicate == 'rot180_and_rep_x_2' ) { // e.g. riley
+        for( var x_offset = -4; x_offset <= 4; x_offset += 2 ) {
+            pts.push( add( a, p2( x_offset, 0.0 ) ) );
+            pts.push( add( mul(a, -1.0), p2( x_offset, 0.0 ) ) );
+        }
+    }
+    else if( recipe.duplicate == 'maskit' ) {
+        var mu = control_points[0];
+        for( var x_offset = -4; x_offset <= 4; x_offset += 2 ) {
+            pts.push( add( a, p2( x_offset, 0.0 ) ) );
+            pts.push( add( mul( sub( a, mu ), -1.0), p2( x_offset, 0.0 ) ) );
+        }
     }
     else {
-        if( recipe.duplicate == 'rot180' ) {
-            draw_image_line( a, b, rgb );
-            draw_image_line( mul(a, -1.0), mul(b, -1.0), rgb );
-        }
-        else if( recipe.duplicate == 'rot180_and_rep_x_2' ) { // e.g. riley
-            for( var x_offset = -6; x_offset <= 6; x_offset += 2 ) {
-                draw_image_line( add( a, p2( x_offset, 0.0 ) ), add( b, p2( x_offset, 0.0 ) ), rgb );
-                draw_image_line( add( mul(a, -1.0), p2( x_offset, 0.0 ) ), add( mul(b, -1.0), p2( x_offset, 0.0 ) ), rgb );
-            }
-        }
-        else if( recipe.duplicate == 'maskit' ) {
-            var mu = control_points[0];
-            for( var x_offset = -6; x_offset <= 6; x_offset += 2 ) {
-                draw_image_line( add( a, p2( x_offset, 0.0 ) ), add( b, p2( x_offset, 0.0 ) ), rgb );
-                draw_image_line( add( mul( sub( a, mu ), -1.0), p2( x_offset, 0.0 ) ), add( mul( sub( b, mu ), -1.0), p2( x_offset, 0.0 ) ), rgb );
-            }
-        }
-        else {
-            //console.log('Unknown duplication command:', recipe.duplicate);
-            draw_image_line( a, b, rgb );
-        }
+        //console.log('Unknown duplication command:', recipe.duplicate);
+        pts.push( a );
+    }
+    return pts;
+}
+
+function draw_image_line_with_duplication( a, b, rgb, duplication_func ) {
+    var a_pts = duplication_func( a );
+    var b_pts = duplication_func( b );
+    for( var i = 0; i < a_pts.length; i++) {
+        draw_image_line( a_pts[i], b_pts[i], rgb );
     }
 }
 
@@ -833,13 +799,7 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
             }
             if( close_enough || level >= max_depth ) {
                 // draw the line segments, we've reached the bottom
-                if( closed_loop ) {
-                    for(var i = 0; i < z.length; i++) {
-                        output_pts[which_solution].push( z[i] );
-                    }
-                } else {
-                    output_pts[which_solution].push( z );
-                }
+                output_pts[which_solution].push( z );
                 n_pts += z.length;
             }
             else {
@@ -856,17 +816,11 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
     if( 'start_letters' in recipes[iRecipe] ) { start_letters = recipes[iRecipe].start_letters; }
     for( var iStartLetter = 0; iStartLetter < start_letters.length; iStartLetter++) {
         var iTag = start_letters[iStartLetter];
-        if( closed_loop ) {
-            output_pts[which_solution].push( { p: repetends[iTag][0].p, label: repetends[iTag][0].label } );
-        }
         var ret = explore_tree( gens[iTag].t, gens[iTag].name, iTag, 1 );
         if( ret == -1 ) {
             return 0; // drawing was aborted
         }
         n_pts_plotted += ret;
-        if( closed_loop ) {
-            output_pts[which_solution].push( { p: last(repetends[iTag]).p, label: last(repetends[iTag]).label } ); // (not needed if the necklace condition applies)
-        }
     }
     return n_pts_plotted;
 }
