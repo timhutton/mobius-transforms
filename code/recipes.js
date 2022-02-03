@@ -217,3 +217,7 @@ function get_recipes()
 
     return [ fuchsian, theta_schottky, kissing_schottky, gasket, modular, maskit, maskit2, maskit3, grandma, riley, jorgensen, special ];
 }
+
+function format_complex( a ) {
+    return `${ a.x.toFixed(3) } ${ a.y >= 0.0 ? "+" : "-" } ${ Math.abs(a.y).toFixed(3) }i`;
+}
