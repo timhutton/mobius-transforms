@@ -209,6 +209,9 @@ function init() {
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
+    worker = new Worker( 'code/worker.js' );
+    worker.addEventListener( 'message', handleWorkerResponse );
+
     compute_and_redraw();
 }
 
@@ -524,31 +527,31 @@ function onSaveAsPNGButton(element) {
 
 function compute_and_redraw() {
     document.getElementById('rendering_text').textContent = "Rendering...";
-    setTimeout(function() {
+    var params = { control_points: control_points };
+    worker.postMessage( params );
+}
 
-        const time_start = performance.now();
+function handleWorkerResponse( e ) {
+    var result = e.data;
+    output_pts = result.output_pts;
+    cloud_pts = result.cloud_pts;
+    draw();
 
-        var [dfs_succeeded, n_pts_plotted, description] = compute();
-        draw();
-
-        const time_end = performance.now();
-        const ms_elapsed = time_end - time_start;
-        if( ms_elapsed > 1000.0 ) {
-            document.getElementById('rendering_text').textContent = "Last render took: "+(ms_elapsed/1000.0).toFixed(2)+"s";
-        }
-        else {
-            document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed.toFixed(2)+"ms";
-        }
-        if( n_pts_plotted > 0 ) {
-            document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted;
-        }
-        else {
-            document.getElementById('num_points_text').textContent = "Aborted rendering";
-        }
-        document.getElementById('download_svg_button').disabled = !dfs_succeeded;
-        document.getElementById('download_png_button').disabled = !dfs_succeeded;
-        document.getElementById('description_text').innerHTML = "Description: " + description;
-    }, 1 );
+    if( result.ms_elapsed > 1000.0 ) {
+        document.getElementById('rendering_text').textContent = "Compute: " + (result.ms_elapsed / 1000.0).toFixed(2) + "s";
+    }
+    else {
+        document.getElementById('rendering_text').textContent = "Compute: " + result.ms_elapsed.toFixed(0) + "ms";
+    }
+    if( result.n_pts_plotted > 0 ) {
+        document.getElementById('num_points_text').textContent = "Number of points: " + result.n_pts_plotted;
+    }
+    else {
+        document.getElementById('num_points_text').textContent = "Aborted compute";
+    }
+    document.getElementById('download_svg_button').disabled = !result.dfs_succeeded;
+    document.getElementById('download_png_button').disabled = !result.dfs_succeeded;
+    document.getElementById('description_text').innerHTML = "Description: " + result.description;
 }
 
 function clear_drawing() {
