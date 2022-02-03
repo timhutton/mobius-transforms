@@ -752,24 +752,24 @@ function get_repetends( transforms ) {
                         //  after A we get: B,A,b
                         //  after b we get: A,b,a
             { p: get_mobius_fixed_points( bABa )[0], label: '|bABa' },
-            //{ p: get_mobius_fixed_points( a )[0],    label: '|a' },
+            { p: get_mobius_fixed_points( a )[0],    label: '|a' },
             //{ p: get_mobius_fixed_points( aBa )[0],  label: '|aBa' },
             //{ p: get_mobius_fixed_points( Baa )[0],  label: '|Baa' },
             { p: get_mobius_fixed_points( BAba )[0], label: '|BAba' },
         ], [
             { p: get_mobius_fixed_points( ABab )[0], label: '|ABab' },
-            //{ p: get_mobius_fixed_points( b )[0],    label: '|b' },
+            { p: get_mobius_fixed_points( b )[0],    label: '|b' },
             //{ p: get_mobius_fixed_points( AAb )[0],  label: '|AAb' },
             { p: get_mobius_fixed_points( aBAb )[0], label: '|aBAb' },
         ], [
             { p: get_mobius_fixed_points( BabA )[0], label: '|BabA' },
-            //{ p: get_mobius_fixed_points( A )[0],    label: '|A' },
+            { p: get_mobius_fixed_points( A )[0],    label: '|A' },
             //{ p: get_mobius_fixed_points( AbA )[0],  label: '|AbA' },
             //{ p: get_mobius_fixed_points( bAA )[0],  label: '|bAA' },
             { p: get_mobius_fixed_points( baBA )[0], label: '|baBA' },
         ], [
             { p: get_mobius_fixed_points( abAB )[0], label: '|abAB' },
-            //{ p: get_mobius_fixed_points( B )[0],    label: '|B' },
+            { p: get_mobius_fixed_points( B )[0],    label: '|B' },
             //{ p: get_mobius_fixed_points( aaB )[0],  label: '|aaB' },
             { p: get_mobius_fixed_points( AbaB )[0], label: '|AbaB' },
         ]
@@ -787,7 +787,10 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
             var z = [];
             var close_enough = true;
             for(var i = 0; i < repetends[iTag].length; i++) {
-                z.push( { p: mobius_on_point( y, repetends[iTag][i].p ) /*, label: old_word + repetends[iTag][i].label*/ } );
+                z.push( {
+                    p: mobius_on_point( y, repetends[iTag][i].p ),
+                    // label: old_word + repetends[iTag][i].label
+                    } );
                 if( i > 0 ) {
                     var d2 = dist2( z[i].p, z[i-1].p );
                     if( d2 > closeness_epsilon2 ) { close_enough = false; }
