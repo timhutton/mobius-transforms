@@ -173,8 +173,8 @@ function get_recipes()
     var special = {
         label: "Grandma's four-alarm special",
         //control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ],
-        control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(1.79, 1.948) ], // discovered
-        //control_points: [ p2(1.863, -0.072), p2(1.900, 0.1), p2(1.79, 1.948) ], // discovered
+        //control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(1.79, 1.948) ], // discovered
+        control_points: [ p2(1.863, -0.072), p2(1.900, 0.1), p2(1.79, 1.948) ], // discovered
         //control_points: [ p2(1.924781, -0.047529), p2(2.0, 0.0), p2(0.0, 0.0) ], // Fig. 11.1, p. 354 ?
         pt_labels: [ 'ta', 'tb', 'tab' ],
         make_generators: (which_solution, control_points) => {

@@ -787,7 +787,7 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
             var z = [];
             var close_enough = true;
             for(var i = 0; i < repetends[iTag].length; i++) {
-                z.push( { p: mobius_on_point( y, repetends[iTag][i].p ), label: old_word + repetends[iTag][i].label } );
+                z.push( { p: mobius_on_point( y, repetends[iTag][i].p ) /*, label: old_word + repetends[iTag][i].label*/ } );
                 if( i > 0 ) {
                     var d2 = dist2( z[i].p, z[i-1].p );
                     if( d2 > closeness_epsilon2 ) { close_enough = false; }
@@ -797,10 +797,13 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
                     }
                 }
             }
-            if( close_enough || level >= max_depth ) {
-                // draw the line segments, we've reached the bottom
+            if( close_enough ) {
+                // draw the line segments
                 output_pts[which_solution].push( z );
                 n_pts += z.length;
+            }
+            else if( level >= max_depth ) {
+                // we've reached the maximum search depth and the lines are still too long - don't draw anything
             }
             else {
                 var new_word = old_word + gens[ iTag ].name;
