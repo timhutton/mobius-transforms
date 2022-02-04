@@ -793,7 +793,7 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
                     if( d2 > closeness_epsilon2 ) { close_enough = false; }
                     if( d2 > max_d2 && level >= max_depth ) {
                         // if there are still very long lines at max_depth then we need to abort
-                        return -1; // debug: no abort
+                        return -1;
                     }
                 }
             }
