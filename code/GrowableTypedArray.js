@@ -11,9 +11,12 @@ class GrowableTypedArray {
         this.blocks = [];
         this.n = 0;
     }
+    get length() {
+        return this.n;
+    }
     get array() {
         if( this.blocks.length == 0 ) {
-            throw "Empty array";
+            return undefined;
         }
         var arr = this.block_func( this.n );
         // copy over the full blocks

@@ -23,7 +23,8 @@ function compute( params ) {
         n_pts_plotted += dfs_recursive_tree( recipe, gens, repetends, params.max_depth, params.closeness_epsilon, which_solution, vertices );
         description = desc;
     }
-    const vertices_buffer = vertices.array.buffer;
+    var vertices_buffer;
+    if( vertices.length > 0 ) { vertices_buffer = vertices.array.buffer; }
 
     postMessage(
         {
