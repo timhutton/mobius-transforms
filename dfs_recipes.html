@@ -33,25 +33,19 @@ function onTouchMove( evt ) {
 function onMove( pos ) {
     if( point_is_being_dragged ) {
         control_points[ i_point ] = fromScreen( add( pos, drag_offset ) );
-        compute_and_redraw();
+        need_redraw_image = true;
+        need_recompute = true;
+        checkForPendingCommands();
     }
     else if( is_panning ) {
         var move = sub( fromScreen( drag_offset ), fromScreen( pos ) );
         offset = add( offset, move );
-        draw();
+        need_redraw = true;
+        need_redraw_image = true;
+        checkForPendingCommands();
         drag_offset = pos;
     }
     else {
-        if( draw_fixed_points ) {
-            debug_pts = [[],[]];
-            for( var which_solution = 0; which_solution < 2; which_solution++) {
-                find_nearby_short_word_fixed_points( pos, transforms, which_solution, debug_pts );
-            }
-            if( debug_pts[0].length > 0 || debug_pts[1].length > 0 ) {
-                //console.log(debug_pts);
-                draw();
-            }
-        }
         // find the closest point, if within a minimum radius
         var iClosest = -1;
         var closest_dist2 = touch_radius * touch_radius;
@@ -66,11 +60,13 @@ function onMove( pos ) {
         if( iClosest >= 0 ) {
             point_is_highlighted = true;
             i_point = iClosest;
-            draw();
+            need_redraw = true;
+            checkForPendingCommands();
         }
         else if( point_is_highlighted ) {
             point_is_highlighted = false;
-            draw();
+            need_redraw = true;
+            checkForPendingCommands();
         }
     }
 }
@@ -101,15 +97,18 @@ function onDown( pos ) {
         point_is_highlighted = false;
         i_point = iClosest;
         drag_offset = sub( toScreen( control_points[ i_point ] ), pos );
-        draw();
+        need_redraw = true;
+        checkForPendingCommands();
     }
     else if( point_is_being_dragged ) {
         point_is_being_dragged = false;
-        draw();
+        need_redraw = true;
+        checkForPendingCommands();
     }
     else if( point_is_highlighted ) {
         point_is_highlighted = false;
-        draw();
+        need_redraw = true;
+        checkForPendingCommands();
     }
     else {
         is_panning = true;
@@ -120,7 +119,8 @@ function onDown( pos ) {
 function onMouseUp( evt ) {
     if( point_is_highlighted || point_is_being_dragged ) {
         point_is_highlighted = point_is_being_dragged = false;
-        draw();
+        need_redraw = true;
+        checkForPendingCommands();
     }
     is_mouse_down = false;
     is_panning = false;
@@ -172,6 +172,11 @@ function init() {
     is_panning = false;
     i_point = -1;
     grab_offset = p2( 0, 0 );
+    need_recompute = true;
+    need_redraw_image = false;
+    need_redraw = false;
+    redrawing_image = false;
+    recomputing = false;
 
     touch_radius = 50;
 
@@ -212,7 +217,19 @@ function init() {
     worker = new Worker( 'code/worker.js' );
     worker.addEventListener( 'message', handleWorkerResponse );
 
-    compute_and_redraw();
+    checkForPendingCommands();
+}
+
+function checkForPendingCommands() {
+    if( need_redraw ) {
+        draw();
+    }
+    if( need_redraw_image && !redrawing_image ) {
+        draw_image();
+    }
+    if( need_recompute && !recomputing ) {
+        compute();
+    }
 }
 
 function reset_viewport() {
@@ -227,9 +244,14 @@ function drawPoint( p, r, t, t_offset ) {
     ctx.fill();
 }
 
-function draw() {
+function draw_image() {
 
-    clear_drawing();
+    redrawing_image = true;
+    need_redraw_image = false;
+
+    const time_start = performance.now();
+
+    clear_image();
 
     // draw the loop into the image buffer
     for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
@@ -256,6 +278,18 @@ function draw() {
             }
         }
     }
+
+    const time_end = performance.now();
+    last_redraw_image_time_ms = time_end - time_start;
+
+    need_redraw = true;
+    redrawing_image = false;
+    checkForPendingCommands();
+}
+
+function draw() {
+
+    need_redraw = false;
 
     // blit the image to the screen
     ctx.putImageData(image, 0, 0);
@@ -321,6 +355,9 @@ function draw() {
             }
         }
     }
+
+    document.getElementById('rendering_text').textContent = "Compute, transfer, render: " + formatMilliseconds( last_compute_time_ms ) + ", "
+        + formatMilliseconds( transfer_time ) + ", " + formatMilliseconds( last_redraw_image_time_ms );
 }
 
 function drawLine( a, b ) {
@@ -333,7 +370,8 @@ function drawLine( a, b ) {
 function onDrawControlPointsButton(element) {
     draw_control_points = !draw_control_points;
     element.value = draw_control_points ? "Draw control points: ON" : "Draw control points: OFF";
-    draw();
+    need_redraw = true;
+    checkForPendingCommands();
 }
 
 function onRecipeChanged(element) {
@@ -346,7 +384,8 @@ function onRecipeChanged(element) {
     updateHighQualityModeButton();
     set_quality_parameters( hq_mode );
     reset_viewport();
-    compute_and_redraw();
+    need_recompute = true;
+    checkForPendingCommands();
 }
 
 function set_quality_parameters(hq_mode) {
@@ -367,7 +406,8 @@ function set_quality_parameters(hq_mode) {
 
 function onMaxDepthChanged(element) {
     max_depth = element.value;
-    compute_and_redraw();
+    need_recompute = true;
+    checkForPendingCommands();
 }
 
 function onEpsilonChanged(element) {
@@ -378,14 +418,16 @@ function onEpsilonChanged(element) {
         element.value = closeness_epsilon;
     }
     closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
-    compute_and_redraw();
+    need_recompute = true;
+    checkForPendingCommands();
 }
 
 function onHighQualityModeButton(element) {
     hq_mode = !hq_mode;
     updateHighQualityModeButton();
     set_quality_parameters( hq_mode );
-    compute_and_redraw();
+    need_recompute = true;
+    checkForPendingCommands();
 }
 
 function updateHighQualityModeButton() {
@@ -394,24 +436,28 @@ function updateHighQualityModeButton() {
 
 function onZoomInButton(element) {
     scale *= 2.0;
-    draw();
+    need_redraw_image = true;
+    checkForPendingCommands();
 }
 
 function onZoomOutButton(element) {
     scale /= 2.0;
-    draw();
+    need_redraw_image = true;
+    checkForPendingCommands();
 }
 
 function onWhichSolutionChanged(element) {
     plot_solution[0] = element.selectedIndex == 0 || element.selectedIndex == 2;
     plot_solution[1] = element.selectedIndex == 1 || element.selectedIndex == 2;
-    compute_and_redraw();
+    need_recompute = true;
+    checkForPendingCommands();
 }
 
 function onWhichMethodChanged(element) {
     plot_ifs = element.selectedIndex == 0 || element.selectedIndex == 2;
     plot_dfs = element.selectedIndex == 1 || element.selectedIndex == 2;
-    compute_and_redraw();
+    need_recompute = true;
+    checkForPendingCommands();
 }
 
 function download(filename, type, text) {
@@ -525,8 +571,11 @@ function onSaveAsPNGButton(element) {
     downloadLink.click();
 }
 
-function compute_and_redraw() {
+function compute() {
+    recomputing = true;
+    need_recompute = false;
     document.getElementById('rendering_text').textContent = "Rendering...";
+    start_compute_time = performance.now();
     var solutions_to_plot = [];
     if( plot_solution[0] ) { solutions_to_plot.push( 0 ); }
     if( plot_solution[1] ) { solutions_to_plot.push( 1 ); }
@@ -541,17 +590,14 @@ function compute_and_redraw() {
 }
 
 function handleWorkerResponse( e ) {
+
     var result = e.data;
     output_pts = result.output_pts;
     cloud_pts = result.cloud_pts;
-    draw();
 
-    if( result.ms_elapsed > 1000.0 ) {
-        document.getElementById('rendering_text').textContent = "Compute: " + (result.ms_elapsed / 1000.0).toFixed(2) + "s";
-    }
-    else {
-        document.getElementById('rendering_text').textContent = "Compute: " + result.ms_elapsed.toFixed(0) + "ms";
-    }
+    last_compute_time_ms = result.ms_elapsed;
+    transfer_time = (performance.now() - start_compute_time) - last_compute_time_ms;
+
     if( result.n_pts_plotted > 0 ) {
         document.getElementById('num_points_text').textContent = "Number of points: " + result.n_pts_plotted;
     }
@@ -561,9 +607,13 @@ function handleWorkerResponse( e ) {
     document.getElementById('download_svg_button').disabled = !result.dfs_succeeded;
     document.getElementById('download_png_button').disabled = !result.dfs_succeeded;
     document.getElementById('description_text').innerHTML = "Description: " + result.description;
+
+    need_redraw_image = true;
+    recomputing = false;
+    checkForPendingCommands();
 }
 
-function clear_drawing() {
+function clear_image() {
     for( var i = 0; i < image.width * image.height; i++) {
         image.data[ i*4 + 0 ] = 0;
         image.data[ i*4 + 1 ] = 0;
@@ -780,6 +830,15 @@ function compute() {
 
     return [dfs_succeeded, n_pts_plotted, description];
 }*/
+
+function formatMilliseconds( ms ) {
+    if( ms > 1000.0 ) {
+        return (ms / 1000.0).toFixed(2) + "s";
+    }
+    else {
+        return ms.toFixed(0) + "ms";
+    }
+}
 
 window.onload = init;
 </script>
