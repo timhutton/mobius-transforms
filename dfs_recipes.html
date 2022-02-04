@@ -778,18 +778,18 @@ function get_repetends( transforms ) {
 }
 
 function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
-    var max_d2 = 1.0;
-    function explore_tree( x, old_word, prev, level ) {
+    const max_d2 = 1.0;
+    function explore_tree( x, prev, level ) {
         var n_pts = 0;
         for( var k = prev + 1; k >= prev - 1; k--) {
-            var iTag = mod4( k );
-            var y = get_mobius_composed( x, gens[ iTag ].t );
+            const iTag = mod4( k );
+            const y = get_mobius_composed( x, gens[ iTag ].t );
             var z = [];
             var close_enough = true;
             for(var i = 0; i < repetends[iTag].length; i++) {
                 z.push( mobius_on_point( y, repetends[iTag][i].p ) );
                 if( i > 0 ) {
-                    var d2 = dist2( z[i], z[i-1] );
+                    const d2 = dist2( z[i], z[i-1] );
                     if( d2 > closeness_epsilon2 ) { close_enough = false; }
                     if( d2 > max_d2 && level >= max_depth ) {
                         // if there are still very long lines at max_depth then we need to abort
@@ -806,8 +806,7 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
                 // we've reached the maximum search depth and the lines are still too long - don't draw anything
             }
             else {
-                var new_word = old_word + gens[ iTag ].name;
-                var ret = explore_tree( y, new_word, iTag, level + 1 );
+                const ret = explore_tree( y, iTag, level + 1 );
                 if( ret == -1) { return -1; } // the abort signal bubbles up the stack
                 n_pts += ret;
             }
@@ -818,8 +817,8 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
     var start_letters = [0, 3, 2, 1]; // default order: aBAb
     if( 'start_letters' in recipes[iRecipe] ) { start_letters = recipes[iRecipe].start_letters; }
     for( var iStartLetter = 0; iStartLetter < start_letters.length; iStartLetter++) {
-        var iTag = start_letters[iStartLetter];
-        var ret = explore_tree( gens[iTag].t, gens[iTag].name, iTag, 1 );
+        const iTag = start_letters[iStartLetter];
+        const ret = explore_tree( gens[iTag].t, iTag, 1 );
         if( ret == -1 ) {
             return 0; // drawing was aborted
         }
