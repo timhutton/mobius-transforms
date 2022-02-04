@@ -21,6 +21,7 @@
 <meta charset="UTF-8">
 <script src="code/math.js"></script>
 <script src="code/recipes.js"></script>
+<script src="code/three.js"></script>
 <script>
 
 function toScreen( p ) {
@@ -226,7 +227,36 @@ function init() {
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
+    init3js();
+
     compute_and_redraw();
+}
+
+function init3js() {
+    canvas2 = document.getElementById('canvas2');
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color( 'rgb(255,200,150)' );
+
+    camera1 = new THREE.OrthographicCamera( -3, 3, -3, 3, 0.1, 1000 );
+    camera1.position.set(0, 0, 2);
+    camera1.up.set(0, -1, 0);
+    camera1.lookAt(0, 0, 0);
+    scene.add(camera1);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas2 });
+
+    let line_vertices = [];
+    for(var i = 0; i < 3.14; i+= 0.1) {
+        line_vertices.push( Math.cos(i), Math.sin(i), 0        );
+    }
+    const line_material = new THREE.LineBasicMaterial({ color: 'rgb(100,100,100)' });
+    const line_geometry = new THREE.BufferGeometry();
+    line_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( line_vertices, 3 ) );
+    const line = new THREE.Line( line_geometry, line_material );
+    scene.add( line );
+
+    renderer.render( scene, camera1 );
 }
 
 function reset_viewport() {
@@ -921,6 +951,7 @@ input, select, label, p {
 <body>
 
 <div style="float:left;touch-action:none"><p><canvas id="canvas" width="700" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
+<div style="float:left;touch-action:none"><p><canvas id="canvas2" width="700" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
 
 <div style="float:left;padding-left: 20px">
 
