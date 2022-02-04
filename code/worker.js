@@ -1,41 +1,39 @@
 importScripts( 'math.js' );
 importScripts( 'recipes.js' );
+importScripts( 'GrowableTypedArray.js' );
 
 var recipes = get_recipes();
 
 onmessage = function( e ) {
     var params = e.data;
-    postMessage( compute( params ) );
+    compute( params );
 }
 
 function compute( params ) {
-    const time_start = performance.now();
-
     var recipe = recipes[ params.iRecipe ];
     var dfs_succeeded = true; // TODO
     var n_pts_plotted = 0;
     var description = '';
-    var output_pts = [[[]],[[]]];
-    var cloud_pts = [[],[]];
+    var vertices = new GrowableTypedArray( n => new Float32Array( n ) );
+    var cloud_pts = [[], []];
     for( var iWhichSolution = 0; iWhichSolution < params.solutions_to_plot.length; iWhichSolution++ ) {
         var which_solution = params.solutions_to_plot[ iWhichSolution ];
         var [transforms, desc] = make_generators( recipe, which_solution, params.control_points );
         var [gens, repetends] = get_repetends( transforms );
-        n_pts_plotted += dfs_recursive_tree( recipe, gens, repetends, params.max_depth, params.closeness_epsilon, which_solution, output_pts );
+        n_pts_plotted += dfs_recursive_tree( recipe, gens, repetends, params.max_depth, params.closeness_epsilon, which_solution, vertices );
         description = desc;
     }
+    const vertices_buffer = vertices.array.buffer;
 
-    const time_end = performance.now();
-    const ms_elapsed = time_end - time_start;
-
-    return {
-        output_pts: output_pts,
-        cloud_pts: cloud_pts,
-        dfs_succeeded: dfs_succeeded,
-        n_pts_plotted: n_pts_plotted,
-        description: description,
-        ms_elapsed: ms_elapsed
-    };
+    postMessage(
+        {
+            cloud_pts: cloud_pts,
+            dfs_succeeded: dfs_succeeded,
+            n_pts_plotted: n_pts_plotted,
+            description: description,
+            vertices_buffer: vertices_buffer
+        },
+        [vertices_buffer]);
 }
 
 function make_generators( recipe, which_solution, control_points ) {
@@ -94,7 +92,7 @@ function get_repetends( transforms ) {
     return [gens, repetends];
 }
 
-function dfs_recursive_tree(recipe, gens, repetends, max_depth, closeness_epsilon, which_solution, output_pts) {
+function dfs_recursive_tree(recipe, gens, repetends, max_depth, closeness_epsilon, which_solution, vertices) {
     var max_d2 = 1.0;
     var closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
     function explore_tree( x, old_word, prev, level ) {
@@ -120,7 +118,12 @@ function dfs_recursive_tree(recipe, gens, repetends, max_depth, closeness_epsilo
             }
             if( close_enough ) {
                 // draw the line segments
-                output_pts[which_solution].push( z );
+                for(var i = 0; i < z.length; i++) {
+                    const ix = vertices.add( z[i].p.x );
+                    const iy = vertices.add( z[i].p.y );
+                    // TODO: store the indices
+                }
+                //output_pts[which_solution].push( z );
                 n_pts += z.length;
             }
             else if( level >= max_depth ) {

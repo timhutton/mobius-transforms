@@ -253,16 +253,28 @@ function draw_image() {
 
     clear_image();
 
-    // draw the loop into the image buffer
-    for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        var duplication_func = p => duplicate_point( p, recipes[ iRecipe ] );
-        // draw the separate line segments
-        for(var i = 0; i < output_pts[which_solution].length; i++) {
-            if( output_pts[which_solution][i].length == 0 ) { continue; }
-            var a = output_pts[which_solution][i][0].p, b;
-            for(var j = 0; j < output_pts[which_solution][i].length; j++) {
-                b = output_pts[which_solution][i][j].p;
-                draw_image_line_with_duplication( a, b, which_solution, duplication_func );
+    if(false) { // old code to draw from output_pts
+        // draw the loop into the image buffer
+        for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+            var duplication_func = p => duplicate_point( p, recipes[ iRecipe ] );
+            // draw the separate line segments
+            for(var i = 0; i < output_pts[which_solution].length; i++) {
+                if( output_pts[which_solution][i].length == 0 ) { continue; }
+                var a = output_pts[which_solution][i][0].p, b;
+                for(var j = 0; j < output_pts[which_solution][i].length; j++) {
+                    b = output_pts[which_solution][i][j].p;
+                    draw_image_line_with_duplication( a, b, which_solution, duplication_func );
+                    a = b;
+                }
+            }
+        }
+    } else {
+        if(vertices.length > 0 ) {
+            var duplication_func = p => duplicate_point( p, recipes[ iRecipe ] );
+            var a = p2( vertices[0], vertices[1] );
+            for(var i = 2; i < vertices.length; i += 2) {
+                var b = p2( vertices[i], vertices[i+1] );
+                draw_image_line_with_duplication( a, b, 0, duplication_func);
                 a = b;
             }
         }
@@ -356,8 +368,8 @@ function draw() {
         }
     }
 
-    document.getElementById('rendering_text').textContent = "Compute, transfer, render: " + formatMilliseconds( last_compute_time_ms ) + ", "
-        + formatMilliseconds( transfer_time ) + ", " + formatMilliseconds( last_redraw_image_time_ms );
+    document.getElementById('rendering_text').textContent = "Compute, render: " + formatMilliseconds( last_compute_time_ms ) + ", "
+        + formatMilliseconds( last_redraw_image_time_ms );
 }
 
 function drawLine( a, b ) {
@@ -594,9 +606,9 @@ function handleWorkerResponse( e ) {
     var result = e.data;
     output_pts = result.output_pts;
     cloud_pts = result.cloud_pts;
+    vertices = new Float32Array( result.vertices_buffer );
 
-    last_compute_time_ms = result.ms_elapsed;
-    transfer_time = (performance.now() - start_compute_time) - last_compute_time_ms;
+    last_compute_time_ms = performance.now() - start_compute_time;
 
     if( result.n_pts_plotted > 0 ) {
         document.getElementById('num_points_text').textContent = "Number of points: " + result.n_pts_plotted;
