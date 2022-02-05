@@ -227,36 +227,75 @@ function init() {
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
-    init3js();
-
     compute_and_redraw();
+
+    init3js();
 }
 
 function init3js() {
     canvas2 = document.getElementById('canvas2');
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color( 'rgb(255,200,150)' );
+    scene.background = new THREE.Color( 'rgb(0,0,0)' );
 
-    camera1 = new THREE.OrthographicCamera( -3, 3, -3, 3, 0.1, 1000 );
-    camera1.position.set(0, 0, 2);
+    camera1 = new THREE.OrthographicCamera( -3, 3, -3, 3 );
+    camera1.position.set(0, 0, 1);
     camera1.up.set(0, -1, 0);
     camera1.lookAt(0, 0, 0);
+    camera1.updateProjectionMatrix();
     scene.add(camera1);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas2 });
 
-    let line_vertices = [];
-    for(var i = 0; i < 3.14; i+= 0.1) {
-        line_vertices.push( Math.cos(i), Math.sin(i), 0        );
+    scene_objects = [];
+}
+
+function updateScene() {
+    for(var i = 0; i < scene_objects.length; i++) {
+        scene.remove( scene_objects[i] );
     }
-    const line_material = new THREE.LineBasicMaterial({ color: 'rgb(100,100,100)' });
+    addLine();
+    renderer.render( scene, camera1 );
+}
+
+function updateCamera() {
+    camera1.updateProjectionMatrix();
+    renderer.render( scene, camera1 );
+}
+
+function addLine() {
+    let line_vertices = [];
+    for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
+        var duplication_func = p => duplicate_point( p, recipes[ iRecipe ] );
+        // draw the separate line segments
+        for(var i = 0; i < output_pts[which_solution].length; i++) {
+            if( output_pts[which_solution][i].length == 0 ) { continue; }
+            var pts_dup = [];
+            for( var k = 0; k < output_pts[which_solution][i].length; k++ ) {
+                pts_dup.push( duplication_func( output_pts[which_solution][i][k] ) );
+            }
+            for( var k = 0; k < pts_dup[0].length; k++ ) {
+                var a = pts_dup[0][k];
+                for(var j = 1; j < pts_dup.length; j++) {
+                    var b = pts_dup[j][k];
+                    line_vertices.push( a.x );
+                    line_vertices.push( a.y );
+                    line_vertices.push( 0 );
+                    line_vertices.push( b.x );
+                    line_vertices.push( b.y );
+                    line_vertices.push( 0 );
+                    a = b;
+                    //draw_image_line_with_duplication( a, b, which_solution, duplication_func );
+                }
+            }
+        }
+    }
+    const line_material = new THREE.LineBasicMaterial({ color: 'rgb(255,255,255)' });
     const line_geometry = new THREE.BufferGeometry();
     line_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( line_vertices, 3 ) );
-    const line = new THREE.Line( line_geometry, line_material );
+    const line = new THREE.LineSegments( line_geometry, line_material );
     scene.add( line );
-
-    renderer.render( scene, camera1 );
+    scene_objects = [ line, line_geometry, line_material ];
 }
 
 function reset_viewport() {
@@ -273,7 +312,7 @@ function drawPoint( p, r, t, t_offset ) {
 
 function draw() {
 
-    clear_drawing();
+    /*clear_drawing();
 
     // draw the loop into the image buffer
     for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
@@ -282,7 +321,7 @@ function draw() {
         for(var i = 0; i < output_pts[which_solution].length; i++) {
             if( output_pts[which_solution][i].length == 0 ) { continue; }
             var a = output_pts[which_solution][i][0], b;
-            for(var j = 0; j < output_pts[which_solution][i].length; j++) {
+            for(var j = 0; j < output_pts[which_solution][i].length; j++) { // TODO: j=1
                 b = output_pts[which_solution][i][j];
                 draw_image_line_with_duplication( a, b, which_solution, duplication_func );
                 a = b;
@@ -302,7 +341,10 @@ function draw() {
     }
 
     // blit the image to the screen
-    ctx.putImageData(image, 0, 0);
+    ctx.putImageData(image, 0, 0);*/
+
+    ctx.fillStyle = 'rgb(0,0,0)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
     // draw the axes
     if( draw_control_points ) {
@@ -365,6 +407,8 @@ function draw() {
             }
         }
     }
+
+    updateScene();
 }
 
 function drawLine( a, b ) {
@@ -439,11 +483,15 @@ function updateHighQualityModeButton() {
 function onZoomInButton(element) {
     scale *= 2.0;
     draw();
+    camera1.zoom *= 2.0;
+    updateCamera();
 }
 
 function onZoomOutButton(element) {
     scale /= 2.0;
     draw();
+    camera1.zoom /= 2.0;
+    updateCamera();
 }
 
 function onWhichSolutionChanged(element) {
@@ -951,7 +999,7 @@ input, select, label, p {
 <body>
 
 <div style="float:left;touch-action:none"><p><canvas id="canvas" width="700" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
-<div style="float:left;touch-action:none"><p><canvas id="canvas2" width="700" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
+<div style="float:left;touch-action:none"><p><canvas id="canvas2" width="600" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
 
 <div style="float:left;padding-left: 20px">
 
