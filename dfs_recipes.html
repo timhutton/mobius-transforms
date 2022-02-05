@@ -298,7 +298,7 @@ function addLine() {
 }
 
 function reset_viewport() {
-    scale = Math.min( canvas.width, canvas.height ) / 4.5;
+    scale = Math.min( canvas.width, canvas.height ) / 6.0;
     offset = p2( 0.0, 0.0 );
 }
 
@@ -310,6 +310,8 @@ function drawPoint( p, r, t, t_offset ) {
 }
 
 function draw() {
+
+    updateScene();
 
     /*clear_drawing();
 
@@ -407,7 +409,6 @@ function draw() {
         }
     }
 
-    updateScene();
 }
 
 function drawLine( a, b ) {
@@ -1007,14 +1008,19 @@ input, select, label, p {
     font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
     padding-right: 5px;
 }
+/*canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}*/
 </style>
 
 </head>
 
 <body>
 
-<div style="float:left;touch-action:none"><p><canvas id="canvas" width="700" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
 <div style="float:left;touch-action:none"><p><canvas id="canvas2" width="600" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
+<div style="float:left;touch-action:none"><p><canvas id="canvas" width="600" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
 
 <div style="float:left;padding-left: 20px">
 
