@@ -29,7 +29,8 @@
 <script>
 
 function init() {
-    draw_control_points = true;
+    computing = false;
+    need_recompute = false;
 
     // initialise the recipes
     recipes = get_recipes();
@@ -47,6 +48,7 @@ function init() {
     for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
         control_points.push( p2( recipes[ iRecipe ].control_points[i].x, recipes[ iRecipe ].control_points[i].y ) );
     }
+    draw_control_points = true;
 
     plot_solution = [ true, true ];
     document.getElementById("which_solution_dropdown").selectedIndex = 2;
@@ -67,7 +69,7 @@ function init() {
 }
 
 function init3js() {
-    canvas2 = document.getElementById('canvas2');
+    const canvas = document.getElementById('canvas');
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 'rgb(0,0,0)' );
@@ -93,6 +95,7 @@ function init3js() {
     // add axes
     axes = new THREE.GridHelper( 100, 100, 0x444444, 0x222222 );
     axes.geometry.rotateX( Math.PI / 2 );
+    axes.renderOrder = -1;
     scene.add( axes );
 
     control_point_meshes = [];
@@ -103,7 +106,7 @@ function init3js() {
     camera1.lookAt(0, 0, 0);
     scene.add( camera1 );
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas2 });
+    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
 
     orbit_controls = new THREE.OrbitControls( camera1, renderer.domElement );
     orbit_controls.enableRotate = false;
@@ -118,15 +121,15 @@ function init3js() {
     drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
     drag_controls.addEventListener( 'drag', onDragControlPoint, false );
 
-    canvas2.addEventListener( 'mousemove', render, false );
-    canvas2.addEventListener( 'touchmove', render, false );
-    canvas2.addEventListener( 'mousedown',  render, false );
-    canvas2.addEventListener( 'touchstart',  render, false );
-    canvas2.addEventListener( 'mouseup',  render, false );
-    canvas2.addEventListener( 'mouseout',  render, false );
-    canvas2.addEventListener( 'touchend',  render, false );
-    canvas2.addEventListener( 'touchcancel',  render, false );
-    canvas2.addEventListener( 'wheel',  render, false );
+    canvas.addEventListener( 'mousemove', render, false );
+    canvas.addEventListener( 'touchmove', render, false );
+    canvas.addEventListener( 'mousedown',  render, false );
+    canvas.addEventListener( 'touchstart',  render, false );
+    canvas.addEventListener( 'mouseup',  render, false );
+    canvas.addEventListener( 'mouseout',  render, false );
+    canvas.addEventListener( 'touchend',  render, false );
+    canvas.addEventListener( 'touchcancel',  render, false );
+    canvas.addEventListener( 'wheel',  render, false );
 }
 
 function onDragControlPoint( e ) {
@@ -135,7 +138,8 @@ function onDragControlPoint( e ) {
     if( iControlPoint == -1 ) { console.log('unknown dragged object'); return; }
     control_points[ iControlPoint ].x = mesh.position.x;
     control_points[ iControlPoint ].y = mesh.position.y;
-    compute_and_redraw();
+    if( computing ) { need_recompute = true; }
+    else { compute_and_redraw(); }
 }
 
 function onCameraChange() {
@@ -391,6 +395,8 @@ function onSaveAsPNGButton(element) {
 }
 
 function compute_and_redraw() {
+    computing = true;
+    need_recompute = false;
     document.getElementById('rendering_text').textContent = "Rendering...";
     setTimeout(function() {
 
@@ -417,6 +423,13 @@ function compute_and_redraw() {
         document.getElementById('download_svg_button').disabled = !dfs_succeeded;
         document.getElementById('download_png_button').disabled = !dfs_succeeded;
         document.getElementById('description_text').innerHTML = "Description: " + description;
+
+        computing = false;
+
+        if( need_recompute ) {
+            console.log('processing pending recompute');
+            compute_and_redraw();
+        }
     }, 1 );
 }
 
@@ -726,7 +739,7 @@ input, select, label, p {
 
 <body>
 
-<div style="float:left;touch-action:none"><p><canvas id="canvas2" width="600" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
+<div style="float:left;touch-action:none"><p><canvas id="canvas" width="600" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
 
 <div style="float:left;padding-left: 20px">
 
