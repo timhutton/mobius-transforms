@@ -147,7 +147,7 @@ function resetControlPointMeshes( scene ) {
         scene.remove( control_point_meshes[i] );
     }
     control_point_meshes.length = 0;
-    const control_point_size = 0.1;
+    const control_point_size = 0.2;
     const control_point_geometry = new THREE.BoxGeometry( control_point_size, control_point_size, control_point_size );
     const control_point_material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
     for( var i = 0; i < control_points.length; i++) {
