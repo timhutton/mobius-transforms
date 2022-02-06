@@ -74,23 +74,22 @@ function init3js() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 'rgb(0,0,0)' );
 
-    // add rendering for line segments
     line_segments = [[],[]]
     const line_materials = [ new THREE.LineBasicMaterial({ color: 'rgb(255,0,0)' }), new THREE.LineBasicMaterial({ color: 'rgb(0,255,0)' }) ];
     line_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
-    line_geometry[0].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[0], 3 ) );
-    line_geometry[1].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[1], 3 ) );
-    scene.add( new THREE.LineSegments( line_geometry[0], line_materials[0] ) );
-    scene.add( new THREE.LineSegments( line_geometry[1], line_materials[1] ) );
 
-    // add rendering for points
     vertices = [[],[]]
     const point_materials = [ new THREE.PointsMaterial({ color: 'rgb(255,0,0)' }), new THREE.PointsMaterial({ color: 'rgb(0,255,0)' }) ];
     point_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
-    point_geometry[0].setAttribute( 'position', new THREE.Float32BufferAttribute( vertices[0], 3 ) );
-    point_geometry[1].setAttribute( 'position', new THREE.Float32BufferAttribute( vertices[1], 3 ) );
-    scene.add( new THREE.Points( point_geometry[0], point_materials[0] ) );
-    scene.add( new THREE.Points( point_geometry[1], point_materials[1] ) );
+
+    for( var i = 0; i < 2; i++ ) {
+        line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[i], 3 ) );
+        const line_mesh = new THREE.LineSegments( line_geometry[i], line_materials[i] );
+        scene.add( line_mesh );
+        point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( vertices[i], 3 ) );
+        const points_mesh = new THREE.Points( point_geometry[i], point_materials[i] );
+        scene.add( points_mesh );
+    }
 
     // add axes
     axes = new THREE.GridHelper( 100, 100, 0x444444, 0x222222 );
@@ -196,10 +195,12 @@ function render() {
 }
 
 function updateScene() {
-    line_geometry[0].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[0], 3 ) );
-    line_geometry[1].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[1], 3 ) );
-    point_geometry[0].setAttribute( 'position', new THREE.Float32BufferAttribute( vertices[0], 3 ) );
-    point_geometry[1].setAttribute( 'position', new THREE.Float32BufferAttribute( vertices[1], 3 ) );
+    for( var i = 0; i < 2; i++ ) {
+        line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[i], 3 ) );
+        point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( vertices[i], 3 ) );
+        line_geometry[i].computeBoundingSphere()
+        point_geometry[i].computeBoundingSphere()
+    }
     render();
 }
 
