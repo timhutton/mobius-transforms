@@ -23,6 +23,8 @@
 <script src="code/recipes.js"></script>
 <script src="code/threejs/three.min.js"></script>
 <script src="code/threejs/DragControls.js"></script>
+<script src="code/threejs/FontLoader.js"></script>
+<script src="code/threejs/helvetica.js"></script>
 <script src="code/threejs/OrbitControls.js"></script>
 <script>
 
@@ -56,9 +58,12 @@ function init() {
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
-    init3js();
-
-    compute_and_redraw();
+    const loader = new THREE.FontLoader();
+    loader.load( helvetiker_regular_typeface_json, (loaded_font) => {
+        font = loaded_font;
+        init3js();
+        compute_and_redraw();
+    });
 }
 
 function init3js() {
@@ -93,7 +98,7 @@ function init3js() {
     camera1.lookAt(0, 0, 0);
     scene.add( camera1 );
 
-    renderer = new THREE.WebGLRenderer({ antialias: false, canvas: canvas2 });
+    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas2 });
 
     orbit_controls = new THREE.OrbitControls( camera1, renderer.domElement );
     orbit_controls.enableRotate = false;
@@ -149,10 +154,22 @@ function resetControlPointMeshes( scene ) {
     control_point_meshes.length = 0;
     const control_point_size = 0.2;
     const control_point_geometry = new THREE.BoxGeometry( control_point_size, control_point_size, control_point_size );
-    const control_point_material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+    const control_point_material = new THREE.MeshBasicMaterial( { color: 0xffffff, transparent:true, opacity: 0.4 } );
     for( var i = 0; i < control_points.length; i++) {
         var mesh = new THREE.Mesh( control_point_geometry, control_point_material );
         mesh.position.set( control_points[i].x, control_points[i].y, 0.0 );
+
+        {
+            const material = new THREE.MeshBasicMaterial({color: 'rgb(255,255,255)'});
+            const shapes = font.generateShapes( recipes[ iRecipe ].pt_labels[ i ], 0.2 );
+            const geometry = new THREE.ShapeBufferGeometry( shapes );
+            const text = new THREE.Mesh( geometry, material );
+            text.position.x = control_points[i].x + 0.1;
+            text.position.y = control_points[i].y + 0.1;
+            text.position.z = 0.0;
+            mesh.attach( text );
+        }
+
         scene.add( mesh );
         control_point_meshes.push( mesh );
     }
