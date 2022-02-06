@@ -151,6 +151,9 @@ function resetControlPointMeshes( scene ) {
         scene.add( mesh );
         control_point_meshes.push( mesh );
     }
+    if( typeof drag_controls !== "undefined" ) {
+        drag_controls.dispose();
+    }
     drag_controls = new THREE.DragControls( control_point_meshes, camera1, renderer.domElement );
     drag_controls.addEventListener( 'dragstart', () => orbit_controls.enabled = false );
     drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
