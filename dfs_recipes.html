@@ -85,17 +85,7 @@ function init3js() {
     scene.add( new THREE.Points( point_geometry[0], point_materials[0] ) );
     scene.add( new THREE.Points( point_geometry[1], point_materials[1] ) );
 
-    // add the control points
-    const control_point_size = 0.1;
-    const control_point_geometry = new THREE.BoxGeometry( control_point_size, control_point_size, control_point_size );
-    const control_point_material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
     control_point_meshes = [];
-    for( var i = 0; i < control_points.length; i++) {
-        var mesh = new THREE.Mesh( control_point_geometry, control_point_material );
-        mesh.position.set( control_points[i].x, control_points[i].y, 0.0 );
-        scene.add( mesh );
-        control_point_meshes.push( mesh );
-    }
 
     camera1 = new THREE.OrthographicCamera( -3, 3, 3, -3 );
     camera1.position.set(0, 0, 1);
@@ -111,10 +101,7 @@ function init3js() {
     orbit_controls.touches.ONE = THREE.TOUCH.PAN;
     orbit_controls.addEventListener( 'change', onCameraChange, false );
 
-    const drag_controls = new THREE.DragControls( control_point_meshes, camera1, renderer.domElement );
-    drag_controls.addEventListener( 'dragstart', () => orbit_controls.enabled = false );
-    drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
-    drag_controls.addEventListener( 'drag', onDragControlPoint, false );
+    resetControlPointMeshes( scene );
 
     canvas2.addEventListener( 'mousemove', render, false );
     canvas2.addEventListener( 'touchmove', render, false );
@@ -150,6 +137,27 @@ function resetCamera() {
     orbit_controls.reset();
 }
 
+function resetControlPointMeshes( scene ) {
+    for( var i = 0; i < control_point_meshes.length; i++) {
+        scene.remove( control_point_meshes[i] );
+    }
+    control_point_meshes = [];
+    const control_point_size = 0.1;
+    const control_point_geometry = new THREE.BoxGeometry( control_point_size, control_point_size, control_point_size );
+    const control_point_material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+    for( var i = 0; i < control_points.length; i++) {
+        var mesh = new THREE.Mesh( control_point_geometry, control_point_material );
+        mesh.position.set( control_points[i].x, control_points[i].y, 0.0 );
+        scene.add( mesh );
+        control_point_meshes.push( mesh );
+    }
+    drag_controls = new THREE.DragControls( control_point_meshes, camera1, renderer.domElement );
+    drag_controls.addEventListener( 'dragstart', () => orbit_controls.enabled = false );
+    drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
+    drag_controls.addEventListener( 'drag', onDragControlPoint, false );
+
+}
+
 function render() {
     renderer.render( scene, camera1 );
 }
@@ -177,6 +185,7 @@ function onRecipeChanged(element) {
     hq_mode = false;
     updateHighQualityModeButton();
     set_quality_parameters( hq_mode );
+    resetControlPointMeshes( scene );
     resetCamera();
     compute_and_redraw();
 }
