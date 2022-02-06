@@ -90,6 +90,11 @@ function init3js() {
     scene.add( new THREE.Points( point_geometry[0], point_materials[0] ) );
     scene.add( new THREE.Points( point_geometry[1], point_materials[1] ) );
 
+    // add axes
+    axes = new THREE.GridHelper( 100, 100, 0x444444, 0x222222 );
+    axes.geometry.rotateX( Math.PI / 2 );
+    scene.add( axes );
+
     control_point_meshes = [];
 
     camera1 = new THREE.OrthographicCamera( -3, 3, 3, -3 );
@@ -201,6 +206,7 @@ function onDrawControlPointsButton(element) {
         control_point_meshes[i].visible = draw_control_points;
     }
     if( draw_control_points ) { drag_controls.activate(); } else { drag_controls.deactivate(); }
+    axes.visible = draw_control_points;
     render();
 }
 
