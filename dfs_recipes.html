@@ -427,7 +427,6 @@ function compute_and_redraw() {
         computing = false;
 
         if( need_recompute ) {
-            console.log('processing pending recompute');
             compute_and_redraw();
         }
     }, 1 );
