@@ -108,7 +108,7 @@ function init3js() {
 
     control_point_meshes = [];
     resetControlPointMeshes( scene );
-    const drag_controls = new THREE.DragControls( control_point_meshes, camera1, renderer.domElement );
+    drag_controls = new THREE.DragControls( control_point_meshes, camera1, renderer.domElement );
     drag_controls.addEventListener( 'dragstart', () => orbit_controls.enabled = false );
     drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
     drag_controls.addEventListener( 'drag', onDragControlPoint, false );
@@ -197,7 +197,11 @@ function updateScene() {
 function onDrawControlPointsButton(element) {
     draw_control_points = !draw_control_points;
     element.value = draw_control_points ? "Draw control points: ON" : "Draw control points: OFF";
-    draw();
+    for( var i = 0; i < control_point_meshes.length; i++ ) {
+        control_point_meshes[i].visible = draw_control_points;
+    }
+    if( draw_control_points ) { drag_controls.activate(); } else { drag_controls.deactivate(); }
+    render();
 }
 
 function onRecipeChanged(element) {
