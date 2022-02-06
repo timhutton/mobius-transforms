@@ -152,12 +152,19 @@ function resetControlPointMeshes( scene ) {
         scene.remove( control_point_meshes[i] );
     }
     control_point_meshes.length = 0;
-    const control_point_size = 0.2;
-    const control_point_geometry = new THREE.BoxGeometry( control_point_size, control_point_size, control_point_size );
-    const control_point_material = new THREE.MeshBasicMaterial( { color: 0xffffff, transparent:true, opacity: 0.4 } );
+    const marker_size = 0.05;
+    const marker_geometry = new THREE.BoxGeometry( marker_size, marker_size, marker_size );
+    const marker_material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+    const handle_size = 0.5;
+    const handle_geometry = new THREE.BoxGeometry( handle_size, handle_size, handle_size );
+    const handle_material = new THREE.MeshBasicMaterial( { color: 0xffffff, transparent:true, opacity: 0.1 } );
     for( var i = 0; i < control_points.length; i++) {
-        var mesh = new THREE.Mesh( control_point_geometry, control_point_material );
-        mesh.position.set( control_points[i].x, control_points[i].y, 0.0 );
+        var handle_mesh = new THREE.Mesh( handle_geometry, handle_material );
+        handle_mesh.position.set( control_points[i].x, control_points[i].y, 0.0 );
+
+        var marker_mesh = new THREE.Mesh( marker_geometry, marker_material );
+        marker_mesh.position.set( control_points[i].x, control_points[i].y, 0.0 );
+        handle_mesh.attach( marker_mesh );
 
         {
             const material = new THREE.MeshBasicMaterial({color: 'rgb(255,255,255)'});
@@ -167,11 +174,11 @@ function resetControlPointMeshes( scene ) {
             text.position.x = control_points[i].x + 0.1;
             text.position.y = control_points[i].y + 0.1;
             text.position.z = 0.0;
-            mesh.attach( text );
+            handle_mesh.attach( text );
         }
 
-        scene.add( mesh );
-        control_point_meshes.push( mesh );
+        scene.add( handle_mesh );
+        control_point_meshes.push( handle_mesh );
     }
 }
 
