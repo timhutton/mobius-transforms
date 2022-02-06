@@ -101,7 +101,12 @@ function init3js() {
     orbit_controls.touches.ONE = THREE.TOUCH.PAN;
     orbit_controls.addEventListener( 'change', onCameraChange, false );
 
+    control_point_meshes = [];
     resetControlPointMeshes( scene );
+    const drag_controls = new THREE.DragControls( control_point_meshes, camera1, renderer.domElement );
+    drag_controls.addEventListener( 'dragstart', () => orbit_controls.enabled = false );
+    drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
+    drag_controls.addEventListener( 'drag', onDragControlPoint, false );
 
     canvas2.addEventListener( 'mousemove', render, false );
     canvas2.addEventListener( 'touchmove', render, false );
@@ -141,7 +146,7 @@ function resetControlPointMeshes( scene ) {
     for( var i = 0; i < control_point_meshes.length; i++) {
         scene.remove( control_point_meshes[i] );
     }
-    control_point_meshes = [];
+    control_point_meshes.length = 0;
     const control_point_size = 0.1;
     const control_point_geometry = new THREE.BoxGeometry( control_point_size, control_point_size, control_point_size );
     const control_point_material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
@@ -151,14 +156,6 @@ function resetControlPointMeshes( scene ) {
         scene.add( mesh );
         control_point_meshes.push( mesh );
     }
-    if( typeof drag_controls !== "undefined" ) {
-        drag_controls.dispose();
-    }
-    drag_controls = new THREE.DragControls( control_point_meshes, camera1, renderer.domElement );
-    drag_controls.addEventListener( 'dragstart', () => orbit_controls.enabled = false );
-    drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
-    drag_controls.addEventListener( 'drag', onDragControlPoint, false );
-
 }
 
 function render() {
