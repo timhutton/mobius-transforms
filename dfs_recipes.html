@@ -26,178 +26,8 @@
 <script src="code/threejs/OrbitControls.js"></script>
 <script>
 
-function toScreen( p ) {
-    return add( origin_screen, complex_conjugate( mul( sub( p, offset ), scale ) ) );
-}
-
-function fromScreen( p ) {
-    return add( mul( complex_conjugate( sub( p, origin_screen ) ), 1.0 / scale ), offset);
-}
-
-function getMousePos(canvas, evt) {
-    var rect = canvas.getBoundingClientRect();
-    return p2( evt.clientX - rect.left, evt.clientY - rect.top );
-}
-
-function onMouseMove( evt ) {
-    var pos = getMousePos( canvas, evt );
-    onMove( pos );
-}
-
-function onTouchMove( evt ) {
-    if( point_is_being_dragged )
-        evt.preventDefault();
-    onMove( fixTouch( evt.changedTouches[0] ) );
-}
-
-function onMove( pos ) {
-    if( point_is_being_dragged ) {
-        control_points[ i_point ] = fromScreen( add( pos, drag_offset ) );
-        compute_and_redraw();
-    }
-    else if( is_panning ) {
-        var move = sub( fromScreen( drag_offset ), fromScreen( pos ) );
-        offset = add( offset, move );
-        updateCamera();
-        draw();
-        drag_offset = pos;
-    }
-    else {
-        if( draw_fixed_points ) {
-            debug_pts = [[],[]];
-            for( var which_solution = 0; which_solution < 2; which_solution++) {
-                find_nearby_short_word_fixed_points( pos, transforms, which_solution, debug_pts );
-            }
-            if( debug_pts[0].length > 0 || debug_pts[1].length > 0 ) {
-                //console.log(debug_pts);
-                draw();
-            }
-        }
-        // find the closest point, if within a minimum radius
-        var iClosest = -1;
-        var closest_dist2 = touch_radius * touch_radius;
-        var num_control_points = control_points.length;
-        for( var i = 0; i < num_control_points; i++ ) {
-            var d2 = dist2( pos, toScreen( control_points[ i ] ) );
-            if( d2 < closest_dist2 ) {
-                closest_dist2 = d2;
-                iClosest = i;
-            }
-        }
-        if( iClosest >= 0 ) {
-            point_is_highlighted = true;
-            i_point = iClosest;
-            draw();
-        }
-        else if( point_is_highlighted ) {
-            point_is_highlighted = false;
-            draw();
-        }
-    }
-}
-
-function onMouseDown( evt ) {
-    var pos = getMousePos( canvas, evt );
-    onDown( pos );
-}
-
-function onTouchStart( evt ) {
-    onDown( fixTouch( evt.changedTouches[0] ) );
-}
-
-function onDown( pos ) {
-    // find the closest point, if within a minimum radius
-    var iClosest = -1;
-    var closest_dist2 = touch_radius * touch_radius;
-    var num_control_points = control_points.length;
-    for( var i = 0; i < num_control_points; i++ ) {
-        var d2 = dist2( pos, toScreen( control_points[ i ] ) );
-        if( d2 < closest_dist2 ) {
-            closest_dist2 = d2;
-            iClosest = i;
-        }
-    }
-    if( iClosest >= 0 ) {
-        point_is_being_dragged = true;
-        point_is_highlighted = false;
-        i_point = iClosest;
-        drag_offset = sub( toScreen( control_points[ i_point ] ), pos );
-        draw();
-    }
-    else if( point_is_being_dragged ) {
-        point_is_being_dragged = false;
-        draw();
-    }
-    else if( point_is_highlighted ) {
-        point_is_highlighted = false;
-        draw();
-    }
-    else {
-        is_panning = true;
-        drag_offset = pos;
-    }
-}
-
-function onMouseUp( evt ) {
-    if( point_is_highlighted || point_is_being_dragged ) {
-        point_is_highlighted = point_is_being_dragged = false;
-        draw();
-    }
-    is_mouse_down = false;
-    is_panning = false;
-}
-
-// thanks to: http://stackoverflow.com/a/12714084/126823
-function fixTouch (touch) {
-    var winPageX = window.pageXOffset,
-        winPageY = window.pageYOffset,
-        x = touch.clientX,
-        y = touch.clientY;
-
-    if (touch.pageY === 0 && Math.floor(y) > Math.floor(touch.pageY) ||
-        touch.pageX === 0 && Math.floor(x) > Math.floor(touch.pageX)) {
-        // iOS4 clientX/clientY have the value that should have been
-        // in pageX/pageY. While pageX/page/ have the value 0
-        x = x - winPageX;
-        y = y - winPageY;
-    } else if (y < (touch.pageY - winPageY) || x < (touch.pageX - winPageX) ) {
-        // Some Android browsers have totally bogus values for clientX/Y
-        // when scrolling/zooming a page. Detectable since clientX/clientY
-        // should never be smaller than pageX/pageY minus page scroll
-        x = touch.pageX - winPageX;
-        y = touch.pageY - winPageY;
-    }
-    var rect = canvas.getBoundingClientRect();
-    return p2( x - rect.left, y - rect.top );
-}
-
 function init() {
-    canvas = document.getElementById('canvas');
-    ctx = canvas.getContext('2d');
-    canvas_rect = { x:0, y:0, width:canvas.width, height:canvas.height };
-
-    canvas.addEventListener( 'mousemove', onMouseMove, false );
-    canvas.addEventListener( 'touchmove', onTouchMove, false );
-    canvas.addEventListener( 'mousedown',  onMouseDown, false );
-    canvas.addEventListener( 'touchstart',  onTouchStart, false );
-    canvas.addEventListener( 'mouseup',  onMouseUp, false );
-    canvas.addEventListener( 'mouseout',  onMouseUp, false );
-    canvas.addEventListener( 'touchend',  onMouseUp, false );
-    canvas.addEventListener( 'touchcancel',  onMouseUp, false );
-
-    origin_screen = p2( canvas.width/2, canvas.height/2 );
-    reset_viewport();
-
-    point_is_highlighted = false;
-    point_is_being_dragged = false;
-    is_panning = false;
-    i_point = -1;
-    grab_offset = p2( 0, 0 );
-
-    touch_radius = 50;
-
     draw_control_points = true;
-    draw_fixed_points = false;
 
     // initialise the recipes
     recipes = get_recipes();
@@ -216,10 +46,6 @@ function init() {
         control_points.push( p2( recipes[ iRecipe ].control_points[i].x, recipes[ iRecipe ].control_points[i].y ) );
     }
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    pixels = image.data;
-
     plot_solution = [ true, true ];
     document.getElementById("which_solution_dropdown").selectedIndex = 2;
 
@@ -230,9 +56,9 @@ function init() {
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
-    compute_and_redraw();
-
     init3js();
+
+    compute_and_redraw();
 }
 
 function init3js() {
@@ -274,10 +100,12 @@ function init3js() {
     orbit_controls.enableRotate = false;
     orbit_controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
     orbit_controls.touches.ONE = THREE.TOUCH.PAN;
+    orbit_controls.addEventListener( 'change', onCameraChange, false );
 
     const drag_controls = new THREE.DragControls( control_point_meshes, camera1, renderer.domElement );
-    drag_controls.addEventListener('dragstart', () => orbit_controls.enabled = false);
-    drag_controls.addEventListener('dragend', () => orbit_controls.enabled = true);
+    drag_controls.addEventListener( 'dragstart', () => orbit_controls.enabled = false );
+    drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
+    drag_controls.addEventListener( 'drag', onDragControlPoint, false );
 
     canvas2.addEventListener( 'mousemove', render, false );
     canvas2.addEventListener( 'touchmove', render, false );
@@ -288,18 +116,27 @@ function init3js() {
     canvas2.addEventListener( 'touchend',  render, false );
     canvas2.addEventListener( 'touchcancel',  render, false );
     canvas2.addEventListener( 'wheel',  render, false );
-    drag_controls.addEventListener( 'drag', render, false );
 }
 
-function render() {
-    const scale = 1.0 / camera1.zoom;
+function onDragControlPoint(e) {
+    const iControlPoint = control_point_meshes.indexOf(e.object);
+    if( iControlPoint == -1 ) { console.log('unknown dragged object'); return; }
+    control_points[ iControlPoint ].x = control_point_meshes[ iControlPoint ].position.x;
+    control_points[ iControlPoint ].y = control_point_meshes[ iControlPoint ].position.y;
+    compute_and_redraw();
+}
+
+function onCameraChange() {
     // set size of the control_points depending on the zoom
+    const scale = 1.0 / camera1.zoom;
     for(var i = 0; i < control_point_meshes.length; i++) {
         control_point_meshes[i].scale.x = scale;
         control_point_meshes[i].scale.y = scale;
         control_point_meshes[i].scale.z = scale;
-        control_point_meshes[i].matrixWorldNeedsUpdate = true;
     }
+}
+
+function render() {
     renderer.render( scene, camera1 );
 }
 
@@ -307,96 +144,6 @@ function updateScene() {
     geometry[0].setAttribute( 'position', new THREE.Float32BufferAttribute( vertices[0], 3 ) );
     geometry[1].setAttribute( 'position', new THREE.Float32BufferAttribute( vertices[1], 3 ) );
     render();
-}
-
-function reset_viewport() {
-    scale = Math.min( canvas.width, canvas.height ) / 6.0;
-    offset = p2( 0.0, 0.0 );
-}
-
-function drawPoint( p, r, t, t_offset ) {
-    ctx.beginPath();
-    ctx.arc( p.x, p.y, r, 0, 2.0 * Math.PI );
-    ctx.fillText( t, p.x + t_offset.x - 5, p.y - t_offset.y );
-    ctx.fill();
-}
-
-function draw() {
-
-    updateScene();
-
-    ctx.fillStyle = 'rgb(0,0,0)';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    // draw the axes
-    if( draw_control_points ) {
-        var min = fromScreen( p2( 0.0, canvas.height ) );
-        var max = fromScreen( p2( canvas.width, 0.0 ) );
-        min = p2( Math.floor( min.x ), Math.floor( min.y ) );
-        max = p2( Math.ceil( max.x ), Math.ceil( max.y ) );
-        ctx.strokeStyle = "rgba(255,255,255,0.4)";
-        ctx.beginPath();
-        drawLine( p2( min.x, 0 ), p2( max.x, 0 ) );
-        drawLine( p2( 0, min.y ), p2( 0, max.y ) );
-        // unit marks
-        for( var x = min.x; x <= max.x; x++ ) {
-            drawLine( p2( x, -0.05 ), p2( x, 0.05 ) );
-        }
-        for( var y = min.y; y <= max.y; y++ ) {
-            drawLine( p2( -0.05, y ), p2( 0.05, y ) );
-        }
-        ctx.stroke();
-    }
-
-    // draw the control points
-    if( draw_control_points ) {
-        ctx.font="22px Arial";
-        var rest_color = "rgb(255,255,255)";
-        var highlighted_color = "rgb(0,255,255)";
-        var dragging_color = "rgb(0,255,0)";
-        for( var i = 0; i < control_points.length; i++ ) {
-            if( point_is_highlighted && i_point == i )
-                ctx.fillStyle = ctx.strokeStyle = highlighted_color;
-            else if( point_is_being_dragged && i_point == i )
-                ctx.fillStyle = ctx.strokeStyle = dragging_color;
-            else
-                ctx.fillStyle = ctx.strokeStyle = rest_color;
-            var radius = 4;
-            var offset = p2( 20.0 * Math.cos(i * Math.PI), 20.0 * Math.sin(i * Math.PI) );
-            drawPoint( toScreen( control_points[ i ] ), radius, recipes[ iRecipe ].pt_labels[i], offset );
-        }
-    }
-
-    if( draw_fixed_points ) {
-        ctx.font="12px Arial";
-        ctx.fillStyle = "rgb(255,255,255)";
-        for( var which_solution = 0; which_solution < debug_pts.length; which_solution++) {
-            for( var i = 0; i < debug_pts[which_solution].length; i++ ) {
-                drawPoint( toScreen( debug_pts[which_solution][i].p ), 2, debug_pts[which_solution][i].label, p2(Math.random()*40-20, Math.random()*40-20) );
-            }
-        }
-    }
-
-    // draw the debug labels
-    if( false ) {
-        ctx.font="12px Arial";
-        ctx.fillStyle = "rgb(255,255,255)";
-        for( var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-            for( var i = 0; i < output_pts[which_solution].length; i++ ) {
-                for( var j = 0; j < output_pts[which_solution][i].length; j++ ) {
-                    drawPoint( toScreen( output_pts[which_solution][i][j] ), 2, i+':'+j+':'+output_pts[which_solution][i][j].label, p2( 0, i%2==1?10:-10 ) );
-                }
-            }
-        }
-    }
-
-}
-
-function drawLine( a, b ) {
-    var sa = toScreen( a );
-    var sb = toScreen( b );
-    ctx.moveTo( sa.x, sa.y );
-    ctx.lineTo( sb.x, sb.y );
 }
 
 function onDrawControlPointsButton(element) {
@@ -459,20 +206,6 @@ function onHighQualityModeButton(element) {
 
 function updateHighQualityModeButton() {
     document.getElementById('hq_mode_button').value = hq_mode ? "High quality mode: ON" : "High quality mode: OFF";
-}
-
-function onZoomInButton(element) {
-    scale *= 2.0;
-    draw();
-    camera1.zoom *= 2.0;
-    updateCamera();
-}
-
-function onZoomOutButton(element) {
-    scale /= 2.0;
-    draw();
-    camera1.zoom /= 2.0;
-    updateCamera();
 }
 
 function onWhichSolutionChanged(element) {
@@ -605,7 +338,8 @@ function compute_and_redraw() {
         const time_start = performance.now();
 
         var [dfs_succeeded, n_pts_plotted, description] = compute();
-        draw();
+        updateScene();
+        render();
 
         const time_end = performance.now();
         const ms_elapsed = time_end - time_start;
@@ -871,10 +605,6 @@ function compute() {
             [transforms, description] = make_generators( which_solution );
             var [gens, repetends] = get_repetends( transforms );
             n_pts_plotted += dfs_recursive_tree( gens, repetends, which_solution, output_pts );
-
-            if( draw_fixed_points ) {
-                find_fixed_points(transforms, which_solution, debug_pts);
-            }
         }
     }
 
@@ -926,15 +656,10 @@ input, select, label, p {
 <body>
 
 <div style="float:left;touch-action:none"><p><canvas id="canvas2" width="600" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
-<div style="float:left;touch-action:none"><p><canvas id="canvas" width="600" height="600">(Canvas drawing not supported by your browser.)</canvas></p></div>
 
 <div style="float:left;padding-left: 20px">
 
 <p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
-<p>
-  <input type="button" id="zoom_in_button" value="Zoom in" onclick="onZoomInButton(this)" />
-  <input type="button" id="zoom_out_button" value="Zoom out" onclick="onZoomOutButton(this)" />
-</p>
 <p><input type="button" id="hq_mode_button" value="High quality mode: OFF" onclick="onHighQualityModeButton(this)" /></p>
 <p><label for="maximum_depth_input">Max search depth:</label>
 <input type="number" id="maximum_depth_input" min="1" max="500" value="25" size="4" onchange="onMaxDepthChanged(this)"></p>
