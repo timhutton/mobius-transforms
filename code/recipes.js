@@ -126,7 +126,7 @@ function get_recipes()
 
     var grandma = {
         label: "Grandma's recipe",
-        control_points: [ p2(2.4, 0.0), p2(2.4, 0.0) ],
+        control_points: [ p2(2.4, 0.0), p2(2.37, 0.34) ],
         //control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], // for debugging the necks
         //control_points: [ p2(2.0, -1.0), p2(3.0, 0.0) ], // Fig. 8.16, p. 247, needing aaB
         //control_points: [ p2(1.958591030,-0.011278560), p2(2.0, 0.0) ], //Fig. 9.1, p. 269
