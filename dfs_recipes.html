@@ -69,7 +69,7 @@ function setURLParams() {
         searchParams.set( recipes[ iRecipe ].pt_labels[ i ] + '.y', control_points[i].y.toFixed(6) );
     }
     const url = window.location.pathname + '?' + searchParams.toString();
-    history.pushState(null, '', url);
+    history.replaceState(null, '', url);
 }
 
 function readURLParams() {
@@ -680,7 +680,7 @@ input, select, label, p {
 
 <p>The image shows the limit set of a <a href="https://en.wikipedia.org/wiki/Kleinian_group">Kleinian group</a> of four <a href="index.html">Möbius transformations</a>.</p>
 
-<p>The lines are drawn by a search tree defined by deciding which transfom to apply next. The search continues until the maximum depth is reached or the distance between successive points is less than epsilon. When the line drawing algorithm fails (if the pattern is degenerate) we show an <a href="https://en.wikipedia.org/wiki/Iterated_function_system">IFS</a> point cloud that approximates the same limit set.</p>
+<p>The lines are drawn by a search tree defined by deciding which transform to apply next. The search continues until the maximum depth is reached or the distance between successive points is less than epsilon. When the line drawing algorithm fails (if the pattern is degenerate) we show an <a href="https://en.wikipedia.org/wiki/Iterated_function_system">IFS</a> point cloud for the same limit set.</p>
 
 <hr>
 
