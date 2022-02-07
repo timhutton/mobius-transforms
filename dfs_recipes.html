@@ -44,12 +44,9 @@ function init() {
     iRecipe = 8;
     recipes_dropdown.selectedIndex = iRecipe;
 
-    control_points = [];
-    for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
-        control_points.push( p2( recipes[ iRecipe ].control_points[i].x, recipes[ iRecipe ].control_points[i].y ) );
-    }
-    draw_control_points = true;
+    readURLParams();
 
+    draw_control_points = true;
     plot_solution = [ true, true ];
     document.getElementById("which_solution_dropdown").selectedIndex = 2;
 
@@ -65,6 +62,50 @@ function init() {
         init3js();
         compute_and_redraw();
     });
+}
+
+function setURLParams() {
+    var searchParams = new URLSearchParams();
+    for(var pair of searchParams.entries()) {
+        console.log( pair );
+        searchParams.delete( pair[0] );
+    }
+    searchParams.set( 'id', recipes[ iRecipe ].id );
+    for(var i = 0; i < control_points.length; i++) {
+        searchParams.set( recipes[ iRecipe ].pt_labels[ i ] + '.x', control_points[i].x.toFixed(6) );
+        searchParams.set( recipes[ iRecipe ].pt_labels[ i ] + '.y', control_points[i].y.toFixed(6) );
+    }
+    const url = window.location.pathname + '?' + searchParams.toString();
+    history.pushState(null, '', url);
+}
+
+function readURLParams() {
+    var searchParams = new URLSearchParams(window.location.search);
+    const id = searchParams.get('id');
+    if( id === null ) {
+        // no pattern specification found in URL, use defaults
+        control_points = [];
+        for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
+            control_points.push( p2( recipes[ iRecipe ].control_points[i].x, recipes[ iRecipe ].control_points[i].y ) );
+        }
+    }
+    for(var i = 0; i < recipes.length; i++) {
+        const recipe = recipes[ i ];
+        if( recipe.id === id ) {
+            iRecipe = i;
+            control_points = [];
+            for(var j = 0; j < recipes[ iRecipe ].control_points.length; j++) {
+                control_points.push( p2( recipes[ iRecipe ].control_points[j].x, recipes[ iRecipe ].control_points[j].y ) );
+            }
+            for( var j = 0; j < recipe.pt_labels.length; j++) {
+                const xval = searchParams.get( recipe.pt_labels[ j ] + ".x" );
+                if( xval !== null ) control_points[j].x = parseFloat( xval );
+                const yval = searchParams.get( recipe.pt_labels[ j ] + ".y" );
+                if( yval !== null ) control_points[j].y = parseFloat( yval );
+            }
+            break;
+        }
+    }
 }
 
 function init3js() {
@@ -348,12 +389,16 @@ function compute_and_redraw() {
         else {
             document.getElementById('num_points_text').textContent = "Aborted rendering";
         }
-        document.getElementById('description_text').innerHTML = "Description: " + description;
+        document.getElementById('description_text').innerHTML = "Description and permalink: <a href=\"" + window.location.search + "\">"
+            + description + "</a>";
 
         computing = false;
 
         if( need_recompute ) {
             compute_and_redraw();
+        }
+        else {
+            setURLParams();
         }
     }, 1 );
 }
@@ -608,7 +653,7 @@ input, select, label, p {
 <td><canvas id="canvas" width="600" height="600">(Canvas drawing not supported by your browser.)</canvas></td>
 
 <td style="text-align:left;vertical-align:top;padding-left:20px;padding-top:0px">
-<p>Use touch and mouse to pan and zoom the view, and drag the control points.</p>
+<p>Use touch/mouse to drag the control points and to pan/zoom the view.</p>
 <p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
 <p><label for="maximum_depth_input">Max search depth:</label>
 <input type="number" id="maximum_depth_input" min="1" max="500" value="25" size="4" onchange="onMaxDepthChanged(this)"></p>
@@ -627,9 +672,7 @@ input, select, label, p {
 
 <p id="description_text"></p>
 
-<p>The image shows the limit set of a <a href="https://en.wikipedia.org/wiki/Kleinian_group">Kleinian group</a> using four <a href="index.html">Möbius transformations</a>.</p>
-
-<p>See the book Indra's Pearls for details of what this is about. See <a href="ifs.html">this page</a> for a more general Möbius-IFS system.</p>
+<p>The image shows the limit set of a <a href="https://en.wikipedia.org/wiki/Kleinian_group">Kleinian group</a> of four <a href="index.html">Möbius transformations</a>.</p>
 
 <hr>
 

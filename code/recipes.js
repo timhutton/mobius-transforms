@@ -21,7 +21,7 @@ function get_recipes()
 
     const prec = 6;
 
-    var fuchsian = { label: "Fuchsian", control_points: [], pt_labels: [],
+    var fuchsian = { id: 'fuchsian', label: "Fuchsian", control_points: [], pt_labels: [],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, page 163
             var transforms = [];
@@ -32,7 +32,7 @@ function get_recipes()
             return [transforms, description];
         }
     };
-    var theta_schottky = { label: "\u03B8-Schottky", control_points: [ p2(0.6, 0.5) ], pt_labels: [ '\u03B8' ],
+    var theta_schottky = { id: 'thetaSchottky', label: "\u03B8-Schottky", control_points: [ p2(0.6, 0.5) ], pt_labels: [ '\u03B8' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, page 118
             var theta = Math.atan2( control_points[0].y, control_points[0].x );
@@ -46,7 +46,7 @@ function get_recipes()
         }
     };
 
-    var kissing_schottky = { label: "kissing Schottky", control_points: [ p2(0.91, 1.08) ], pt_labels: [ 'yv' ],
+    var kissing_schottky = { id: 'kissingSchottky', label: "kissing Schottky", control_points: [ p2(0.91, 1.08) ], pt_labels: [ 'yv' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, p. 170
             var y = control_points[0].x;
@@ -64,7 +64,7 @@ function get_recipes()
         }
     };
 
-    var gasket = { label: "gasket", control_points: [],
+    var gasket = { id: 'gasket', label: "gasket", control_points: [],
         make_generators: (which_solution, control_points) => {
             var transforms = [];
             transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( 0.0, -2.0 ), p2( 1.0, 0.0 ) ];
@@ -76,7 +76,7 @@ function get_recipes()
         duplicate: 'rot180'
     };
 
-    var modular = { label: "modular group", control_points: [],
+    var modular = { id: 'modular', label: "modular group", control_points: [],
         make_generators: (which_solution, control_points) => {
             var transforms = [];
             transforms[0] = [ p2( 1.0, 0.0 ), p2( 0.0, 0.0), p2( -2.0, 0.0 ), p2( 1.0, 0.0 ) ];
@@ -86,7 +86,7 @@ function get_recipes()
         }
     };
 
-    var maskit = { label: "Maskit recipe", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
+    var maskit = { id: 'maskit', label: "Maskit recipe", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, p. 259
             var mu = control_points[0];
@@ -100,7 +100,7 @@ function get_recipes()
         duplicate: 'maskit'
     };
 
-    var maskit2 = { label: "Maskit recipe 2", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
+    var maskit2 = { id: 'maskit2', label: "Maskit recipe 2", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, p. 259, plus Jos Leys' b-variation (http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf)
             var mu = control_points[0];
@@ -113,7 +113,7 @@ function get_recipes()
         }
     };
 
-    var maskit3 = { label: "Maskit recipe 3", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
+    var maskit3 = { id: 'maskit3', label: "Maskit recipe 3", control_points: [ p2(0, 2.0) ], pt_labels: [ 'mu' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, p. 259, plus Jos Leys' b-variation (http://www.josleys.com/articles/Kleinian%20escape-time_3.pdf)
             var mu = control_points[0];
@@ -126,7 +126,7 @@ function get_recipes()
         }
     };
 
-    var grandma = {
+    var grandma = { id: 'grandma',
         label: "Grandma's recipe",
         control_points: [ p2(2.4, 0.0), p2(2.37, 0.34) ],
         //control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], // for debugging the necks
@@ -158,7 +158,7 @@ function get_recipes()
         duplicate: 'rot180'
     };
 
-    var riley = { label: "Riley's recipe", control_points: [ p2(0.1, 0.93) ], pt_labels: [ 'c' ],
+    var riley = { id: 'riley', label: "Riley's recipe", control_points: [ p2(0.1, 0.93) ], pt_labels: [ 'c' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, p. 258
             var c = control_points[0];
@@ -172,7 +172,7 @@ function get_recipes()
         duplicate: 'rot180_and_rep_x_2'
     };
 
-    var jorgensen = { label: "Jørgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ],
+    var jorgensen = { id: 'jorgensen', label: "Jørgensen's recipe", control_points: [ p2(1.87, 0.1), p2(1.87, -0.1) ], pt_labels: [ 'ta', 'tb' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, p. 256
             var t_a = control_points[0];
@@ -189,7 +189,7 @@ function get_recipes()
         // TODO: find a stretch of letters that can be duplicated
     };
 
-    var special = {
+    var special = { id: 'special',
         label: "Grandma's four-alarm special",
         //control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(-1.87, 0.05) ],
         control_points: [ p2(1.87, -0.08), p2(1.87, 0.1), p2(1.79, 1.948) ], // discovered
