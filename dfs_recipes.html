@@ -70,6 +70,7 @@ function setURLParams() {
     }
     const url = window.location.pathname + '?' + searchParams.toString();
     debounce( () => history.pushState(null, '', url), 1000 );
+    return url;
 }
 
 var debounce_timer;
@@ -408,8 +409,8 @@ function compute_and_redraw() {
         }
         else {
             // no more events on the queue
-            setURLParams();
-            document.getElementById('description_text').innerHTML = "Permalink: <a href=\"" + window.location.search + "\">"
+            const url = setURLParams();
+            document.getElementById('description_text').innerHTML = "Permalink: <a href=\"" + url + "\">"
                 + description + "</a>";
         }
     }, 1 );
