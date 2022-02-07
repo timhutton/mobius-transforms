@@ -309,8 +309,8 @@ function saveDataURI( name, dataURI ) {
 }
 
 function defaultFileName (ext) {
-  const str = `${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}${ext}`;
-  return str.replace(/\//g, '-').replace(/:/g, '.');
+  const str = `dfs_${new Date().toISOString()}${ext}`;
+  return str.replace(/:/g, '').replace(/T/g, '_').replace(/Z/g, '');
 }
 
 function takeScreenshot( width, height ) {
@@ -371,7 +371,7 @@ function compute_and_redraw() {
 }
 
 function format_complex( a ) {
-    return `${ a.x.toFixed(3) } ${ a.y >= 0.0 ? "+" : "-" } ${ Math.abs(a.y).toFixed(3) }i`;
+    return `${ a.x.toFixed(6) } ${ a.y >= 0.0 ? "+" : "-" } ${ Math.abs(a.y).toFixed(6) }i`;
 }
 
 function make_generators(which_solution) {
