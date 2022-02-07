@@ -55,7 +55,6 @@ function init() {
 
     plot_ifs = false;
     plot_dfs = true;
-    document.getElementById("which_method_dropdown").selectedIndex = 1;
 
     hq_mode = false;
     set_quality_parameters( hq_mode );
@@ -275,12 +274,6 @@ function updateHighQualityModeButton() {
 function onWhichSolutionChanged(element) {
     plot_solution[0] = element.selectedIndex == 0 || element.selectedIndex == 2;
     plot_solution[1] = element.selectedIndex == 1 || element.selectedIndex == 2;
-    compute_and_redraw();
-}
-
-function onWhichMethodChanged(element) {
-    plot_ifs = element.selectedIndex == 0 || element.selectedIndex == 2;
-    plot_dfs = element.selectedIndex == 1 || element.selectedIndex == 2;
     compute_and_redraw();
 }
 
@@ -631,11 +624,6 @@ input, select, label, p {
 <p><label for="maximum_depth_input">Max search depth:</label>
 <input type="number" id="maximum_depth_input" min="1" max="500" value="25" size="4" onchange="onMaxDepthChanged(this)"></p>
 <p><label for="epsilon_input">Epsilon:</label><input type="number" id="epsilon_input" min="0" max="10" value="0.01" step="0.001" size="10" onchange="onEpsilonChanged(this)"></p>
-<p><label for="which_method_dropdown">Drawing method:</label><select id="which_method_dropdown" onchange="onWhichMethodChanged(this)">
-  <option>IFS</option>
-  <option>DFS</option>
-  <option>both</option>
-</select></p>
 <p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
 <p><label for="which_solution_dropdown">Which solution to plot:</label><select id="which_solution_dropdown" onchange="onWhichSolutionChanged(this)">
   <option>a</option>
