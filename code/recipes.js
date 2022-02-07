@@ -19,6 +19,8 @@ function get_recipes()
 {
     // start_letters: default is [0, 3, 2, 1] ie. aBAb
 
+    const prec = 6;
+
     var fuchsian = { label: "Fuchsian", control_points: [], pt_labels: [],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, page 163
@@ -39,12 +41,12 @@ function get_recipes()
             var transforms = [];
             transforms[0] = [ p2( 1.0 / sin_theta, 0.0 ), p2( 0.0, cos_theta / sin_theta), p2( 0.0, -cos_theta / sin_theta ), p2( 1.0 / sin_theta, 0.0 ) ];
             transforms[1] = [ p2( 1.0 / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( cos_theta / sin_theta, 0.0 ), p2( 1.0 / sin_theta, 0.0 ) ];
-            var description = `\u03B8-Schottky recipe from Indra's Pearls with \u03B8 = ${theta.toFixed(3)}`;
+            var description = `\u03B8-Schottky recipe from Indra's Pearls with \u03B8 = ${theta.toFixed(prec)}`;
             return [transforms, description];
         }
     };
 
-    var kissing_schottky = { label: "kissing Schottky", control_points: [ p2(1.0, 1.0) ], pt_labels: [ 'yv' ],
+    var kissing_schottky = { label: "kissing Schottky", control_points: [ p2(0.91, 1.08) ], pt_labels: [ 'yv' ],
         make_generators: (which_solution, control_points) => {
             // Indra's Pearls, p. 170
             var y = control_points[0].x;
@@ -57,7 +59,7 @@ function get_recipes()
             var transforms = [];
             transforms[0] = [ p2(x, 0.0), p2(y, 0.0), p2(y, 0.0), p2(x, 0.0) ];
             transforms[1] = [ p2(u, 0.0), p2(0.0, k * v), p2(0.0, -v / k), p2(u, 0.0) ];
-            var description = `Kissing Schottky recipe from Indra's Pearls, p. 170. With x = ${x.toFixed(3)}, y = ${y.toFixed(3)}, u = ${u.toFixed(3)}, v = ${v.toFixed(3)}, k = ${k.toFixed(3)}`;
+            var description = `Kissing Schottky recipe from Indra's Pearls, p. 170. With x = ${x.toFixed(prec)}, y = ${y.toFixed(prec)}, u = ${u.toFixed(prec)}, v = ${v.toFixed(prec)}, k = ${k.toFixed(prec)}`;
             return [transforms, description];
         }
     };
