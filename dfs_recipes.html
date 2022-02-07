@@ -99,15 +99,15 @@ function init3js() {
 
     control_point_meshes = [];
 
-    camera1 = new THREE.OrthographicCamera( -3, 3, 3, -3 );
-    camera1.position.set(0, 0, 1);
-    camera1.up.set(0, 1, 0);
-    camera1.lookAt(0, 0, 0);
-    scene.add( camera1 );
+    camera = new THREE.OrthographicCamera( -3, 3, 3, -3 );
+    camera.position.set(0, 0, 1);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(0, 0, 0);
+    scene.add( camera );
 
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
 
-    orbit_controls = new THREE.OrbitControls( camera1, renderer.domElement );
+    orbit_controls = new THREE.OrbitControls( camera, renderer.domElement );
     orbit_controls.enableRotate = false;
     orbit_controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
     orbit_controls.touches.ONE = THREE.TOUCH.PAN;
@@ -115,7 +115,7 @@ function init3js() {
 
     control_point_meshes = [];
     resetControlPointMeshes( scene );
-    drag_controls = new THREE.DragControls( control_point_meshes, camera1, renderer.domElement );
+    drag_controls = new THREE.DragControls( control_point_meshes, camera, renderer.domElement );
     drag_controls.addEventListener( 'dragstart', () => orbit_controls.enabled = false );
     drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
     drag_controls.addEventListener( 'drag', onDragControlPoint, false );
@@ -143,7 +143,7 @@ function onDragControlPoint( e ) {
 
 function onCameraChange() {
     // set size of the control_points depending on the zoom
-    const scale = 1.0 / camera1.zoom;
+    const scale = 1.0 / camera.zoom;
     for(var i = 0; i < control_point_meshes.length; i++) {
         control_point_meshes[i].scale.x = scale;
         control_point_meshes[i].scale.y = scale;
@@ -191,7 +191,7 @@ function resetControlPointMeshes( scene ) {
 }
 
 function render() {
-    renderer.render( scene, camera1 );
+    renderer.render( scene, camera );
 }
 
 function updateScene() {
@@ -284,116 +284,62 @@ function onWhichMethodChanged(element) {
     compute_and_redraw();
 }
 
-function download(filename, type, text) {
-    var element = document.createElement('a');
-    element.setAttribute('href', 'data:'+type+';charset=utf-8,' + encodeURIComponent(text));
-    element.setAttribute('download', filename);
-    element.style.display = 'none';
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-}
-
-function getBoundsWithDuplication( pts, duplication_func ) {
-    var bounds = { minX: Number.MAX_VALUE, minY: Number.MAX_VALUE, maxX: -Number.MAX_VALUE, maxY: -Number.MAX_VALUE };
-    for( var i = 0; i < pts.length; i++) {
-        if( isNaN( pts[i].x ) || isNaN( pts[i].y ) ) { continue; }
-        var pts_dup = duplication_func( pts[i] );
-        for( var j = 0; j < pts_dup.length; j++ ) {
-            if( pts_dup[j].x < bounds.minX ) { bounds.minX = pts_dup[j].x; }
-            if( pts_dup[j].y < bounds.minY ) { bounds.minY = pts_dup[j].y; }
-            if( pts_dup[j].x > bounds.maxX ) { bounds.maxX = pts_dup[j].x; }
-            if( pts_dup[j].y > bounds.maxY ) { bounds.maxY = pts_dup[j].y; }
-        }
-    }
-    bounds.width = bounds.maxX - bounds.minX;
-    bounds.height = bounds.maxY - bounds.minY;
-    return bounds;
-}
-
-function getOutputPtsBoundsWithDuplication( scale, duplication_func ) {
-    var all_pts = [];
-    for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        for(var i = 0; i < output_pts[which_solution].length; i++) {
-            for(var j = 0; j < output_pts[which_solution][i].length; j++) {
-                all_pts.push( mul( output_pts[which_solution][i][j], scale) );
-            }
-        }
-    }
-    var bounds = getBoundsWithDuplication( all_pts, duplication_func );
-    return bounds;
-}
-
-function onSaveAsSVGButton(element) {
-    var scale = 300;
-    var duplication_func = p => duplicate_point( p, recipes[ iRecipe ] );
-    var bounds = getOutputPtsBoundsWithDuplication( scale, duplication_func );
-    var svg = "<!-- SVG produced by https://github.com/timhutton/mobius-transforms -->\n";
-    svg += "<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='"+bounds.width.toFixed(1)+"px' height='"+bounds.height.toFixed(1)+"px' viewBox='"
-        + bounds.minX.toFixed(1) + " " + bounds.minY.toFixed(1) + " " + bounds.width.toFixed(1) + " " + bounds.height.toFixed(1) + "'>\n";
-    for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        for(var i = 0; i < output_pts[which_solution].length; i++) {
-            var pts_dup = [];
-            for( var k = 0; k < output_pts[which_solution][i].length; k++ ) {
-                pts_dup.push( duplication_func( output_pts[which_solution][i][k] ) );
-            }
-            for( var k = 0; k < pts_dup[0].length; k++ ) {
-                svg += "  <polyline points='";
-                for( var iPt = 0; iPt < pts_dup.length; iPt++) {
-                    var sp = mul( pts_dup[iPt][k], scale );
-                    svg += sp.x.toFixed(3) + ", " + sp.y.toFixed(3) + " "
-                }
-                svg += "'\n    fill='none' stroke='black' stroke-width='0.3'/>\n";
-            }
-        }
-    }
-    svg += "</svg>\n";
-    download("dfs.svg", "image/svg+xml", svg);
-}
-
 function onSaveAsPNGButton(element) {
-    var max_image_dimension = 3000;
-    var duplication_func = p => duplicate_point( p, recipes[ iRecipe ] );
-    var bounds = getOutputPtsBoundsWithDuplication( 1.0, duplication_func );
-    var scale = max_image_dimension / Math.max( bounds.width, bounds.height );
-    var width = bounds.width * scale;
-    var height = bounds.height * scale;
-    var border = 5;
-    // create a large canvas
-    var new_canvas = document.createElement('canvas');
-    new_canvas.width = width + border * 2;
-    new_canvas.height = height + border * 2;
-    var context = new_canvas.getContext('2d');
-    context.fillStyle = 'rgb(255,255,255)';
-    context.fillRect(0, 0, new_canvas.width, new_canvas.height);
-    // draw the whole loop
-    context.strokeStyle = 'rgba(0,0,0,1.0)';
-    context.fillStyle = 'rgba(247, 246, 216, 1.0)';
-    for(var which_solution = 0; which_solution < output_pts.length; which_solution++) {
-        for( var j = 0; j < output_pts[which_solution].length; j++) {
-            if(output_pts[which_solution][j].length == 0) { continue; }
-            var pts_dup = [];
-            for( var k = 0; k < output_pts[which_solution][j].length; k++ ) {
-                pts_dup.push( duplication_func( output_pts[which_solution][j][k] ) );
-            }
-            for( var k = 0; k < pts_dup[0].length; k++ ) {
-                context.beginPath();
-                var sp0 = add( mul( sub( pts_dup[0][k], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border ) );
-                context.moveTo( sp0.x, new_canvas.height - sp0.y );
-                for(var i = 1; i < pts_dup.length; i++) {
-                    var sp = add( mul( sub( pts_dup[i][k], p2( bounds.minX, bounds.minY ) ), scale ), p2( border, border) );
-                    context.lineTo( sp.x, new_canvas.height - sp.y );
-                }
-                context.stroke();
-            }
-        }
-    }
-    // save the png
-    var downloadLink = document.createElement('a');
-    downloadLink.download = 'dfs.png';
-    downloadLink.href = new_canvas.toDataURL('image/png');
-    downloadLink.click();
+    takeScreenshot( 2048, 2048 );
 }
+
+function dataURIToBlob( dataURI ) {
+  const binStr = window.atob( dataURI.split( ',' )[1] );
+  const len = binStr.length;
+  const arr = new Uint8Array( len );
+  for ( let i = 0; i < len; i++ ) {
+    arr[i] = binStr.charCodeAt( i );
+  }
+  return new window.Blob( [arr] );
+}
+
+function saveDataURI( name, dataURI ) {
+  const blob = dataURIToBlob( dataURI );
+
+  // force download
+  const link = document.createElement( 'a' );
+  link.download = name;
+  link.href = window.URL.createObjectURL( blob );
+  link.onclick = () => {
+    window.setTimeout( () => {
+      window.URL.revokeObjectURL( blob );
+      link.removeAttribute( 'href' );
+    }, 500 );
+
+  };
+  link.click();
+}
+
+function defaultFileName (ext) {
+  const str = `${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}${ext}`;
+  return str.replace(/\//g, '-').replace(/:/g, '.');
+}
+
+function takeScreenshot( width, height ) {
+
+    const old_width = canvas.width;
+    const old_height = canvas.height;
+
+    // set camera and renderer to desired screenshot dimension
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize( width, height );
+    renderer.render( scene, camera, null, false );
+
+    const DataURI = renderer.domElement.toDataURL( 'image/png' );
+    saveDataURI(defaultFileName( '.png' ), DataURI);
+
+    // reset to old dimensions
+    camera.aspect = old_width / old_height;
+    camera.updateProjectionMatrix();
+    renderer.setSize( old_width, old_height );
+    renderer.render( scene, camera, null, false );
+ }
 
 function compute_and_redraw() {
     computing = true;
@@ -403,7 +349,7 @@ function compute_and_redraw() {
 
         const time_start = performance.now();
 
-        var [dfs_succeeded, n_pts_plotted, description] = compute();
+        var [n_pts_plotted, description] = compute();
         updateScene();
         render();
 
@@ -421,8 +367,6 @@ function compute_and_redraw() {
         else {
             document.getElementById('num_points_text').textContent = "Aborted rendering";
         }
-        document.getElementById('download_svg_button').disabled = !dfs_succeeded;
-        document.getElementById('download_png_button').disabled = !dfs_succeeded;
         document.getElementById('description_text').innerHTML = "Description: " + description;
 
         computing = false;
@@ -482,61 +426,6 @@ function mod4( x ) {
 
 function last(arr) { return arr[arr.length - 1]; }
 
-function find_nearby_short_word_fixed_points( sp, transforms, which_solution, debug_pts) {
-    var [ a, b, A, B ] = transforms;
-    var gens = [ {t:a, name:'a'}, {t:B, name:'B'}, {t:A, name:'A'}, {t:b, name:'b'} ];
-    var fixed_points_max_depth = 6;
-    var shortest_len = 10000;
-    var p;
-    var found_one = false;
-    function explore_tree( x, old_word, prev, level ) {
-        for( var k = prev - 1; k <= prev + 1; k++) {
-            var iTag = mod4( k );
-            var y = get_mobius_composed( x, gens[ iTag ].t );
-            var new_word = old_word + gens[ iTag ].name;
-            var fp = { p: get_mobius_fixed_points( y )[0], label: new_word };
-            var sfp = toScreen( fp.p );
-            if( dist2( sp, sfp ) < 400.0 && fp.label.length < shortest_len) {
-                shortest_len = fp.label.length;
-                p = fp;
-                found_one = true;
-            }
-            if( level < fixed_points_max_depth ) {
-                explore_tree( y, new_word, iTag, level + 1 );
-            }
-        }
-    };
-    for( var k = 0; k < 4; k++) {
-        explore_tree( gens[k].t, gens[k].name, k, 0 );
-    }
-    if( found_one )
-        debug_pts[which_solution] = [ p ];
-}
-
-function find_fixed_points(transforms, which_solution, debug_pts) {
-    // for debugging which special words are appropriate for a particular pattern
-    var [ a, b, A, B ] = transforms;
-    var gens = [ {t:a, name:'a'}, {t:B, name:'B'}, {t:A, name:'A'}, {t:b, name:'b'} ];
-    var fixed_points_max_depth = 2;
-    function explore_tree( x, old_word, prev, level ) {
-        for( var k = prev - 1; k <= prev + 1; k++) {
-            var iTag = mod4( k );
-            var y = get_mobius_composed( x, gens[ iTag ].t );
-            var new_word = old_word + gens[ iTag ].name;
-            var fp = { p: get_mobius_fixed_points( y )[0], label: new_word };
-            debug_pts[which_solution].push( fp );
-            if( level < fixed_points_max_depth ) {
-                explore_tree( y, new_word, iTag, level + 1 );
-            }
-        }
-    };
-    for( var k = 0; k < 4; k++) {
-        var fp = { p: get_mobius_fixed_points( gens[k].t )[0], label: gens[k].name };
-        debug_pts[which_solution].push( fp );
-        explore_tree( gens[k].t, gens[k].name, k, 0 );
-    }
-}
-
 function get_repetends( transforms ) {
     var [ a, b, A, B ] = transforms;
     var gens = [ {t:a, name:'a'}, {t:b, name:'b'}, {t:A, name:'A'}, {t:B, name:'B'} ];
@@ -585,7 +474,7 @@ function get_repetends( transforms ) {
     return [gens, repetends];
 }
 
-function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
+function dfs_recursive_tree(gens, repetends, which_solution) {
     const max_d2 = 1.0;
     var duplication_func = p => duplicate_point( p, recipes[ iRecipe ] );
     function explore_tree( x, prev, level ) {
@@ -609,7 +498,6 @@ function dfs_recursive_tree(gens, repetends, which_solution, output_pts) {
             if( close_enough || level >= max_depth ) {
                 if( close_enough ) {
                     // store the line segments
-                    output_pts[which_solution].push( z );
                     var pts_dup = [];
                     for( var j = 0; j < z.length; j++ ) {
                         pts_dup.push( duplication_func( z[j] ) );
@@ -666,7 +554,6 @@ function draw_ifs(transforms, which_solution) {
     for( var i = 0; i < num_ifs_iterations + discard; i++) {
         p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
         if( i > discard ) {
-            cloud_pts[which_solution].push( p );
             vertices[which_solution].push( p.x );
             vertices[which_solution].push( p.y );
             vertices[which_solution].push( 0.0 );
@@ -678,9 +565,6 @@ function draw_ifs(transforms, which_solution) {
 function compute() {
 
     var n_pts_plotted = 0;
-    output_pts = [[],[]];
-    debug_pts = [[],[]];
-    cloud_pts = [[],[]];
     vertices = [[],[]];
     line_segments = [[],[]];
     transforms = [];
@@ -693,14 +577,13 @@ function compute() {
 
             [transforms, description] = make_generators( which_solution );
             var [gens, repetends] = get_repetends( transforms );
-            n_pts_plotted += dfs_recursive_tree( gens, repetends, which_solution, output_pts );
+            n_pts_plotted += dfs_recursive_tree( gens, repetends, which_solution );
         }
     }
 
     if(n_pts_plotted == 0) {
         // DFS rendering failed, clear the drawing and draw IFS instead
         dfs_succeeded = false;
-        output_pts = [[],[]];
         vertices = [[],[]];
         line_segments = [[],[]];
     }
@@ -715,7 +598,7 @@ function compute() {
         }
     }
 
-    return [dfs_succeeded, n_pts_plotted, description];
+    return [n_pts_plotted, description];
 }
 
 window.onload = init;
@@ -761,10 +644,7 @@ input, select, label, p {
 </select></p>
 <p id="num_points_text"></p>
 <p id="rendering_text"></p>
-<p>
-  <input type="button" id="download_png_button" value="Save as PNG" onclick="onSaveAsPNGButton(this)" />
-  <input type="button" id="download_svg_button" value="Save as SVG" onclick="onSaveAsSVGButton(this)" />
-</p>
+<p><input type="button" id="download_png_button" value="Save as PNG" onclick="onSaveAsPNGButton(this)" /></p>
 
 </div>
 
