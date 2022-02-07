@@ -44,8 +44,8 @@ function init() {
     readURLParams();
 
     draw_control_points = true;
-    plot_solution = [ true, true ];
-    document.getElementById("which_solution_dropdown").selectedIndex = 2;
+    plot_solution = [ true, false ];
+    document.getElementById("which_solution_dropdown").selectedIndex = 0;
 
     plot_ifs = false;
     plot_dfs = true;
@@ -107,6 +107,7 @@ function readURLParams() {
             }
         }
     }
+    document.getElementById('which_solution_dropdown').disabled = ( recipes[ iRecipe ].num_solutions == 1 );
 }
 
 function init3js() {
@@ -115,12 +116,14 @@ function init3js() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 'rgb(0,0,0)' );
 
+    const colors = [ 'rgb(255,255,255)', 'rgb(0,255,0)' ];
+
     line_segments = [[],[]]
-    const line_materials = [ new THREE.LineBasicMaterial({ color: 'rgb(255,0,0)' }), new THREE.LineBasicMaterial({ color: 'rgb(0,255,0)' }) ];
+    const line_materials = [ new THREE.LineBasicMaterial({ color: colors[0] }), new THREE.LineBasicMaterial({ color: colors[1] }) ];
     line_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
 
     vertices = [[],[]]
-    const point_materials = [ new THREE.PointsMaterial({ color: 'rgb(255,0,0)' }), new THREE.PointsMaterial({ color: 'rgb(0,255,0)' }) ];
+    const point_materials = [ new THREE.PointsMaterial({ color: colors[0] }), new THREE.PointsMaterial({ color: colors[1] }) ];
     point_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
 
     for( var i = 0; i < 2; i++ ) {
@@ -262,6 +265,9 @@ function onRecipeChanged(element) {
     for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
         control_points.push( p2( recipes[ iRecipe ].control_points[i].x, recipes[ iRecipe ].control_points[i].y ) );
     }
+    document.getElementById('which_solution_dropdown').disabled = ( recipes[ iRecipe ].num_solutions == 1 );
+    plot_solution = [ true, false ];
+    document.getElementById("which_solution_dropdown").selectedIndex = 0;
     hq_mode = false;
     set_quality_parameters( hq_mode );
     resetControlPointMeshes( scene );
@@ -597,8 +603,10 @@ function compute() {
     var description = "";
     var dfs_succeeded = true;
 
+    console.log( recipes[ iRecipe ].num_solutions );
+
     if( plot_dfs ) {
-        for( var which_solution = 0; which_solution < 2; which_solution++ ) {
+        for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
             if(! plot_solution[which_solution] ) { continue; }
 
             [transforms, description] = make_generators( which_solution );
@@ -616,7 +624,7 @@ function compute() {
 
     if(!dfs_succeeded || plot_ifs) {
         // run IFS
-        for( var which_solution = 0; which_solution < 2; which_solution++ ) {
+        for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
             if(! plot_solution[which_solution] ) { continue; }
 
             [transforms, description] = make_generators( which_solution );
