@@ -32,7 +32,6 @@ function init() {
     computing = false;
     need_recompute = false;
 
-    // initialise the recipes
     recipes = get_recipes();
     var recipes_dropdown = document.getElementById('recipes_dropdown');
     for( var i = 0; i < recipes.length; i++ ) {
@@ -41,8 +40,6 @@ function init() {
         el.value = recipes[i].label;
         recipes_dropdown.appendChild(el);
     }
-    iRecipe = 8;
-    recipes_dropdown.selectedIndex = iRecipe;
 
     readURLParams();
 
@@ -66,10 +63,6 @@ function init() {
 
 function setURLParams() {
     var searchParams = new URLSearchParams();
-    for(var pair of searchParams.entries()) {
-        console.log( pair );
-        searchParams.delete( pair[0] );
-    }
     searchParams.set( 'id', recipes[ iRecipe ].id );
     for(var i = 0; i < control_points.length; i++) {
         searchParams.set( recipes[ iRecipe ].pt_labels[ i ] + '.x', control_points[i].x.toFixed(6) );
@@ -80,30 +73,38 @@ function setURLParams() {
 }
 
 function readURLParams() {
+    var recipes_dropdown = document.getElementById('recipes_dropdown');
     var searchParams = new URLSearchParams(window.location.search);
     const id = searchParams.get('id');
     if( id === null ) {
         // no pattern specification found in URL, use defaults
+        iRecipe = 8;
+        recipes_dropdown.selectedIndex = iRecipe;
         control_points = [];
         for(var i = 0; i < recipes[ iRecipe ].control_points.length; i++) {
             control_points.push( p2( recipes[ iRecipe ].control_points[i].x, recipes[ iRecipe ].control_points[i].y ) );
         }
     }
-    for(var i = 0; i < recipes.length; i++) {
-        const recipe = recipes[ i ];
-        if( recipe.id === id ) {
-            iRecipe = i;
-            control_points = [];
-            for(var j = 0; j < recipes[ iRecipe ].control_points.length; j++) {
-                control_points.push( p2( recipes[ iRecipe ].control_points[j].x, recipes[ iRecipe ].control_points[j].y ) );
+    else {
+        for(var i = 0; i < recipes.length; i++) {
+            const recipe = recipes[ i ];
+            if( recipe.id === id ) {
+                iRecipe = i;
+                recipes_dropdown.selectedIndex = iRecipe;
+                control_points = [];
+                for(var j = 0; j < recipes[ iRecipe ].control_points.length; j++) {
+                    control_points.push( p2( recipes[ iRecipe ].control_points[j].x, recipes[ iRecipe ].control_points[j].y ) );
+                }
+                if( typeof(recipe.pt_labels) !== "undefined") {
+                    for( var j = 0; j < recipe.pt_labels.length; j++) {
+                        const xval = searchParams.get( recipe.pt_labels[ j ] + ".x" );
+                        if( xval !== null ) control_points[j].x = parseFloat( xval );
+                        const yval = searchParams.get( recipe.pt_labels[ j ] + ".y" );
+                        if( yval !== null ) control_points[j].y = parseFloat( yval );
+                    }
+                }
+                break;
             }
-            for( var j = 0; j < recipe.pt_labels.length; j++) {
-                const xval = searchParams.get( recipe.pt_labels[ j ] + ".x" );
-                if( xval !== null ) control_points[j].x = parseFloat( xval );
-                const yval = searchParams.get( recipe.pt_labels[ j ] + ".y" );
-                if( yval !== null ) control_points[j].y = parseFloat( yval );
-            }
-            break;
         }
     }
 }
@@ -389,8 +390,6 @@ function compute_and_redraw() {
         else {
             document.getElementById('num_points_text').textContent = "Aborted rendering";
         }
-        document.getElementById('description_text').innerHTML = "Description and permalink: <a href=\"" + window.location.search + "\">"
-            + description + "</a>";
 
         computing = false;
 
@@ -398,7 +397,10 @@ function compute_and_redraw() {
             compute_and_redraw();
         }
         else {
+            // no more events on the queue
             setURLParams();
+            document.getElementById('description_text').innerHTML = "Permalink: <a href=\"" + window.location.search + "\">"
+                + description + "</a>";
         }
     }, 1 );
 }
