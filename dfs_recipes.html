@@ -69,7 +69,13 @@ function setURLParams() {
         searchParams.set( recipes[ iRecipe ].pt_labels[ i ] + '.y', control_points[i].y.toFixed(6) );
     }
     const url = window.location.pathname + '?' + searchParams.toString();
-    history.replaceState(null, '', url);
+    debounce( () => history.pushState(null, '', url), 1000 );
+}
+
+var debounce_timer;
+function debounce(func, delay) {
+    clearTimeout( debounce_timer )
+    debounce_timer = setTimeout( func, delay )
 }
 
 function readURLParams() {
