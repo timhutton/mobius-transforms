@@ -603,8 +603,6 @@ function compute() {
     var description = "";
     var dfs_succeeded = true;
 
-    console.log( recipes[ iRecipe ].num_solutions );
-
     if( plot_dfs ) {
         for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
             if(! plot_solution[which_solution] ) { continue; }
