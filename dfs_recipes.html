@@ -372,7 +372,7 @@ function compute_and_redraw() {
 
         const time_start = performance.now();
 
-        var [n_pts_plotted, description] = compute();
+        var [dfs_succeeded, n_pts_plotted, description] = compute();
         updateScene();
         render();
 
@@ -385,10 +385,8 @@ function compute_and_redraw() {
             document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed.toFixed(2)+"ms";
         }
         if( n_pts_plotted > 0 ) {
-            document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted;
-        }
-        else {
-            document.getElementById('num_points_text').textContent = "Aborted rendering";
+            document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted
+                + (dfs_succeeded ? "":" (IFS)");
         }
 
         computing = false;
@@ -626,7 +624,7 @@ function compute() {
         }
     }
 
-    return [n_pts_plotted, description];
+    return [dfs_succeeded, n_pts_plotted, description];
 }
 
 window.onload = init;
