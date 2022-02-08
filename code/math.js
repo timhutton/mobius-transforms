@@ -32,12 +32,17 @@ function magnitude( a ) { return Math.sqrt( len2( a ) ); }
 function normalize( a ) { return mul( a, 1 / magnitude( a ) ); }
 function cross( a, b ) { return p3( a.y * b.z - a.z * b.y, a.z*b.x - a.x * b.z, a.x * b.y - a.y * b.x ); }
 function phase( a ) { return Math.atan2( a.y, a.x ); }
+function toPolar( a ) { return [ magnitude( a ), Math.atan2( a.y, a.x ) ]; }
 function fromPolar( mag, phase ) { return p2( mag * Math.cos(phase), mag*Math.sin(phase) ) }
 function sqrt_complex( a ) { return fromPolar( Math.sqrt( magnitude(a) ), phase(a) / 2.0 ); }
 function complex_conjugate( p ) { return p2( p.x, -p.y ); }
 function sphereInversion( p, sphere ) {
     var d2 = dist2( p, sphere.p );
     return add( sphere.p, mul( sub( p, sphere.p ), sphere.r * sphere.r / d2 ) );
+}
+function pow_complex( a, p ) {
+    const [ r, theta ] = toPolar( a );
+    return fromPolar( Math.pow( r, p ), theta * p );
 }
 
 function get_mobius_determinant( m ) {
@@ -128,6 +133,28 @@ function complex_solve_quadratic( a, b, c ) {
     var x1 = div_complex( add( mul( b, -1.0 ), sqrt_term ),  mul( a, 2.0 ) );
     var x2 = div_complex( sub( mul( b, -1.0 ), sqrt_term ),  mul( a, 2.0 ) );
     return [ x1, x2 ];
+}
+
+function get_eigenvalues( m ) {
+    return complex_solve_quadratic( p2( 1.0, 0.0 ), mul( add( m[0], m[3] ), -1.0 ), get_mobius_determinant( m ) );
+}
+
+function diagonalize( m ) {
+    const eigenvals = get_eigenvalues( m );
+    const P = [ p2( 1.0, 0.0 ), p2( 1.0, 0.0 ), div_complex( sub( eigenvals[0], m[0] ), m[1] ), div_complex( sub( eigenvals[1], m[0] ), m[1] ) ];
+    const D = [ eigenvals[0], p2( 0.0, 0.0 ), p2( 0.0, 0.0 ), eigenvals[1] ];
+    const Pinv = get_mobius_inverse( P );
+    return [ P, D, Pinv ];
+}
+
+function mobius_power( m, p ) {
+    if( p < 0.0 ) {
+        m = get_mobius_inverse( m );
+        p = Math.abs( p );
+    }
+    const [ P, D, Pinv ] = diagonalize( m );
+    const D2 = [ pow_complex( D[0], p ), p2( 0.0, 0.0 ), p2( 0.0, 0.0 ), pow_complex( D[3], p ) ];
+    return get_mobius_composed( P, D2, Pinv );
 }
 
 function complex_apply_quadratic( x, a, b, c ) {
