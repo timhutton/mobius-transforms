@@ -123,13 +123,13 @@ function init3js() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 'rgb(0,0,0)' );
 
-    const colors = [ 'rgb(255,255,255)', 'rgb(0,255,0)' ];
+    const colors = [ 'rgb(150,100,25)', 'rgb(0,255,0)' ];
 
-    line_segments = [[],[]]
+    line_segments = [[],[]];
     const line_materials = [ new THREE.LineBasicMaterial({ color: colors[0] }), new THREE.LineBasicMaterial({ color: colors[1] }) ];
     line_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
 
-    vertices = [[],[]]
+    vertices = [[],[]];
     const point_materials = [ new THREE.PointsMaterial({ color: colors[0] }), new THREE.PointsMaterial({ color: colors[1] }) ];
     point_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
 
@@ -141,6 +141,14 @@ function init3js() {
         const points_mesh = new THREE.Points( point_geometry[i], point_materials[i] );
         scene.add( points_mesh );
     }
+
+    // transformed pattern
+    transformed_line_segments = [];
+    const transformed_line_material = new THREE.LineBasicMaterial({ color: 'rgb(255,255,255)' });
+    transformed_line = new THREE.BufferGeometry();
+    transformed_line.setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments, 3 ) );
+    const transformed_line_mesh = new THREE.LineSegments( transformed_line, transformed_line_material );
+    scene.add( transformed_line_mesh );
 
     // add axes
     axes = new THREE.GridHelper( 100, 100, 0x444444, 0x222222 );
@@ -640,6 +648,22 @@ function compute() {
     return [dfs_succeeded, n_pts_plotted, description];
 }
 
+function onSliderChange( value, iTransform ) {
+    const k = value / 100.0;
+    const m = mobius_power( transforms[ iTransform ], k );
+    transformed_line_segments = [];
+    for( var i = 0; i < line_segments[0].length; i += 3 ) {
+        const p = p2( line_segments[0][i], line_segments[0][i+1] );
+        const transformed_p = mobius_on_point( m, p );
+        transformed_line_segments.push( transformed_p.x );
+        transformed_line_segments.push( transformed_p.y );
+        transformed_line_segments.push( 0.0 );
+    }
+    transformed_line.setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments, 3 ) );
+    transformed_line.computeBoundingSphere();
+    render();
+}
+
 window.onload = init;
 </script>
 
@@ -668,10 +692,11 @@ input, select, label, p {
 <td style="text-align:left;vertical-align:top;padding-left:20px;padding-top:0px">
 <p>Use touch/mouse to drag the control points and to pan/zoom the view.</p>
 <p><label for="recipes_dropdown">Choose a recipe:</label><br><select id="recipes_dropdown" onchange="onRecipeChanged(this)"></select></p>
-<p><label for="maximum_depth_input">Max search depth:</label>
-<input type="number" id="maximum_depth_input" min="1" max="500" value="25" size="4" onchange="onMaxDepthChanged(this)"></p>
+<p>
+  <label for="maximum_depth_input">Max search depth:</label>
+  <input type="number" id="maximum_depth_input" min="1" max="500" value="25" size="4" onchange="onMaxDepthChanged(this)">
+</p>
 <p><label for="epsilon_input">Epsilon:</label><input type="number" id="epsilon_input" min="0" max="10" value="0.01" step="0.001" size="10" onchange="onEpsilonChanged(this)"></p>
-<p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
 <p><label for="which_solution_dropdown">Which solution to plot:</label><select id="which_solution_dropdown" onchange="onWhichSolutionChanged(this)">
   <option>+ve</option>
   <option>-ve</option>
@@ -679,6 +704,13 @@ input, select, label, p {
 </select></p>
 <p id="num_points_text"></p>
 <p id="rendering_text"></p>
+<p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
+<div>
+  <input type="checkbox" id="show_transforms_checkbox" checked>
+  <label for="show_transforms_checkbox">Show transforms</label>
+</div>
+<p><input type="range" min="0" max="100" value="0" id="slider1" oninput="onSliderChange(this.value, 0)"></p>
+<p><input type="range" min="0" max="100" value="0" class="slider" oninput="onSliderChange(this.value, 1)"></p>
 <p><input type="button" id="download_png_button" value="Save as PNG" onclick="onSaveAsPNGButton(this)" /></p>
 
 </td></tr></table>
