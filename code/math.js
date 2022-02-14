@@ -152,6 +152,34 @@ function mobius_power( m, p ) {
         m = get_mobius_inverse( m );
         p = Math.abs( p );
     }
+    //console.log( 'm:', m );
+    const traceM = get_mobius_trace( m );
+    const detM = get_mobius_determinant( m );
+    const trM2_minus_4detM = sub( mul_complex( traceM, traceM ), mul( detM, 4.0 ) );
+    //console.log( 'traceM:', traceM );
+    //console.log( 'detM:', detM );
+    //console.log( 'trM2_minus_4detM:', trM2_minus_4detM );
+    if( magnitude( trM2_minus_4detM ) < 1e-5 ) {
+        // following https://math.berkeley.edu/~ogus/old/Math_54-05/webfoils/jordan.pdf
+        const lambda = mul( get_mobius_trace( m ), 0.5 );
+        //console.log( 'lambda:', lambda );
+        const N = [ sub( m[0], lambda ), m[1], m[2], sub( m[3], lambda ) ]; // N = m - lambda.I
+        //console.log( 'N:', N );
+        var S = [ N[1], p2( 0.0, 0.0 ), N[3], p2( 1.0, 0.0 ) ];
+        if( magnitude( N[1] ) < 1e-5 && magnitude( N[3] ) < 1e-5 ) {
+            //console.log( 'using first column of S' );
+            S = [ N[0], p2( 1.0, 0.0 ), N[2], p2( 0.0, 0.0 ) ];
+        }
+        //console.log( 'S:', S );
+        //const detS = get_mobius_determinant( S );
+        //console.log( 'detS:', detS );
+        const Sinv = get_mobius_inverse( S );
+        //const Sinv = [ div_complex( Sinv_pre[0], detS ), div_complex( Sinv_pre[1], detS ), div_complex( Sinv_pre[2], detS ), div_complex( Sinv_pre[3], detS ) ];
+        //const L = [ lambda, p2( 1.0, 0.0 ), p2( 0.0, 0.0 ), lambda ];
+        //const SLSinv = get_mobius_composed( S, L, Sinv );
+        const Lp = [ pow_complex( lambda, p ), mul( lambda, p ), p2( 0.0, 0.0 ), pow_complex( lambda, p ) ];
+        return get_mobius_composed( S, Lp, Sinv );
+    }
     const [ P, D, Pinv ] = diagonalize( m );
     const D2 = [ pow_complex( D[0], p ), p2( 0.0, 0.0 ), p2( 0.0, 0.0 ), pow_complex( D[3], p ) ];
     return get_mobius_composed( P, D2, Pinv );
