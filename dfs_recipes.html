@@ -436,7 +436,7 @@ function format_complex( a ) {
     return `${ a.x.toFixed(6) } ${ a.y >= 0.0 ? "+" : "-" } ${ Math.abs(a.y).toFixed(6) }i`;
 }
 
-function make_generators(which_solution) {
+function make_generators( which_solution ) {
     // construct the four Mobius transformations we will be using
     var [transforms, description] = recipes[ iRecipe ].make_generators(which_solution, control_points);
     transforms[2] = get_mobius_inverse( transforms[0] );
@@ -622,16 +622,20 @@ function compute() {
     var n_pts_plotted = 0;
     vertices = [[],[]];
     line_segments = [[],[]];
-    transforms = [];
+    transforms = [[],[]];
     var description = "";
     var dfs_succeeded = true;
+
+    // make generators for both solutions
+    for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
+        [transforms[which_solution], description] = make_generators( which_solution );
+    }
 
     if( plot_dfs ) {
         for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
             if(! plot_solution[which_solution] ) { continue; }
 
-            [transforms, description] = make_generators( which_solution );
-            var [gens, repetends] = get_repetends( transforms );
+            var [gens, repetends] = get_repetends( transforms[which_solution] );
             n_pts_plotted += dfs_recursive_tree( gens, repetends, which_solution );
         }
     }
@@ -648,8 +652,7 @@ function compute() {
         for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
             if(! plot_solution[which_solution] ) { continue; }
 
-            [transforms, description] = make_generators( which_solution );
-            n_pts_plotted += draw_ifs( transforms, which_solution );
+            n_pts_plotted += draw_ifs( transforms[which_solution], which_solution );
         }
     }
 
@@ -659,7 +662,8 @@ function compute() {
 function onSliderChange() {
     const k0 = document.getElementById('transform0_slider').value / 100.0;
     const k1 = document.getElementById('transform1_slider').value / 100.0;
-    const m = get_mobius_composed(mobius_power( transforms[ 0 ], k0 ), mobius_power( transforms[ 1 ], k1 ) );
+    const which_solution = 0;
+    const m = get_mobius_composed(mobius_power( transforms[which_solution][ 0 ], k0 ), mobius_power( transforms[which_solution][ 1 ], k1 ) );
     transformed_line_segments = [];
     for( var i = 0; i < line_segments[0].length; i += 3 ) {
         const p = p2( line_segments[0][i], line_segments[0][i+1] );
