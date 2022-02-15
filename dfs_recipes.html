@@ -407,6 +407,7 @@ function compute_and_redraw() {
 
         var [dfs_succeeded, n_pts_plotted, description] = compute();
         updateScene();
+        computeTransformedObjects();
         render();
 
         const time_end = performance.now();
@@ -663,13 +664,18 @@ function compute() {
     return [dfs_succeeded, n_pts_plotted, description];
 }
 
-function onSliderChange() {
+function onTransformSliderChanged() {
+    computeTransformedObjects();
+    render();
+}
+
+function computeTransformedObjects() {
     const k0 = document.getElementById('transform0_slider').value / 100.0;
     const k1 = document.getElementById('transform1_slider').value / 100.0;
     for( var which_solution = 0; which_solution < 2; which_solution++ ) {
         transformed_line_segments[which_solution] = [];
         transformed_vertices[which_solution] = [];
-        if( transforms[which_solution].length > 0) {
+        if( document.getElementById('show_transforms_checkbox').checked && transforms[which_solution].length > 0) {
             const m = get_mobius_composed(mobius_power( transforms[which_solution][0], k0 ), mobius_power( transforms[which_solution][1], k1 ) );
             for( var i = 0; i < line_segments[which_solution].length; i += 3 ) {
                 const p = p2( line_segments[which_solution][i], line_segments[which_solution][i+1] );
@@ -754,10 +760,10 @@ div.labelSlider {
   <label for="show_transforms_checkbox" >Show transforms</label>
   <div class="labelSlider">
     <label for="transform0_slider" class="lblFloat">1:</label>
-    <input type="range" min="0" max="100" value="0" id="transform0_slider" disabled oninput="onSliderChange()">
+    <input type="range" min="0" max="100" value="0" id="transform0_slider" disabled oninput="onTransformSliderChanged()">
     <br>
     <label for="transform1_slider" class="lblFloat">2:</label>
-    <input type="range" min="0" max="100" value="0" id="transform1_slider" disabled oninput="onSliderChange()">
+    <input type="range" min="0" max="100" value="0" id="transform1_slider" disabled oninput="onTransformSliderChanged()">
   </div>
 </div>
 <p><input type="button" id="download_png_button" value="Save as PNG" onclick="onSaveAsPNGButton(this)" /></p>
