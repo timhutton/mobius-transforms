@@ -648,9 +648,10 @@ function compute() {
     return [dfs_succeeded, n_pts_plotted, description];
 }
 
-function onSliderChange( value, iTransform ) {
-    const k = value / 100.0;
-    const m = mobius_power( transforms[ iTransform ], k );
+function onSliderChange() {
+    const k0 = document.getElementById('transform0_slider').value / 100.0;
+    const k1 = document.getElementById('transform1_slider').value / 100.0;
+    const m = get_mobius_composed(mobius_power( transforms[ 0 ], k0 ), mobius_power( transforms[ 1 ], k1 ) );
     transformed_line_segments = [];
     for( var i = 0; i < line_segments[0].length; i += 3 ) {
         const p = p2( line_segments[0][i], line_segments[0][i+1] );
@@ -724,10 +725,10 @@ div.labelSlider {
   <label for="show_transforms_checkbox" >Show transforms</label>
   <div class="labelSlider">
     <label for="transform0_slider" class="lblFloat">1:</label>
-    <input type="range" min="0" max="100" value="0" id="transform0_slider" disabled oninput="onSliderChange(this.value, 0)">
+    <input type="range" min="0" max="100" value="0" id="transform0_slider" disabled oninput="onSliderChange()">
     <br>
     <label for="transform1_slider" class="lblFloat">2:</label>
-    <input type="range" min="0" max="100" value="0" id="transform1_slider" disabled oninput="onSliderChange(this.value, 1)">
+    <input type="range" min="0" max="100" value="0" id="transform1_slider" disabled oninput="onSliderChange()">
   </div>
 </div>
 <p><input type="button" id="download_png_button" value="Save as PNG" onclick="onSaveAsPNGButton(this)" /></p>
