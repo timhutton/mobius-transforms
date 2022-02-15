@@ -115,50 +115,56 @@ function readURLParams() {
         }
     }
     document.getElementById('which_solution_dropdown').disabled = ( recipes[ iRecipe ].num_solutions == 1 );
+    document.getElementById('transform0_slider').value = 0;
+    document.getElementById('transform1_slider').value = 0;
 }
 
 function init3js() {
     const canvas = document.getElementById('canvas');
 
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color( 'rgb(0,0,0)' );
+    const white = new THREE.Color( 'rgb(255,255,255)' );
+    const green = new THREE.Color( 'rgb(0,255,0)' );
+    const grey = new THREE.Color( 'rgb(100,100,100)' );
+    const dark_green = new THREE.Color( 'rgb(0,100,0)' );
+    const black = new THREE.Color( 'rgb(0,0,0)' );
 
-    const colors = [ 'rgb(150,100,25)', 'rgb(0,255,0)' ];
+    scene = new THREE.Scene();
+    scene.background = black;
 
     line_segments = [[],[]];
-    const line_materials = [ new THREE.LineBasicMaterial({ color: colors[0] }), new THREE.LineBasicMaterial({ color: colors[1] }) ];
+    const line_materials = [ new THREE.LineBasicMaterial({ color: grey }), new THREE.LineBasicMaterial({ color: dark_green }) ];
     line_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
 
-    vertices = [[],[]];
-    const point_materials = [ new THREE.PointsMaterial({ color: colors[0] }), new THREE.PointsMaterial({ color: colors[1] }) ];
+    points = [[],[]];
+    const point_materials = [ new THREE.PointsMaterial({ color: grey }), new THREE.PointsMaterial({ color: dark_green }) ];
     point_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
 
     for( var i = 0; i < 2; i++ ) {
         line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[i], 3 ) );
         const line_mesh = new THREE.LineSegments( line_geometry[i], line_materials[i] );
         scene.add( line_mesh );
-        point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( vertices[i], 3 ) );
+        point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( points[i], 3 ) );
         const points_mesh = new THREE.Points( point_geometry[i], point_materials[i] );
         scene.add( points_mesh );
     }
 
     // transformed pattern
     transformed_line_segments = [[],[]];
-    const transformed_line_material = new THREE.LineBasicMaterial({ color: 'rgb(255,255,255)' });
+    const transformed_line_materials = [ new THREE.LineBasicMaterial({ color: white }), new THREE.LineBasicMaterial({ color: green }) ];
     transformed_line = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
     for( var i = 0; i < 2; i++ ) {
         transformed_line[i].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments[i], 3 ) );
-        const transformed_line_mesh = new THREE.LineSegments( transformed_line[i], transformed_line_material );
+        const transformed_line_mesh = new THREE.LineSegments( transformed_line[i], transformed_line_materials[i] );
         scene.add( transformed_line_mesh );
     }
 
-    // transformed vertices
+    // transformed points
     transformed_vertices = [[],[]];
-    const transformed_point_material = new THREE.PointsMaterial({ color: 'rgb(255,255,255)' });
+    const transformed_point_materials = [ new THREE.PointsMaterial({ color: white }), new THREE.PointsMaterial({ color: green }) ];
     transformed_points = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
     for( var i = 0; i < 2; i++ ) {
         transformed_points[i].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices[i], 3 ) );
-        const transformed_points_mesh = new THREE.Points( transformed_points[i], transformed_point_material );
+        const transformed_points_mesh = new THREE.Points( transformed_points[i], transformed_point_materials[i] );
         scene.add( transformed_points_mesh );
     }
 
@@ -268,7 +274,7 @@ function render() {
 function updateScene() {
     for( var i = 0; i < 2; i++ ) {
         line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[i], 3 ) );
-        point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( vertices[i], 3 ) );
+        point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( points[i], 3 ) );
         line_geometry[i].computeBoundingSphere()
         point_geometry[i].computeBoundingSphere()
     }
@@ -295,6 +301,8 @@ function onRecipeChanged(element) {
     document.getElementById('which_solution_dropdown').disabled = ( recipes[ iRecipe ].num_solutions == 1 );
     plot_solution = [ true, false ];
     document.getElementById("which_solution_dropdown").selectedIndex = 0;
+    document.getElementById('transform0_slider').value = 0;
+    document.getElementById('transform1_slider').value = 0;
     hq_mode = false;
     set_quality_parameters( hq_mode );
     resetControlPointMeshes( scene );
@@ -578,9 +586,9 @@ function dfs_recursive_tree(gens, repetends, which_solution) {
                     for( var j = 0; j < z.length; j++ ) {
                         const pt_dup = duplication_func( z[j] );
                         for(var i = 0; i < pt_dup.length; i++) {
-                            vertices[which_solution].push( pt_dup[i].x );
-                            vertices[which_solution].push( pt_dup[i].y );
-                            vertices[which_solution].push( 0.0 );
+                            points[which_solution].push( pt_dup[i].x );
+                            points[which_solution].push( pt_dup[i].y );
+                            points[which_solution].push( 0.0 );
                         }
                     }
                 }
@@ -614,9 +622,9 @@ function draw_ifs(transforms, which_solution) {
     for( var i = 0; i < num_ifs_iterations + discard; i++) {
         p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
         if( i > discard ) {
-            vertices[which_solution].push( p.x );
-            vertices[which_solution].push( p.y );
-            vertices[which_solution].push( 0.0 );
+            points[which_solution].push( p.x );
+            points[which_solution].push( p.y );
+            points[which_solution].push( 0.0 );
         }
     }
     return num_ifs_iterations;
@@ -625,7 +633,7 @@ function draw_ifs(transforms, which_solution) {
 function compute() {
 
     var n_pts_plotted = 0;
-    vertices = [[],[]];
+    points = [[],[]];
     line_segments = [[],[]];
     transforms = [[],[]];
     var description = "";
@@ -648,7 +656,7 @@ function compute() {
     if(n_pts_plotted == 0) {
         // DFS rendering failed, clear the drawing and draw IFS instead
         dfs_succeeded = false;
-        vertices = [[],[]];
+        points = [[],[]];
         line_segments = [[],[]];
     }
 
@@ -675,7 +683,7 @@ function computeTransformedObjects() {
     for( var which_solution = 0; which_solution < 2; which_solution++ ) {
         transformed_line_segments[which_solution] = [];
         transformed_vertices[which_solution] = [];
-        if( document.getElementById('show_transforms_checkbox').checked && transforms[which_solution].length > 0) {
+        if( transforms[which_solution].length > 0) {
             const m = get_mobius_composed(mobius_power( transforms[which_solution][0], k0 ), mobius_power( transforms[which_solution][1], k1 ) );
             for( var i = 0; i < line_segments[which_solution].length; i += 3 ) {
                 const p = p2( line_segments[which_solution][i], line_segments[which_solution][i+1] );
@@ -684,8 +692,8 @@ function computeTransformedObjects() {
                 transformed_line_segments[which_solution].push( transformed_p.y );
                 transformed_line_segments[which_solution].push( 0.0 );
             }
-            for( var i = 0; i < vertices[which_solution].length; i += 3 ) {
-                const p = p2( vertices[which_solution][i], vertices[which_solution][i+1] );
+            for( var i = 0; i < points[which_solution].length; i += 3 ) {
+                const p = p2( points[which_solution][i], points[which_solution][i+1] );
                 const transformed_p = mobius_on_point( m, p );
                 transformed_vertices[which_solution].push( transformed_p.x );
                 transformed_vertices[which_solution].push( transformed_p.y );
@@ -698,11 +706,6 @@ function computeTransformedObjects() {
         transformed_points[which_solution].computeBoundingSphere();
     }
     render();
-}
-
-function onShowTransformsCheckbox( e ) {
-    document.getElementById('transform0_slider').disabled = !e.checked;
-    document.getElementById('transform1_slider').disabled = !e.checked;
 }
 
 window.onload = init;
@@ -755,16 +758,13 @@ div.labelSlider {
 <p id="num_points_text"></p>
 <p id="rendering_text"></p>
 <p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
-<div>
-  <input type="checkbox" id="show_transforms_checkbox" onchange="onShowTransformsCheckbox(this)">
-  <label for="show_transforms_checkbox" >Show transforms</label>
-  <div class="labelSlider">
+<label for="transform_sliders">Apply transforms:</label>
+<div class="labelSlider" id="transform_sliders">
     <label for="transform0_slider" class="lblFloat">1:</label>
-    <input type="range" min="0" max="100" value="0" id="transform0_slider" disabled oninput="onTransformSliderChanged()">
+    <input type="range" min="0" max="100" value="0" id="transform0_slider" oninput="onTransformSliderChanged()">
     <br>
     <label for="transform1_slider" class="lblFloat">2:</label>
-    <input type="range" min="0" max="100" value="0" id="transform1_slider" disabled oninput="onTransformSliderChanged()">
-  </div>
+    <input type="range" min="0" max="100" value="0" id="transform1_slider" oninput="onTransformSliderChanged()">
 </div>
 <p><input type="button" id="download_png_button" value="Save as PNG" onclick="onSaveAsPNGButton(this)" /></p>
 
@@ -772,7 +772,7 @@ div.labelSlider {
 
 <p id="description_text"></p>
 
-<p>The image shows the limit set of a <a href="https://en.wikipedia.org/wiki/Kleinian_group">Kleinian group</a> of four <a href="index.html">Möbius transformations</a>.</p>
+<p>The image shows the limit set of a <a href="https://en.wikipedia.org/wiki/Kleinian_group">Kleinian group</a> of two <a href="index.html">Möbius transformations</a> and their inverses.</p>
 
 <p>The lines are drawn by a search tree defined by the choice of which of the four transforms to apply next. The search continues until the maximum depth is reached or the distance between successive points is less than epsilon. When the algorithm fails (if the pattern is degenerate) we show an <a href="https://en.wikipedia.org/wiki/Iterated_function_system">IFS</a> point cloud for the same limit set.</p>
 
