@@ -664,6 +664,11 @@ function onSliderChange( value, iTransform ) {
     render();
 }
 
+function onShowTransformsCheckbox( e ) {
+    document.getElementById('transform0_slider').disabled = !e.checked;
+    document.getElementById('transform1_slider').disabled = !e.checked;
+}
+
 window.onload = init;
 </script>
 
@@ -678,6 +683,15 @@ input, select, label, p {
     font-size: 20px;
     font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
     padding-right: 5px;
+}
+div.labelSlider {
+    display: table-cell;
+    vertical-align: middle;
+    height: 20px;
+}
+.lblFloat
+{
+    float:left;
 }
 </style>
 
@@ -706,11 +720,16 @@ input, select, label, p {
 <p id="rendering_text"></p>
 <p><input type="button" value="Draw control points: ON" onclick="onDrawControlPointsButton(this)" /></p>
 <div>
-  <input type="checkbox" id="show_transforms_checkbox" checked>
-  <label for="show_transforms_checkbox">Show transforms</label>
+  <input type="checkbox" id="show_transforms_checkbox" onchange="onShowTransformsCheckbox(this)">
+  <label for="show_transforms_checkbox" >Show transforms</label>
+  <div class="labelSlider">
+    <label for="transform0_slider" class="lblFloat">1:</label>
+    <input type="range" min="0" max="100" value="0" id="transform0_slider" disabled oninput="onSliderChange(this.value, 0)">
+    <br>
+    <label for="transform1_slider" class="lblFloat">2:</label>
+    <input type="range" min="0" max="100" value="0" id="transform1_slider" disabled oninput="onSliderChange(this.value, 1)">
+  </div>
 </div>
-<p><input type="range" min="0" max="100" value="0" id="slider1" oninput="onSliderChange(this.value, 0)"></p>
-<p><input type="range" min="0" max="100" value="0" class="slider" oninput="onSliderChange(this.value, 1)"></p>
 <p><input type="button" id="download_png_button" value="Save as PNG" onclick="onSaveAsPNGButton(this)" /></p>
 
 </td></tr></table>
