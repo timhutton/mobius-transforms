@@ -143,20 +143,24 @@ function init3js() {
     }
 
     // transformed pattern
-    transformed_line_segments = [];
+    transformed_line_segments = [[],[]];
     const transformed_line_material = new THREE.LineBasicMaterial({ color: 'rgb(255,255,255)' });
-    transformed_line = new THREE.BufferGeometry();
-    transformed_line.setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments, 3 ) );
-    const transformed_line_mesh = new THREE.LineSegments( transformed_line, transformed_line_material );
-    scene.add( transformed_line_mesh );
+    transformed_line = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    for( var i = 0; i < 2; i++ ) {
+        transformed_line[i].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments[i], 3 ) );
+        const transformed_line_mesh = new THREE.LineSegments( transformed_line[i], transformed_line_material );
+        scene.add( transformed_line_mesh );
+    }
 
     // transformed vertices
-    transformed_vertices = [];
+    transformed_vertices = [[],[]];
     const transformed_point_material = new THREE.PointsMaterial({ color: 'rgb(255,255,255)' });
-    transformed_points = new THREE.BufferGeometry();
-    transformed_points.setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices, 3 ) );
-    const transformed_points_mesh = new THREE.Points( transformed_points, transformed_point_material );
-    scene.add( transformed_points_mesh );
+    transformed_points = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    for( var i = 0; i < 2; i++ ) {
+        transformed_points[i].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices[i], 3 ) );
+        const transformed_points_mesh = new THREE.Points( transformed_points[i], transformed_point_material );
+        scene.add( transformed_points_mesh );
+    }
 
     // add axes
     axes = new THREE.GridHelper( 100, 100, 0x444444, 0x222222 );
@@ -662,28 +666,31 @@ function compute() {
 function onSliderChange() {
     const k0 = document.getElementById('transform0_slider').value / 100.0;
     const k1 = document.getElementById('transform1_slider').value / 100.0;
-    const which_solution = 0;
-    const m = get_mobius_composed(mobius_power( transforms[which_solution][ 0 ], k0 ), mobius_power( transforms[which_solution][ 1 ], k1 ) );
-    transformed_line_segments = [];
-    for( var i = 0; i < line_segments[0].length; i += 3 ) {
-        const p = p2( line_segments[0][i], line_segments[0][i+1] );
-        const transformed_p = mobius_on_point( m, p );
-        transformed_line_segments.push( transformed_p.x );
-        transformed_line_segments.push( transformed_p.y );
-        transformed_line_segments.push( 0.0 );
+    for( var which_solution = 0; which_solution < 2; which_solution++ ) {
+        transformed_line_segments[which_solution] = [];
+        transformed_vertices[which_solution] = [];
+        if( transforms[which_solution].length > 0) {
+            const m = get_mobius_composed(mobius_power( transforms[which_solution][0], k0 ), mobius_power( transforms[which_solution][1], k1 ) );
+            for( var i = 0; i < line_segments[which_solution].length; i += 3 ) {
+                const p = p2( line_segments[which_solution][i], line_segments[which_solution][i+1] );
+                const transformed_p = mobius_on_point( m, p );
+                transformed_line_segments[which_solution].push( transformed_p.x );
+                transformed_line_segments[which_solution].push( transformed_p.y );
+                transformed_line_segments[which_solution].push( 0.0 );
+            }
+            for( var i = 0; i < vertices[which_solution].length; i += 3 ) {
+                const p = p2( vertices[which_solution][i], vertices[which_solution][i+1] );
+                const transformed_p = mobius_on_point( m, p );
+                transformed_vertices[which_solution].push( transformed_p.x );
+                transformed_vertices[which_solution].push( transformed_p.y );
+                transformed_vertices[which_solution].push( 0.0 );
+            }
+        }
+        transformed_line[which_solution].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments[which_solution], 3 ) );
+        transformed_line[which_solution].computeBoundingSphere();
+        transformed_points[which_solution].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices[which_solution], 3 ) );
+        transformed_points[which_solution].computeBoundingSphere();
     }
-    transformed_line.setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments, 3 ) );
-    transformed_line.computeBoundingSphere();
-    transformed_vertices = [];
-    for( var i = 0; i < vertices[0].length; i += 3 ) {
-        const p = p2( vertices[0][i], vertices[0][i+1] );
-        const transformed_p = mobius_on_point( m, p );
-        transformed_vertices.push( transformed_p.x );
-        transformed_vertices.push( transformed_p.y );
-        transformed_vertices.push( 0.0 );
-    }
-    transformed_points.setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices, 3 ) );
-    transformed_points.computeBoundingSphere();
     render();
 }
 
