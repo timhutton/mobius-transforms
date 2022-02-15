@@ -150,6 +150,14 @@ function init3js() {
     const transformed_line_mesh = new THREE.LineSegments( transformed_line, transformed_line_material );
     scene.add( transformed_line_mesh );
 
+    // transformed vertices
+    transformed_vertices = [];
+    const transformed_point_material = new THREE.PointsMaterial({ color: 'rgb(255,255,255)' });
+    transformed_points = new THREE.BufferGeometry();
+    transformed_points.setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices, 3 ) );
+    const transformed_points_mesh = new THREE.Points( transformed_points, transformed_point_material );
+    scene.add( transformed_points_mesh );
+
     // add axes
     axes = new THREE.GridHelper( 100, 100, 0x444444, 0x222222 );
     axes.geometry.rotateX( Math.PI / 2 );
@@ -662,6 +670,16 @@ function onSliderChange() {
     }
     transformed_line.setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments, 3 ) );
     transformed_line.computeBoundingSphere();
+    transformed_vertices = [];
+    for( var i = 0; i < vertices[0].length; i += 3 ) {
+        const p = p2( vertices[0][i], vertices[0][i+1] );
+        const transformed_p = mobius_on_point( m, p );
+        transformed_vertices.push( transformed_p.x );
+        transformed_vertices.push( transformed_p.y );
+        transformed_vertices.push( 0.0 );
+    }
+    transformed_points.setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices, 3 ) );
+    transformed_points.computeBoundingSphere();
     render();
 }
 
