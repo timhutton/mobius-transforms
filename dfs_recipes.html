@@ -413,7 +413,7 @@ function compute_and_redraw() {
 
         const time_start = performance.now();
 
-        var [dfs_succeeded, n_pts_plotted, description] = compute();
+        var [n_pts_plotted, description] = compute();
         updateScene();
         computeTransformedObjects();
         render();
@@ -426,10 +426,7 @@ function compute_and_redraw() {
         else {
             document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed.toFixed(2)+"ms";
         }
-        if( n_pts_plotted > 0 ) {
-            document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted
-                + (dfs_succeeded ? "":" (IFS)");
-        }
+        document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted;
 
         computing = false;
 
@@ -632,44 +629,43 @@ function draw_ifs(transforms, which_solution) {
 
 function compute() {
 
-    var n_pts_plotted = 0;
+    var total_pts_plotted = 0;
     points = [[],[]];
     line_segments = [[],[]];
     transforms = [[],[]];
     var description = "";
-    var dfs_succeeded = true;
+    var dfs_succeeded = [ true, true ];
 
     // make generators for both solutions
     for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
         [transforms[which_solution], description] = make_generators( which_solution );
     }
 
+    // run DFS
     if( plot_dfs ) {
         for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
             if(! plot_solution[which_solution] ) { continue; }
 
             var [gens, repetends] = get_repetends( transforms[which_solution] );
-            n_pts_plotted += dfs_recursive_tree( gens, repetends, which_solution );
+            const num_points_plotted = dfs_recursive_tree( gens, repetends, which_solution );
+            if( num_points_plotted == 0 ) {
+                // DFS rendering failed, clear the drawing and draw IFS instead
+                dfs_succeeded[which_solution] = false;
+                points[which_solution] = [];
+                line_segments[which_solution] = [];
+            }
+            total_pts_plotted += num_points_plotted;
         }
     }
 
-    if(n_pts_plotted == 0) {
-        // DFS rendering failed, clear the drawing and draw IFS instead
-        dfs_succeeded = false;
-        points = [[],[]];
-        line_segments = [[],[]];
-    }
-
-    if(!dfs_succeeded || plot_ifs) {
-        // run IFS
-        for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
-            if(! plot_solution[which_solution] ) { continue; }
-
-            n_pts_plotted += draw_ifs( transforms[which_solution], which_solution );
+    // run IFS
+    for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
+        if( plot_solution[which_solution] && ( !dfs_succeeded[which_solution] || plot_ifs ) ) {
+            total_pts_plotted += draw_ifs( transforms[which_solution], which_solution );
         }
     }
 
-    return [dfs_succeeded, n_pts_plotted, description];
+    return [total_pts_plotted, description];
 }
 
 function onTransformSliderChanged() {
