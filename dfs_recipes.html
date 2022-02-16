@@ -134,18 +134,21 @@ function init3js() {
     line_segments = [[],[]];
     const line_materials = [ new THREE.LineBasicMaterial({ color: grey }), new THREE.LineBasicMaterial({ color: dark_green }) ];
     line_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    line_meshes = [];
+    for( var i = 0; i < 2; i++ ) {
+        line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[i], 3 ) );
+        line_meshes[i] = new THREE.LineSegments( line_geometry[i], line_materials[i] );
+        scene.add( line_meshes[i] );
+    }
 
     points = [[],[]];
     const point_materials = [ new THREE.PointsMaterial({ color: grey }), new THREE.PointsMaterial({ color: dark_green }) ];
     point_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
-
+    points_meshes = [];
     for( var i = 0; i < 2; i++ ) {
-        line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[i], 3 ) );
-        const line_mesh = new THREE.LineSegments( line_geometry[i], line_materials[i] );
-        scene.add( line_mesh );
         point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( points[i], 3 ) );
-        const points_mesh = new THREE.Points( point_geometry[i], point_materials[i] );
-        scene.add( points_mesh );
+        points_meshes[i] = new THREE.Points( point_geometry[i], point_materials[i] );
+        scene.add( points_meshes[i] );
     }
 
     // transformed pattern
@@ -287,6 +290,10 @@ function onDrawControlPointsButton(element) {
     for( var i = 0; i < control_point_meshes.length; i++ ) {
         control_point_meshes[i].visible = draw_control_points;
     }
+    line_meshes[0].visible = draw_control_points;
+    line_meshes[1].visible = draw_control_points;
+    points_meshes[0].visible = draw_control_points;
+    points_meshes[1].visible = draw_control_points;
     if( draw_control_points ) { drag_controls.activate(); } else { drag_controls.deactivate(); }
     axes.visible = draw_control_points;
     render();
