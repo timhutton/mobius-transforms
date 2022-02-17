@@ -8,11 +8,11 @@
 #include <vector>
 
 
-emscripten::val compute() {
+emscripten::val compute(float x, float y) {
     std::vector<float> b;
-    for(float theta = 0.0f; theta < M_PI; theta += 0.1f) {
-        b.push_back( std::cos( theta ) );
-        b.push_back( std::sin( theta ) );
+    for(float theta = 0.0f; theta < 2.0 * M_PI; theta += 0.01f) {
+        b.push_back( x + std::cos( theta ) );
+        b.push_back( y + std::sin( theta ) );
         b.push_back( 0.0f );
     }
     return emscripten::val( emscripten::typed_memory_view( b.size(), b.data() ) );
