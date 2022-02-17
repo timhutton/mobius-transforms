@@ -26,6 +26,13 @@
 <script src="code/threejs/FontLoader.js"></script>
 <script src="code/threejs/helvetica.js"></script>
 <script src="code/threejs/OrbitControls.js"></script>
+<script type="text/javascript">
+    var Module = {
+        onRuntimeInitialized: function() {
+            init();
+        }
+    };
+</script><script src="dfs.js"></script>
 <script>
 
 function init() {
@@ -52,6 +59,8 @@ function init() {
 
     hq_mode = false;
     set_quality_parameters( hq_mode );
+
+    _hello();
 
     const loader = new THREE.FontLoader();
     loader.load( helvetiker_regular_typeface_json, (loaded_font) => {
@@ -710,8 +719,6 @@ function computeTransformedObjects() {
     }
     render();
 }
-
-window.onload = init;
 </script>
 
 <noscript>

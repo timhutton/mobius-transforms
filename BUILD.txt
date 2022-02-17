@@ -1,0 +1,2 @@
+1. Install Emscripten
+2. emcc dfs.cpp -o dfs.js
