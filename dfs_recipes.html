@@ -62,8 +62,7 @@ function init() {
 
     // DEBUG
     var buffer = Module.compute();
-    var js_array = Module.HEAPU8.subarray(buffer.pointer(), buffer.pointer() + buffer.size());
-    console.log( buffer.size(), js_array );
+    console.log( buffer );
 
     const loader = new THREE.FontLoader();
     loader.load( helvetiker_regular_typeface_json, (loaded_font) => {
