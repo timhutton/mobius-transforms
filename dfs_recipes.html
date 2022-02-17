@@ -60,10 +60,6 @@ function init() {
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
-    // DEBUG
-    var buffer = Module.compute();
-    console.log( buffer );
-
     const loader = new THREE.FontLoader();
     loader.load( helvetiker_regular_typeface_json, (loaded_font) => {
         font = loaded_font;
@@ -151,6 +147,14 @@ function init3js() {
         line_meshes[i] = new THREE.LineSegments( line_geometry[i], line_materials[i] );
         scene.add( line_meshes[i] );
     }
+
+    // DEBUG: pass coordinates directly from C++ to THREE.js:
+    const line2_material = new THREE.LineBasicMaterial({ color: white });
+    const line2_geometry = new THREE.BufferGeometry();
+    const coords = Module.compute();
+    line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( coords, 3 ) );
+    line2_mesh = new THREE.LineSegments( line2_geometry, line2_material );
+    scene.add( line2_mesh );
 
     points = [[],[]];
     const point_materials = [ new THREE.PointsMaterial({ color: grey }), new THREE.PointsMaterial({ color: dark_green }) ];
