@@ -170,6 +170,7 @@ function mobius_power( m, p ) {
             //console.log( 'using first column of S' );
             S = [ N[0], p2( 1.0, 0.0 ), N[2], p2( 0.0, 0.0 ) ];
         }
+        S[0].x += 1e-6; // fudge factor because some matrices are still problematic
         //console.log( 'S:', S );
         //const detS = get_mobius_determinant( S );
         //console.log( 'detS:', detS );
