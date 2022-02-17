@@ -415,7 +415,7 @@ function takeScreenshot( width, height ) {
 function compute_and_redraw() {
     computing = true;
     need_recompute = false;
-    document.getElementById('rendering_text').textContent = "Rendering...";
+    document.getElementById('rendering_text').textContent = "Computing...";
     setTimeout(function() {
 
         const time_start = performance.now();
@@ -428,10 +428,10 @@ function compute_and_redraw() {
         const time_end = performance.now();
         const ms_elapsed = time_end - time_start;
         if( ms_elapsed > 1000.0 ) {
-            document.getElementById('rendering_text').textContent = "Last render took: "+(ms_elapsed/1000.0).toFixed(2)+"s";
+            document.getElementById('rendering_text').textContent = "Last compute took: "+(ms_elapsed/1000.0).toFixed(2)+"s";
         }
         else {
-            document.getElementById('rendering_text').textContent = "Last render took: "+ms_elapsed.toFixed(2)+"ms";
+            document.getElementById('rendering_text').textContent = "Last compute took: "+ms_elapsed.toFixed(2)+"ms";
         }
         document.getElementById('num_points_text').textContent = "Number of points: " + n_pts_plotted;
 
