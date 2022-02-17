@@ -1,2 +1,8 @@
-1. Install Emscripten
-2. emcc dfs.cpp -o dfs.js
+1. Install Emscripten:
+    https://emscripten.org/
+2. Compile:
+    emcc dfs.cpp --bind -o dfs.js
+3. Start local webserver:
+    python server.py
+4. Open:
+    http://localhost:8080
