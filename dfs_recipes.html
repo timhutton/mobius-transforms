@@ -60,7 +60,10 @@ function init() {
     hq_mode = false;
     set_quality_parameters( hq_mode );
 
-    _hello();
+    // DEBUG
+    var buffer = Module.compute();
+    var js_array = Module.HEAPU8.subarray(buffer.pointer(), buffer.pointer() + buffer.size());
+    console.log( buffer.size(), js_array );
 
     const loader = new THREE.FontLoader();
     loader.load( helvetiker_regular_typeface_json, (loaded_font) => {
