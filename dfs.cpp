@@ -15,7 +15,10 @@ emscripten::val compute(float x, float y) {
         b.push_back( y + std::sin( theta ) );
         b.push_back( 0.0f );
     }
-    return emscripten::val( emscripten::typed_memory_view( b.size(), b.data() ) );
+    emscripten::val object = emscripten::val::object();
+    object.set( "arr1", emscripten::typed_memory_view( b.size(), b.data() ) );
+    object.set( "n", 25 );
+    return object;
 }
 
 EMSCRIPTEN_BINDINGS( dfs )
