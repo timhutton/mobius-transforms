@@ -1,4 +1,4 @@
-#include "mobius.h"
+#include "recipes.h"
 
 // Emscripten
 #include <emscripten/bind.h>
@@ -10,7 +10,7 @@
 
 std::vector<float> line_segments;
 std::vector<Complex> control_points;
-enum class Recipe { grandma, maskit } recipe;
+Recipe recipe;
 
 void set_number_of_control_points(int n)
 {
@@ -29,6 +29,7 @@ void set_recipe(Recipe r)
 
 emscripten::val compute()
 {
+    const std::vector<Mobius> transforms = get_transforms(recipe, control_points);
     const float x = control_points[0].real();
     const float y = control_points[0].imag();
     // placeholder: output line segments for a circle
