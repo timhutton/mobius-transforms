@@ -151,8 +151,7 @@ function init3js() {
     // DEBUG: pass coordinates directly from C++ to THREE.js:
     const line2_material = new THREE.LineBasicMaterial({ color: white });
     line2_geometry = new THREE.BufferGeometry();
-    const obj = Module.compute( 0.0, 0.0 );
-    line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( obj.arr1, 3 ) );
+    line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [], 3 ) );
     line2_mesh = new THREE.LineSegments( line2_geometry, line2_material );
     scene.add( line2_mesh );
 
@@ -438,7 +437,10 @@ function compute_and_redraw() {
         var [n_pts_plotted, description] = compute();
         updateScene();
         computeTransformedObjects();
-        const obj = Module.compute( control_points[0].x, control_points[0].y );
+        Module.set_number_of_control_points( control_points.length );
+        for(var i = 0; i < control_points.length; i++)
+            Module.set_control_point( i, control_points[i].x, control_points[i].y );
+        const obj = Module.compute();
         line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments, 3 ) );
         render();
 
