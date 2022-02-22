@@ -5,10 +5,12 @@
 #include <emscripten/val.h>
 
 // stdlib
+#include <map>
 #include <vector>
 
 std::vector<float> line_segments;
 std::vector<Complex> control_points;
+enum class Recipe { grandma, maskit } recipe;
 
 void set_number_of_control_points(int n)
 {
@@ -18,6 +20,11 @@ void set_number_of_control_points(int n)
 void set_control_point(int i, float re, float im)
 {
     control_points[i] = { re, im };
+}
+
+void set_recipe(Recipe r)
+{
+    recipe = r;
 }
 
 emscripten::val compute()
@@ -38,7 +45,11 @@ emscripten::val compute()
 
 EMSCRIPTEN_BINDINGS( dfs )
 {
+    emscripten::enum_<Recipe>("Recipe")
+        .value("grandma", Recipe::grandma)
+        .value("maskit", Recipe::maskit);
     emscripten::function("set_number_of_control_points", &set_number_of_control_points);
     emscripten::function("set_control_point", &set_control_point);
+    emscripten::function("set_recipe", &set_recipe);
     emscripten::function("compute", &compute);
 }

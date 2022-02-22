@@ -440,6 +440,7 @@ function compute_and_redraw() {
         Module.set_number_of_control_points( control_points.length );
         for(var i = 0; i < control_points.length; i++)
             Module.set_control_point( i, control_points[i].x, control_points[i].y );
+        Module.set_recipe(Module.Recipe.grandma);
         const obj = Module.compute();
         line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments, 3 ) );
         render();
