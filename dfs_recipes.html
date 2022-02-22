@@ -439,7 +439,7 @@ function compute_and_redraw() {
         updateScene();
         computeTransformedObjects();
         const obj = Module.compute( control_points[0].x, control_points[0].y );
-        line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( obj.arr1, 3 ) );
+        line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments, 3 ) );
         render();
 
         const time_end = performance.now();
