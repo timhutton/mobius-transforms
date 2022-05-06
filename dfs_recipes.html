@@ -442,6 +442,7 @@ function compute_and_redraw() {
             Module.set_control_point( i, control_points[i].x, control_points[i].y );
         Module.set_recipe(Module.Recipe.grandma);
         const obj = Module.compute();
+        console.log('C++ produced:', obj);
         line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments, 3 ) );
         render();
 
