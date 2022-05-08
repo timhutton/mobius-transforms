@@ -73,14 +73,12 @@ int explore_tree(
         bool close_enough = true;
         for(size_t i = 0; i < fp[iTag].size(); i++) {
             z.push_back( mobius_on_point( y, fp[iTag][i] ) );
-            std::cout << "fp[iTag][i]: " << fp[iTag][i] << ", z: " << z.back() << std::endl;
             if( i > 0 ) {
                 const float d2 = std::norm( z[i] - z[i-1] );
-                std::cout << "d2: " << d2 << std::endl;
                 if( d2 > closeness_epsilon2 ) { close_enough = false; }
                 if( d2 > max_d2 && level >= max_depth ) {
                     // if there are still very long lines at max_depth then we need to abort
-                    std::cout << "Aborting..." << std::endl;
+                    //std::cout << "Aborting..." << std::endl;
                     return -1;
                 }
             }

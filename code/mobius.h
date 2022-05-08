@@ -15,7 +15,7 @@ Complex mobius_on_point(const Mobius& m, const Complex& z)
         // special case for z = inf, return a / c
         return m(0,0) / m(1,1);
     }
-    return m(0,0)*z + m(0,1) / ( m(1,0)*z + m(1,1) );
+    return ( m(0,0)*z + m(0,1) ) / ( m(1,0)*z + m(1,1) );
 }
 
 Mobius get_mobius_normalized(const Mobius& m)
@@ -33,7 +33,7 @@ std::array<Complex, 2> get_mobius_fixed_points(const Mobius& m)
     const Complex n = (TrT + std::sqrt( TrT2 - 4.0f )) / 2.0f;
     const Complex k = n * n;
     const Complex st2p4 = std::sqrt( (TrT * TrT) - 4.0f );
-    const Complex z_plus = (mn(0,0) - mn(1,1) + st2p4) / (mn(1,0) * 2.0f);
+    const Complex z_plus = ( mn(0,0) - mn(1,1) + st2p4 ) / (mn(1,0) * 2.0f);
     const Complex z_minus = ( mn(0,0) - mn(1,1) - st2p4 ) / (mn(1,0) * 2.0f);
     if( std::abs( k ) > 1.0f ) { return { z_plus, z_minus }; }
     else { return { z_minus, z_plus }; }
