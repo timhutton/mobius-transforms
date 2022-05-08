@@ -33,6 +33,7 @@ void set_recipe(Recipe r)
 
 emscripten::val compute()
 {
+    line_segments.clear();
     const std::vector<Mobius> gens = make_generators(recipe, control_points);
     const std::vector<std::vector<Complex>> fp = get_repetends_fixed_points(gens);
     const int num_pts_plotted = dfs_recursive_tree(gens, fp);
