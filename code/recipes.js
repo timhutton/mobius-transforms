@@ -160,8 +160,8 @@ function get_recipes()
             var description = "Grandma's recipe from Indra's Pearls, p. 227. With t<sub>a</sub> = " + format_complex(t_a) + ", t<sub>b</sub> = " + format_complex(t_b);
             return [transforms, description];
         },
-        start_letters: [0],
-        duplicate: 'rot180'
+        start_letters: [0, 3, 2, 1], // [0], DEBUG: make slow
+        //duplicate: 'rot180' // DEBUG: make slow
     };
 
     var riley = { id: 'riley', label: "Riley's recipe",

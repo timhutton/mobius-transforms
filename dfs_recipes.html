@@ -148,7 +148,7 @@ function init3js() {
         scene.add( line_meshes[i] );
     }
 
-    // DEBUG: pass coordinates directly from C++ to THREE.js:
+    // lines from C++
     const line2_material = new THREE.LineBasicMaterial({ color: green });
     line2_geometry = new THREE.BufferGeometry();
     line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [], 3 ) );
@@ -434,16 +434,26 @@ function compute_and_redraw() {
 
         const time_start = performance.now();
 
+        // call JS compute()
         var [n_pts_plotted, description] = compute();
-        updateScene();
-        computeTransformedObjects();
+
+        const time_js = performance.now();
+
+        // call C++ compute()
         Module.set_number_of_control_points( control_points.length );
         for(var i = 0; i < control_points.length; i++)
             Module.set_control_point( i, control_points[i].x, control_points[i].y );
         Module.set_recipe(Module.Recipe.grandma);
         const obj = Module.compute();
-        console.log('C++ produced:', obj);
         line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments, 3 ) );
+
+        const time_cpp = performance.now();
+
+        console.log('JS time:', time_js - time_start);
+        console.log('C++ time:', time_cpp - time_js);
+
+        updateScene();
+        computeTransformedObjects();
         render();
 
         const time_end = performance.now();

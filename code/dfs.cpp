@@ -65,8 +65,8 @@ int explore_tree(
     int level)
 {
     constexpr float max_d2 = 1.0f;
-    constexpr float closeness_epsilon2 = 0.04f * 0.04f; // TODO: get from UI
-    constexpr int max_depth = 25; // TODO: get from UI
+    constexpr float closeness_epsilon2 = 0.01f * 0.01f; // 0.04f * 0.04f; // TODO: get from UI
+    constexpr int max_depth = 50; // 25; // TODO: get from UI
     int n_pts = 0;
     for(int k = prev + 1; k >= prev - 1; k--) {
         const int iTag = ( k + 4 ) % 4;
