@@ -149,7 +149,7 @@ function init3js() {
     }
 
     // DEBUG: pass coordinates directly from C++ to THREE.js:
-    const line2_material = new THREE.LineBasicMaterial({ color: white });
+    const line2_material = new THREE.LineBasicMaterial({ color: green });
     line2_geometry = new THREE.BufferGeometry();
     line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [], 3 ) );
     line2_mesh = new THREE.LineSegments( line2_geometry, line2_material );

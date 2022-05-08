@@ -48,8 +48,9 @@ emscripten::val compute()
 EMSCRIPTEN_BINDINGS( dfs )
 {
     emscripten::enum_<Recipe>("Recipe")
+        .value("gasket", Recipe::gasket)
         .value("grandma", Recipe::grandma)
-        .value("maskit", Recipe::maskit);
+        ;
     emscripten::function("set_number_of_control_points", &set_number_of_control_points);
     emscripten::function("set_control_point", &set_control_point);
     emscripten::function("set_recipe", &set_recipe);
@@ -88,10 +89,10 @@ int explore_tree(
             if( close_enough ) {
                 // store the line segments
                 for(size_t j = 0; j < z.size() - 1; j++) {
-                    line_segments.push_back( z[j].real() );
+                    line_segments.push_back( z[j].real() + 0.1f ); // offset for debugging
                     line_segments.push_back( z[j].imag() );
                     line_segments.push_back( 0.0f );
-                    line_segments.push_back( z[j+1].real() );
+                    line_segments.push_back( z[j+1].real() + 0.1f );
                     line_segments.push_back( z[j+1].imag() );
                     line_segments.push_back( 0.0f );
                 }

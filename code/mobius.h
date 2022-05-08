@@ -38,3 +38,12 @@ std::array<Complex, 2> get_mobius_fixed_points(const Mobius& m)
     if( std::abs( k ) > 1.0f ) { return { z_plus, z_minus }; }
     else { return { z_minus, z_plus }; }
 }
+
+std::array<Complex, 2> complex_solve_quadratic(const Complex& a, const Complex& b, const Complex& c )
+{
+    // return both solutions of ax^2 + bx + c = 0
+    const Complex sqrt_term = sqrt( b * b - 4.0f * a * c );
+    const Complex x1 = ( -b + sqrt_term ) / ( 2.0f * a );
+    const Complex x2 = ( -b - sqrt_term ) / ( 2.0f * a );
+    return { x1, x2 };
+}
