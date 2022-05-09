@@ -1,13 +1,12 @@
 #include "mobius.h"
 
 // stdlib
-#include <iostream>
 #include <vector>
 using namespace std::literals;
 
 enum class Recipe { gasket, grandma };
 
-std::vector<Mobius> make_generators(const Recipe recipe, const std::vector<Complex>& control_points, int which_solution = 0)
+std::vector<Mobius> make_generators(const Recipe recipe, const std::vector<Complex>& control_points, int which_solution)
 {
     std::vector<Mobius> transforms(4);
 

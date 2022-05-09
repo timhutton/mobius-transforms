@@ -149,11 +149,14 @@ function init3js() {
     }
 
     // lines from C++
-    const line2_material = new THREE.LineBasicMaterial({ color: green });
-    line2_geometry = new THREE.BufferGeometry();
-    line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [], 3 ) );
-    line2_mesh = new THREE.LineSegments( line2_geometry, line2_material );
-    scene.add( line2_mesh );
+    const line2_materials = [ new THREE.LineBasicMaterial({ color: green }), new THREE.LineBasicMaterial({ color: dark_green }) ];
+    line2_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    line2_meshes = [];
+    for( var i = 0; i < 2; i++ ) {
+        line2_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( [], 3 ) );
+        line2_meshes[i] = new THREE.LineSegments( line2_geometry[i], line2_materials[i] );
+        scene.add( line2_meshes[i] );
+    }
 
     points = [[],[]];
     const point_materials = [ new THREE.PointsMaterial({ color: grey }), new THREE.PointsMaterial({ color: dark_green }) ];
@@ -349,6 +352,7 @@ function set_quality_parameters(hq_mode) {
 
 function onMaxDepthChanged(element) {
     max_depth = element.value;
+    Module.set_depth( max_depth );
     compute_and_redraw();
 }
 
@@ -360,12 +364,15 @@ function onEpsilonChanged(element) {
         element.value = closeness_epsilon;
     }
     closeness_epsilon2 = closeness_epsilon * closeness_epsilon;
+    Module.set_epsilon( closeness_epsilon );
     compute_and_redraw();
 }
 
 function onWhichSolutionChanged(element) {
     plot_solution[0] = element.selectedIndex == 0 || element.selectedIndex == 2;
     plot_solution[1] = element.selectedIndex == 1 || element.selectedIndex == 2;
+    Module.set_plot_solution( 0, plot_solution[0] );
+    Module.set_plot_solution( 1, plot_solution[1] );
     compute_and_redraw();
 }
 
@@ -443,9 +450,10 @@ function compute_and_redraw() {
         Module.set_number_of_control_points( control_points.length );
         for(var i = 0; i < control_points.length; i++)
             Module.set_control_point( i, control_points[i].x, control_points[i].y );
-        Module.set_recipe(Module.Recipe.grandma);
+        Module.set_recipe( Module.Recipe.grandma );
         const obj = Module.compute();
-        line2_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments, 3 ) );
+        line2_geometry[0].setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments0, 3 ) );
+        line2_geometry[1].setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments1, 3 ) );
 
         const time_cpp = performance.now();
 
