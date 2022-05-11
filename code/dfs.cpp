@@ -23,7 +23,6 @@
 #include <emscripten/val.h>
 
 // stdlib
-//#include <iostream>
 #include <vector>
 
 // globals
@@ -78,6 +77,7 @@ EMSCRIPTEN_BINDINGS( dfs )
     emscripten::enum_<Recipe>("Recipe")
         .value("gasket", Recipe::gasket)
         .value("grandma", Recipe::grandma)
+        .value("maskit", Recipe::maskit)
         ;
     emscripten::function("set_number_of_control_points", &set_number_of_control_points);
     emscripten::function("set_control_point", &set_control_point);

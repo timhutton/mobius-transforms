@@ -22,7 +22,7 @@
 #include <vector>
 using namespace std::literals;
 
-enum class Recipe { gasket, grandma };
+enum class Recipe { gasket, grandma, maskit };
 
 std::vector<Mobius> make_generators(const Recipe recipe, const std::vector<Complex>& control_points, int which_solution)
 {
@@ -31,16 +31,20 @@ std::vector<Mobius> make_generators(const Recipe recipe, const std::vector<Compl
     switch(recipe)
     {
         case Recipe::gasket:
+        {
+            // Indra's Pearls, p. 201
             transforms[0] << 1.0f, 0.0f, 0.0f - 2.0if, 1.0f;
             transforms[1] << 1.0f - 1.0if, 1.0f, 1.0f, 1.0f + 1.0if;
             break;
+        }
         case Recipe::grandma:
+        {
             // Indra's Pearls, p. 227
-            const Complex t_a = control_points[0];
-            const Complex t_b = control_points[1];
+            const Complex& t_a = control_points[0];
+            const Complex& t_b = control_points[1];
             // solve x^2 - t_a * t_b * x + t_a^2 + t_b^2 = 0 for x
             const std::array<Complex, 2> solutions = complex_solve_quadratic( 1.0f, -t_a * t_b, t_a * t_a + t_b * t_b);
-            const Complex t_ab = solutions[which_solution]; // pick one
+            const Complex& t_ab = solutions[which_solution]; // pick one
             const Complex z0 = ( t_ab - 2.0f ) * t_b / ( t_b * t_ab - 2.0f * t_a + 2.0if * t_ab );
             transforms[0] << 0.5f * t_a,
                           ( t_a * t_ab - 2.0f * t_b + 4.0if ) / ( z0 * ( 2.0f * t_ab + 4.0f) ),
@@ -51,6 +55,15 @@ std::vector<Mobius> make_generators(const Recipe recipe, const std::vector<Compl
                           0.5f * t_b,
                           0.5f * ( t_b + 2.0if );
             break;
+        }
+        case Recipe::maskit:
+        {
+            // Indra's Pearls, p. 259
+            const Complex& mu = control_points[0];
+            transforms[0] << mu, 1.0f, 1.0f, 0.0f;    // a: z -> mu + 1/z = (mu*z+1)/z
+            transforms[1] << 1.0f, 2.0f, 0.0f, 1.0f;  // b: z -> z + 2
+            break;
+        }
     }
 
     transforms[2] = transforms[0].inverse();
