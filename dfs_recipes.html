@@ -138,54 +138,63 @@ function init3js() {
     scene = new THREE.Scene();
     scene.background = black;
 
-    line_segments = [[],[]];
     const line_materials = [ new THREE.LineBasicMaterial({ color: grey }), new THREE.LineBasicMaterial({ color: dark_green }) ];
-    line_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
-    line_meshes = [];
-    for( var i = 0; i < 2; i++ ) {
-        line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[i], 3 ) );
-        line_meshes[i] = new THREE.LineSegments( line_geometry[i], line_materials[i] );
-        scene.add( line_meshes[i] );
-    }
-
-    // lines from C++
-    const line2_materials = [ new THREE.LineBasicMaterial({ color: green }), new THREE.LineBasicMaterial({ color: dark_green }) ];
-    line2_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
-    line2_meshes = [];
-    for( var i = 0; i < 2; i++ ) {
-        line2_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( [], 3 ) );
-        line2_meshes[i] = new THREE.LineSegments( line2_geometry[i], line2_materials[i] );
-        scene.add( line2_meshes[i] );
-    }
-
-    points = [[],[]];
     const point_materials = [ new THREE.PointsMaterial({ color: grey }), new THREE.PointsMaterial({ color: dark_green }) ];
-    point_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
-    points_meshes = [];
-    for( var i = 0; i < 2; i++ ) {
-        point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( points[i], 3 ) );
-        points_meshes[i] = new THREE.Points( point_geometry[i], point_materials[i] );
-        scene.add( points_meshes[i] );
-    }
-
-    // transformed pattern
-    transformed_line_segments = [[],[]];
     const transformed_line_materials = [ new THREE.LineBasicMaterial({ color: white }), new THREE.LineBasicMaterial({ color: green }) ];
-    transformed_line = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    const transformed_point_materials = [ new THREE.PointsMaterial({ color: white }), new THREE.PointsMaterial({ color: green }) ];
+
+    // scene items from JS
+    lines_segments_js = [[],[]];
+    line_geometry_js = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    line_meshes_js = [];
+    points_js = [[],[]];
+    point_geometry_js = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    point_meshes_js = [];
     for( var i = 0; i < 2; i++ ) {
-        transformed_line[i].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments[i], 3 ) );
-        const transformed_line_mesh = new THREE.LineSegments( transformed_line[i], transformed_line_materials[i] );
-        scene.add( transformed_line_mesh );
+        line_geometry_js[i].setAttribute( 'position', new THREE.Float32BufferAttribute( lines_segments_js[i], 3 ) );
+        line_meshes_js[i] = new THREE.LineSegments( line_geometry_js[i], line_materials[i] );
+        scene.add( line_meshes_js[i] );
+        point_geometry_js[i].setAttribute( 'position', new THREE.Float32BufferAttribute( points_js[i], 3 ) );
+        point_meshes_js[i] = new THREE.Points( point_geometry_js[i], point_materials[i] );
+        scene.add( point_meshes_js[i] );
     }
 
-    // transformed points
-    transformed_vertices = [[],[]];
-    const transformed_point_materials = [ new THREE.PointsMaterial({ color: white }), new THREE.PointsMaterial({ color: green }) ];
-    transformed_points = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    // scene items from C++
+    lines_segments_cpp = [[],[]];
+    line_geometry_cpp = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    line_meshes_cpp = [];
+    points_cpp = [[],[]];
+    point_geometry_cpp = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    point_meshes_cpp = [];
     for( var i = 0; i < 2; i++ ) {
-        transformed_points[i].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices[i], 3 ) );
-        const transformed_points_mesh = new THREE.Points( transformed_points[i], transformed_point_materials[i] );
-        scene.add( transformed_points_mesh );
+        line_meshes_cpp[i] = new THREE.LineSegments( line_geometry_cpp[i], line_materials[i] );
+        scene.add( line_meshes_cpp[i] );
+        point_meshes_cpp[i] = new THREE.Points( point_geometry_cpp[i], point_materials[i] );
+        scene.add( point_meshes_cpp[i] );
+    }
+
+    // transformed scene items from JS
+    transformed_line_segments_js = [[],[]];
+    transformed_line_js = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    transformed_vertices_js = [[],[]];
+    transformed_points_js = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    for( var i = 0; i < 2; i++ ) {
+        transformed_line_js[i].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments_js[i], 3 ) );
+        scene.add( new THREE.LineSegments( transformed_line_js[i], transformed_line_materials[i] ) );
+        transformed_points_js[i].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices_js[i], 3 ) );
+        scene.add( new THREE.Points( transformed_points_js[i], transformed_point_materials[i] ) );
+    }
+
+    // transformed scene items from C++
+    transformed_line_segments_cpp = [[],[]];
+    transformed_line_cpp = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    transformed_vertices_cpp = [[],[]];
+    transformed_points_cpp = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    for( var i = 0; i < 2; i++ ) {
+        transformed_line_cpp[i].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments_cpp[i], 3 ) );
+        scene.add( new THREE.LineSegments( transformed_line_cpp[i], transformed_line_materials[i] ) );
+        transformed_points_cpp[i].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices_cpp[i], 3 ) );
+        scene.add( new THREE.Points( transformed_points_cpp[i], transformed_point_materials[i] ) );
     }
 
     // add axes
@@ -293,10 +302,15 @@ function render() {
 
 function updateScene() {
     for( var i = 0; i < 2; i++ ) {
-        line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[i], 3 ) );
-        point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( points[i], 3 ) );
-        line_geometry[i].computeBoundingSphere()
-        point_geometry[i].computeBoundingSphere()
+        line_geometry_js[i].setAttribute( 'position', new THREE.Float32BufferAttribute( lines_segments_js[i], 3 ) ); // need this?
+        point_geometry_js[i].setAttribute( 'position', new THREE.Float32BufferAttribute( points_js[i], 3 ) );
+        line_geometry_cpp[i].setAttribute( 'position', new THREE.Float32BufferAttribute( lines_segments_cpp[i], 3 ) );
+        point_geometry_cpp[i].setAttribute( 'position', new THREE.Float32BufferAttribute( points_cpp[i], 3 ) );
+        // recompute bounds else clipping goes wrong when zoom in
+        line_geometry_js[i].computeBoundingSphere()
+        point_geometry_js[i].computeBoundingSphere()
+        line_geometry_cpp[i].computeBoundingSphere()
+        point_geometry_cpp[i].computeBoundingSphere()
     }
     render();
 }
@@ -307,10 +321,12 @@ function onDrawControlPointsButton(element) {
     for( var i = 0; i < control_point_meshes.length; i++ ) {
         control_point_meshes[i].visible = draw_control_points;
     }
-    line_meshes[0].visible = draw_control_points;
-    line_meshes[1].visible = draw_control_points;
-    points_meshes[0].visible = draw_control_points;
-    points_meshes[1].visible = draw_control_points;
+    for( var i = 0; i < 2; i++ ) {
+        line_meshes_js[i].visible = draw_control_points;
+        point_meshes_js[i].visible = draw_control_points;
+        line_meshes_cpp[i].visible = draw_control_points;
+        point_meshes_cpp[i].visible = draw_control_points;
+    }
     if( draw_control_points ) { drag_controls.activate(); } else { drag_controls.deactivate(); }
     axes.visible = draw_control_points;
     render();
@@ -391,20 +407,19 @@ function dataURIToBlob( dataURI ) {
 }
 
 function saveDataURI( name, dataURI ) {
-  const blob = dataURIToBlob( dataURI );
+    const blob = dataURIToBlob( dataURI );
 
-  // force download
-  const link = document.createElement( 'a' );
-  link.download = name;
-  link.href = window.URL.createObjectURL( blob );
-  link.onclick = () => {
-    window.setTimeout( () => {
-      window.URL.revokeObjectURL( blob );
-      link.removeAttribute( 'href' );
-    }, 500 );
-
-  };
-  link.click();
+    // force download
+    const link = document.createElement( 'a' );
+    link.download = name;
+    link.href = window.URL.createObjectURL( blob );
+    link.onclick = () => {
+        window.setTimeout( () => {
+            window.URL.revokeObjectURL( blob );
+            link.removeAttribute( 'href' );
+        }, 500 );
+    };
+    link.click();
 }
 
 function defaultFileName (ext) {
@@ -452,8 +467,10 @@ function compute_and_redraw() {
             Module.set_control_point( i, control_points[i].x, control_points[i].y );
         Module.set_recipe( Module.Recipe.grandma );
         const obj = Module.compute();
-        line2_geometry[0].setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments0, 3 ) );
-        line2_geometry[1].setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments1, 3 ) );
+        lines_segments_cpp[0] = obj.line_segments0;
+        lines_segments_cpp[1] = obj.line_segments1;
+        line_geometry_cpp[0].setAttribute( 'position', new THREE.Float32BufferAttribute( lines_segments_cpp[0], 3 ) );
+        line_geometry_cpp[1].setAttribute( 'position', new THREE.Float32BufferAttribute( lines_segments_cpp[1], 3 ) );
 
         const time_cpp = performance.now();
 
@@ -615,12 +632,12 @@ function dfs_recursive_tree(gens, repetends, which_solution) {
                     }
                     for( var j = 0; j < pts_dup[0].length; j++ ) {
                         for( var i = 0; i < pts_dup.length - 1; i++ ) {
-                            line_segments[which_solution].push( pts_dup[i][j].x );
-                            line_segments[which_solution].push( pts_dup[i][j].y );
-                            line_segments[which_solution].push( 0 );
-                            line_segments[which_solution].push( pts_dup[i+1][j].x );
-                            line_segments[which_solution].push( pts_dup[i+1][j].y );
-                            line_segments[which_solution].push( 0 );
+                            lines_segments_js[which_solution].push( pts_dup[i][j].x );
+                            lines_segments_js[which_solution].push( pts_dup[i][j].y );
+                            lines_segments_js[which_solution].push( 0 );
+                            lines_segments_js[which_solution].push( pts_dup[i+1][j].x );
+                            lines_segments_js[which_solution].push( pts_dup[i+1][j].y );
+                            lines_segments_js[which_solution].push( 0 );
                         }
                     }
                 }
@@ -629,9 +646,9 @@ function dfs_recursive_tree(gens, repetends, which_solution) {
                     for( var j = 0; j < z.length; j++ ) {
                         const pt_dup = duplication_func( z[j] );
                         for(var i = 0; i < pt_dup.length; i++) {
-                            points[which_solution].push( pt_dup[i].x );
-                            points[which_solution].push( pt_dup[i].y );
-                            points[which_solution].push( 0.0 );
+                            points_js[which_solution].push( pt_dup[i].x );
+                            points_js[which_solution].push( pt_dup[i].y );
+                            points_js[which_solution].push( 0.0 );
                         }
                     }
                 }
@@ -665,9 +682,9 @@ function draw_ifs(transforms, which_solution) {
     for( var i = 0; i < num_ifs_iterations + discard; i++) {
         p = mobius_on_point( transforms[Math.floor(Math.random() * transforms.length)], p );
         if( i > discard ) {
-            points[which_solution].push( p.x );
-            points[which_solution].push( p.y );
-            points[which_solution].push( 0.0 );
+            points_js[which_solution].push( p.x );
+            points_js[which_solution].push( p.y );
+            points_js[which_solution].push( 0.0 );
         }
     }
     return num_ifs_iterations;
@@ -676,8 +693,8 @@ function draw_ifs(transforms, which_solution) {
 function compute() {
 
     var total_pts_plotted = 0;
-    points = [[],[]];
-    line_segments = [[],[]];
+    points_js = [[],[]];
+    lines_segments_js = [[],[]];
     transforms = [[],[]];
     var description = "";
     var dfs_succeeded = [ true, true ];
@@ -697,8 +714,8 @@ function compute() {
             if( num_points_plotted == 0 ) {
                 // DFS rendering failed, clear the drawing and draw IFS instead
                 dfs_succeeded[which_solution] = false;
-                points[which_solution] = [];
-                line_segments[which_solution] = [];
+                points_js[which_solution] = [];
+                lines_segments_js[which_solution] = [];
             }
             total_pts_plotted += num_points_plotted;
         }
@@ -723,29 +740,54 @@ function computeTransformedObjects() {
     const k0 = document.getElementById('transform0_slider').value / 100.0;
     const k1 = document.getElementById('transform1_slider').value / 100.0;
     for( var which_solution = 0; which_solution < 2; which_solution++ ) {
-        transformed_line_segments[which_solution] = [];
-        transformed_vertices[which_solution] = [];
+        // transform the JS meshes
+        transformed_line_segments_js[which_solution] = [];
+        transformed_vertices_js[which_solution] = [];
         if( transforms[which_solution].length > 0) {
             const m = get_mobius_composed(mobius_power( transforms[which_solution][0], k0 ), mobius_power( transforms[which_solution][1], k1 ) );
-            for( var i = 0; i < line_segments[which_solution].length; i += 3 ) {
-                const p = p2( line_segments[which_solution][i], line_segments[which_solution][i+1] );
+            for( var i = 0; i < lines_segments_js[which_solution].length; i += 3 ) {
+                const p = p2( lines_segments_js[which_solution][i], lines_segments_js[which_solution][i+1] );
                 const transformed_p = mobius_on_point( m, p );
-                transformed_line_segments[which_solution].push( transformed_p.x );
-                transformed_line_segments[which_solution].push( transformed_p.y );
-                transformed_line_segments[which_solution].push( 0.0 );
+                transformed_line_segments_js[which_solution].push( transformed_p.x );
+                transformed_line_segments_js[which_solution].push( transformed_p.y );
+                transformed_line_segments_js[which_solution].push( 0.0 );
             }
-            for( var i = 0; i < points[which_solution].length; i += 3 ) {
-                const p = p2( points[which_solution][i], points[which_solution][i+1] );
+            for( var i = 0; i < points_js[which_solution].length; i += 3 ) {
+                const p = p2( points_js[which_solution][i], points_js[which_solution][i+1] );
                 const transformed_p = mobius_on_point( m, p );
-                transformed_vertices[which_solution].push( transformed_p.x );
-                transformed_vertices[which_solution].push( transformed_p.y );
-                transformed_vertices[which_solution].push( 0.0 );
+                transformed_vertices_js[which_solution].push( transformed_p.x );
+                transformed_vertices_js[which_solution].push( transformed_p.y );
+                transformed_vertices_js[which_solution].push( 0.0 );
             }
         }
-        transformed_line[which_solution].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments[which_solution], 3 ) );
-        transformed_line[which_solution].computeBoundingSphere();
-        transformed_points[which_solution].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices[which_solution], 3 ) );
-        transformed_points[which_solution].computeBoundingSphere();
+        transformed_line_js[which_solution].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments_js[which_solution], 3 ) );
+        transformed_line_js[which_solution].computeBoundingSphere();
+        transformed_points_js[which_solution].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices_js[which_solution], 3 ) );
+        transformed_points_js[which_solution].computeBoundingSphere();
+        // transform the C++ meshes
+        transformed_line_segments_cpp[which_solution] = [];
+        transformed_vertices_cpp[which_solution] = [];
+        if( transforms[which_solution].length > 0) {
+            const m = get_mobius_composed(mobius_power( transforms[which_solution][0], k0 ), mobius_power( transforms[which_solution][1], k1 ) );
+            for( var i = 0; i < lines_segments_cpp[which_solution].length; i += 3 ) {
+                const p = p2( lines_segments_cpp[which_solution][i], lines_segments_cpp[which_solution][i+1] );
+                const transformed_p = mobius_on_point( m, p );
+                transformed_line_segments_cpp[which_solution].push( transformed_p.x );
+                transformed_line_segments_cpp[which_solution].push( transformed_p.y );
+                transformed_line_segments_cpp[which_solution].push( 0.0 );
+            }
+            for( var i = 0; i < points_cpp[which_solution].length; i += 3 ) {
+                const p = p2( points_cpp[which_solution][i], points_cpp[which_solution][i+1] );
+                const transformed_p = mobius_on_point( m, p );
+                transformed_vertices_cpp[which_solution].push( transformed_p.x );
+                transformed_vertices_cpp[which_solution].push( transformed_p.y );
+                transformed_vertices_cpp[which_solution].push( 0.0 );
+            }
+        }
+        transformed_line_cpp[which_solution].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_line_segments_cpp[which_solution], 3 ) );
+        transformed_line_cpp[which_solution].computeBoundingSphere();
+        transformed_points_cpp[which_solution].setAttribute( 'position', new THREE.Float32BufferAttribute( transformed_vertices_cpp[which_solution], 3 ) );
+        transformed_points_cpp[which_solution].computeBoundingSphere();
     }
     render();
 }

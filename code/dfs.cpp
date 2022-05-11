@@ -59,9 +59,9 @@ emscripten::val compute()
     int num_pts_plotted = 0;
     for(int which_solution = 0; which_solution < 2; which_solution++)
     {
+        line_segments[which_solution].clear();
         if( !plot_solution[which_solution] )
             continue;
-        line_segments[which_solution].clear();
         const std::vector<Mobius> gens = make_generators(recipe, control_points, which_solution);
         const std::vector<std::vector<Complex>> fp = get_repetends_fixed_points(gens);
         num_pts_plotted += dfs_recursive_tree(gens, fp, which_solution);
