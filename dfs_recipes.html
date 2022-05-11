@@ -32,7 +32,8 @@
             init();
         }
     };
-</script><script src="dfs.js"></script>
+</script>
+<script src="dfs.js"></script>
 <script>
 
 function init() {
@@ -462,10 +463,10 @@ function compute_and_redraw() {
         const time_js = performance.now();
 
         // call C++ compute()
+        Module.set_recipe( recipes[iRecipe].cpp );
         Module.set_number_of_control_points( control_points.length );
         for(var i = 0; i < control_points.length; i++)
             Module.set_control_point( i, control_points[i].x, control_points[i].y );
-        Module.set_recipe( Module.Recipe.grandma );
         const obj = Module.compute();
         lines_segments_cpp[0] = obj.line_segments0;
         lines_segments_cpp[1] = obj.line_segments1;
