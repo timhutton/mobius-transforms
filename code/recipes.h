@@ -22,7 +22,7 @@
 #include <vector>
 using namespace std::literals;
 
-enum class Recipe { gasket, grandma, maskit };
+enum class Recipe { gasket, grandma, maskit, modular, riley };
 
 std::vector<Mobius> make_generators(const Recipe recipe, const std::vector<Complex>& control_points, int which_solution)
 {
@@ -62,6 +62,21 @@ std::vector<Mobius> make_generators(const Recipe recipe, const std::vector<Compl
             const Complex& mu = control_points[0];
             transforms[0] << mu, 1.0f, 1.0f, 0.0f;    // a: z -> mu + 1/z = (mu*z+1)/z
             transforms[1] << 1.0f, 2.0f, 0.0f, 1.0f;  // b: z -> z + 2
+            break;
+        }
+        case Recipe::modular:
+        {
+            // Indra's Pearls, p. 214
+            transforms[0] << 1.0f, 0.0f, -2.0f, 1.0f;
+            transforms[1] << 1.0f, 2.0f, 0.0f, 1.0f;
+            break;
+        }
+        case Recipe::riley:
+        {
+            // Indra's Pearls, p. 258
+            const Complex& c = control_points[0];
+            transforms[0] << 1.0f, 0.0f, c, 1.0f;
+            transforms[1] << 1.0f, 2.0f, 0.0f, 1.0f;
             break;
         }
     }
