@@ -16,87 +16,19 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "recipes.h"
-
-// Emscripten
-#include <emscripten/bind.h>
-#include <emscripten/val.h>
-
-// stdlib
-#include <vector>
-
-// globals
-std::array<std::vector<float>, 2> line_segments;
-std::vector<Complex> control_points;
-Recipe recipe;
-float epsilon2 = 0.01f * 0.01f;
-int max_depth = 25;
-std::array<bool, 2> plot_solution = { true, false };
-
-int dfs_recursive_tree(
-    const std::vector<Mobius>& gens,
-    const std::vector<std::vector<Complex>>& repetends,
-    const int which_solution);
-
-void set_number_of_control_points(int n)
-{
-    control_points.resize(n);
-}
-
-void set_control_point(int i, float re, float im)
-{
-    control_points[i] = { re, im };
-}
-
-void set_recipe(Recipe r) { recipe = r; }
-void set_epsilon(float e) { epsilon2 = e * e; }
-void set_depth(int d) { max_depth = d; }
-void set_plot_solution(int which_solution, bool state) { plot_solution[which_solution] = state; }
-
-emscripten::val compute()
-{
-    int num_pts_plotted = 0;
-    for(int which_solution = 0; which_solution < 2; which_solution++)
-    {
-        line_segments[which_solution].clear();
-        if( !plot_solution[which_solution] )
-            continue;
-        const std::vector<Mobius> gens = make_generators(recipe, control_points, which_solution);
-        const std::vector<std::vector<Complex>> fp = get_repetends_fixed_points(gens);
-        num_pts_plotted += dfs_recursive_tree(gens, fp, which_solution);
-    }
-
-    emscripten::val object = emscripten::val::object();
-    object.set( "line_segments0", emscripten::typed_memory_view( line_segments[0].size(), line_segments[0].data() ) );
-    object.set( "line_segments1", emscripten::typed_memory_view( line_segments[1].size(), line_segments[1].data() ) );
-    return object;
-}
-
-EMSCRIPTEN_BINDINGS( dfs )
-{
-    emscripten::enum_<Recipe>("Recipe")
-        .value("gasket", Recipe::gasket)
-        .value("grandma", Recipe::grandma)
-        .value("maskit", Recipe::maskit)
-        .value("modular", Recipe::modular)
-        .value("riley", Recipe::riley)
-        ;
-    emscripten::function("set_number_of_control_points", &set_number_of_control_points);
-    emscripten::function("set_control_point", &set_control_point);
-    emscripten::function("set_recipe", &set_recipe);
-    emscripten::function("set_epsilon", &set_epsilon);
-    emscripten::function("set_depth", &set_depth);
-    emscripten::function("set_plot_solution", &set_plot_solution);
-    emscripten::function("compute", &compute);
-}
+// Local
+#include "dfs.h"
 
 int explore_tree(
-    const std::vector<Mobius>& gens,
-    const std::vector<std::vector<Complex>>& fp,
+    const std::array<Mobius, 4>& gens,
+    const std::array<std::vector<Complex>, 4>& fp,
     const Mobius& x,
     const int prev,
     const int level,
-    const int which_solution)
+    const int which_solution,
+    const float epsilon2,
+    const int max_depth,
+    std::array<std::vector<float>, 2>& line_segments)
 {
     constexpr float max_d2 = 1.0f;
     int n_pts = 0;
@@ -132,7 +64,7 @@ int explore_tree(
             n_pts += z.size();
         }
         else {
-            const int ret = explore_tree( gens, fp, y, iTag, level + 1, which_solution );
+            const int ret = explore_tree( gens, fp, y, iTag, level + 1, which_solution, epsilon2, max_depth, line_segments );
             if( ret == -1) { return -1; } // the abort signal bubbles up the stack
             n_pts += ret;
         }
@@ -141,14 +73,17 @@ int explore_tree(
 }
 
 int dfs_recursive_tree(
-    const std::vector<Mobius>& gens,
-    const std::vector<std::vector<Complex>>& fp,
-    const int which_solution)
+    const std::array<Mobius, 4>& gens,
+    const std::array<std::vector<Complex>, 4>& fp,
+    const int which_solution,
+    const float epsilon2,
+    const int max_depth,
+    std::array<std::vector<float>, 2>& line_segments)
 {
     int n_pts_plotted = 0;
     const int start_order[4] = { 0, 3, 2, 1 }; // default order: aBAb
     for(int iTag : start_order) {
-        const int ret = explore_tree( gens, fp, gens[iTag], iTag, 1, which_solution );
+        const int ret = explore_tree( gens, fp, gens[iTag], iTag, 1, which_solution, epsilon2, max_depth, line_segments );
         if( ret == -1 ) {
             return 0; // drawing was aborted
         }

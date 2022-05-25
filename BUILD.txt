@@ -1,7 +1,7 @@
 1. Install Emscripten:
     https://emscripten.org/
 2. Compile:
-    emcc code/dfs.cpp --bind -I code/eigen-3.4.0 -sALLOW_MEMORY_GROWTH -O3 -o dfs.js
+    emcc code/main.cpp code/dfs.cpp code/mobius.cpp --bind -I code/eigen-3.4.0 -sALLOW_MEMORY_GROWTH -O3 -o dfs.js
 3. Start local webserver:
     python server.py
 4. Open:

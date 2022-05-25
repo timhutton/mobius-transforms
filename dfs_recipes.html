@@ -388,8 +388,6 @@ function onEpsilonChanged(element) {
 function onWhichSolutionChanged(element) {
     plot_solution[0] = element.selectedIndex == 0 || element.selectedIndex == 2;
     plot_solution[1] = element.selectedIndex == 1 || element.selectedIndex == 2;
-    Module.set_plot_solution( 0, plot_solution[0] );
-    Module.set_plot_solution( 1, plot_solution[1] );
     compute_and_redraw();
 }
 
@@ -463,15 +461,24 @@ function compute_and_redraw() {
         const time_js = performance.now();
 
         // call C++ compute()
-        Module.set_recipe( recipes[iRecipe].cpp );
-        Module.set_number_of_control_points( control_points.length );
-        for(var i = 0; i < control_points.length; i++)
-            Module.set_control_point( i, control_points[i].x, control_points[i].y );
-        const obj = Module.compute();
-        lines_segments_cpp[0] = obj.line_segments0;
-        lines_segments_cpp[1] = obj.line_segments1;
-        line_geometry_cpp[0].setAttribute( 'position', new THREE.Float32BufferAttribute( lines_segments_cpp[0], 3 ) );
-        line_geometry_cpp[1].setAttribute( 'position', new THREE.Float32BufferAttribute( lines_segments_cpp[1], 3 ) );
+        for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
+            if(! plot_solution[which_solution] ) { continue; }
+
+            var [gens, repetends] = get_repetends( transforms[which_solution] );
+            for(var iGen = 0; iGen < gens.length; iGen++) {
+                Module.set_generator(iGen, gens[iGen].t[0].x, gens[iGen].t[0].y,
+                                           gens[iGen].t[1].x, gens[iGen].t[1].y,
+                                           gens[iGen].t[2].x, gens[iGen].t[2].y,
+                                           gens[iGen].t[3].x, gens[iGen].t[3].y);
+                Module.set_number_of_fixed_points(iGen, repetends[iGen].length);
+                for(var i = 0; i < repetends[iGen].length; i++) {
+                    Module.set_fixed_point(iGen, i, repetends[iGen][i].p.x, repetends[iGen][i].p.y);
+                }
+            }
+            const obj = Module.compute(which_solution);
+            lines_segments_cpp[which_solution] = obj.line_segments; // needed?
+            line_geometry_cpp[which_solution].setAttribute( 'position', new THREE.Float32BufferAttribute( obj.line_segments, 3 ) );
+        }
 
         const time_cpp = performance.now();
 

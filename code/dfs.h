@@ -16,21 +16,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Eigen
-#include <Eigen/Dense>
+// Local
+#include "mobius.h"
 
 // stdlib
-#define _USE_MATH_DEFINES
-#include <cmath>
-#include <complex>
+#include <vector>
 
-using Mobius = Eigen::Matrix2cf;
-using Complex = std::complex<float>;
-
-Complex mobius_on_point(const Mobius& m, const Complex& z);
-
-Mobius get_mobius_normalized(const Mobius& m);
-
-std::array<Complex, 2> get_mobius_fixed_points(const Mobius& m);
-
-std::array<Complex, 2> complex_solve_quadratic(const Complex& a, const Complex& b, const Complex& c);
+int dfs_recursive_tree(
+    const std::array<Mobius, 4>& gens,
+    const std::array<std::vector<Complex>, 4>& fp,
+    const int which_solution,
+    const float epsilon2,
+    const int max_depth,
+    std::array<std::vector<float>, 2>& line_segments);
