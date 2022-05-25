@@ -24,8 +24,9 @@
 #include <cmath>
 #include <complex>
 
-using Mobius = Eigen::Matrix2cf;
-using Complex = std::complex<float>;
+using Mobius = Eigen::Matrix2cd;
+using FloatType = double;
+using Complex = std::complex<FloatType>;
 
 Complex mobius_on_point(const Mobius& m, const Complex& z);
 

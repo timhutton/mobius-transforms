@@ -40,20 +40,20 @@ std::array<Complex, 2> get_mobius_fixed_points(const Mobius& m)
     const Mobius mn = get_mobius_normalized( m );
     const Complex TrT = mn.trace();
     const Complex TrT2 = (mn * mn).trace();
-    const Complex n = (TrT + std::sqrt( TrT2 - 4.0f )) / 2.0f;
+    const Complex n = (TrT + std::sqrt( TrT2 - static_cast<FloatType>(4) )) / static_cast<FloatType>(2);
     const Complex k = n * n;
-    const Complex st2p4 = std::sqrt( (TrT * TrT) - 4.0f );
-    const Complex z_plus = ( mn(0,0) - mn(1,1) + st2p4 ) / (mn(1,0) * 2.0f);
-    const Complex z_minus = ( mn(0,0) - mn(1,1) - st2p4 ) / (mn(1,0) * 2.0f);
-    if( std::abs( k ) > 1.0f ) { return { z_plus, z_minus }; }
+    const Complex st2p4 = std::sqrt( (TrT * TrT) - static_cast<FloatType>(4) );
+    const Complex z_plus = ( mn(0,0) - mn(1,1) + st2p4 ) / (mn(1,0) * static_cast<FloatType>(2));
+    const Complex z_minus = ( mn(0,0) - mn(1,1) - st2p4 ) / (mn(1,0) * static_cast<FloatType>(2));
+    if( std::abs( k ) > 1 ) { return { z_plus, z_minus }; }
     else { return { z_minus, z_plus }; }
 }
 
 std::array<Complex, 2> complex_solve_quadratic(const Complex& a, const Complex& b, const Complex& c)
 {
     // return both solutions of ax^2 + bx + c = 0
-    const Complex sqrt_term = sqrt( b * b - 4.0f * a * c );
-    const Complex x1 = ( -b + sqrt_term ) / ( 2.0f * a );
-    const Complex x2 = ( -b - sqrt_term ) / ( 2.0f * a );
+    const Complex sqrt_term = sqrt( b * b - static_cast<FloatType>(4) * a * c );
+    const Complex x1 = ( -b + sqrt_term ) / ( static_cast<FloatType>(2) * a );
+    const Complex x2 = ( -b - sqrt_term ) / ( static_cast<FloatType>(2) * a );
     return { x1, x2 };
 }
