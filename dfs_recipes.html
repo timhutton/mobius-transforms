@@ -233,7 +233,23 @@ function onMouseMove( e ) {
       (camera.near + camera.far) / (camera.near - camera.far),
     );
     mouse_pos.unproject(camera);
-    compute_and_redraw();
+
+    // show where the mouse location gets transformed to
+    mouse_line_segments = [[],[]];
+    for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
+        if(! plot_solution[which_solution] ) { continue; }
+        for( var transform_idx = 0; transform_idx < transforms[which_solution].length; transform_idx++ ) {
+            var transformed_mouse_pos = mobius_on_point(transforms[which_solution][transform_idx], mouse_pos);
+            mouse_line_segments[which_solution].push(mouse_pos.x);
+            mouse_line_segments[which_solution].push(mouse_pos.y);
+            mouse_line_segments[which_solution].push(0);
+            mouse_line_segments[which_solution].push(transformed_mouse_pos.x);
+            mouse_line_segments[which_solution].push(transformed_mouse_pos.y);
+            mouse_line_segments[which_solution].push(0);
+        }
+    }
+
+    updateScene();
 }
 
 function onDragControlPoint( e ) {
@@ -669,7 +685,6 @@ function compute() {
     points = [[],[]];
     line_segments = [[],[]];
     transforms = [[],[]];
-    mouse_line_segments = [[],[]];
     var description = "";
     var dfs_succeeded = [ true, true ];
 
@@ -699,20 +714,6 @@ function compute() {
     for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
         if( plot_solution[which_solution] && ( !dfs_succeeded[which_solution] || plot_ifs ) ) {
             total_pts_plotted += draw_ifs( transforms[which_solution], which_solution );
-        }
-    }
-
-    // show where the mouse location gets transformed to
-    for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
-        if(! plot_solution[which_solution] ) { continue; }
-        for( var transform_idx = 0; transform_idx < transforms[which_solution].length; transform_idx++ ) {
-            var transformed_mouse_pos = mobius_on_point(transforms[which_solution][transform_idx], mouse_pos);
-            mouse_line_segments[which_solution].push(mouse_pos.x);
-            mouse_line_segments[which_solution].push(mouse_pos.y);
-            mouse_line_segments[which_solution].push(0);
-            mouse_line_segments[which_solution].push(transformed_mouse_pos.x);
-            mouse_line_segments[which_solution].push(transformed_mouse_pos.y);
-            mouse_line_segments[which_solution].push(0);
         }
     }
 
