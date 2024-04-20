@@ -127,11 +127,13 @@ function init3js() {
     const grey = new THREE.Color( 'rgb(100,100,100)' );
     const dark_green = new THREE.Color( 'rgb(0,100,0)' );
     const black = new THREE.Color( 'rgb(0,0,0)' );
+    const yellow = new THREE.Color( 'rgb(255,255,0)' );
+    const orange = new THREE.Color( 'rgb(255,165,0)' );
 
     scene = new THREE.Scene();
     scene.background = black;
 
-    line_segments = [[],[]];
+    line_segments = [[],[]]; // [which_solution]
     const line_materials = [ new THREE.LineBasicMaterial({ color: grey }), new THREE.LineBasicMaterial({ color: dark_green }) ];
     line_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
     line_meshes = [];
@@ -141,7 +143,7 @@ function init3js() {
         scene.add( line_meshes[i] );
     }
 
-    points = [[],[]];
+    points = [[],[]]; // [which_solution]
     const point_materials = [ new THREE.PointsMaterial({ color: grey }), new THREE.PointsMaterial({ color: dark_green }) ];
     point_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
     points_meshes = [];
@@ -170,6 +172,18 @@ function init3js() {
         const transformed_points_mesh = new THREE.Points( transformed_points[i], transformed_point_materials[i] );
         scene.add( transformed_points_mesh );
     }
+
+    // show where mouse location gets transformed to
+    mouse_line_segments = [[],[]]; // [which_solution]
+    const mouse_line_materials = [ new THREE.LineBasicMaterial({ color: yellow }), new THREE.LineBasicMaterial({ color: orange }) ];
+    mouse_line_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+    mouse_line_meshes = [];
+    for( var i = 0; i < 2; i++ ) {
+        mouse_line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( mouse_line_segments[i], 3 ) );
+        mouse_line_meshes[i] = new THREE.LineSegments( mouse_line_geometry[i], mouse_line_materials[i] );
+        scene.add( mouse_line_meshes[i] );
+    }
+    mouse_pos = new THREE.Vector3();
 
     // add axes
     axes = new THREE.GridHelper( 100, 100, 0x444444, 0x222222 );
@@ -200,7 +214,7 @@ function init3js() {
     drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
     drag_controls.addEventListener( 'drag', onDragControlPoint, false );
 
-    canvas.addEventListener( 'mousemove', render, false );
+    canvas.addEventListener( 'mousemove', onMouseMove, false );
     canvas.addEventListener( 'touchmove', render, false );
     canvas.addEventListener( 'mousedown',  render, false );
     canvas.addEventListener( 'touchstart',  render, false );
@@ -209,6 +223,74 @@ function init3js() {
     canvas.addEventListener( 'touchend',  render, false );
     canvas.addEventListener( 'touchcancel',  render, false );
     canvas.addEventListener( 'wheel',  render, false );
+}
+
+function onMouseMove( e ) {
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    mouse_pos.set(
+      ((e.clientX - left) / width) * 2 - 1,
+      -((e.clientY - top) / height) * 2 + 1,
+      (camera.near + camera.far) / (camera.near - camera.far),
+    );
+    mouse_pos.unproject(camera);
+
+    // show where the mouse location gets transformed to
+    var top_left = new THREE.Vector3();
+    top_left.set(-1, 1, (camera.near + camera.far) / (camera.near - camera.far) );
+    top_left.unproject(camera);
+    var bottom_right = new THREE.Vector3();
+    bottom_right.set(1, -1, (camera.near + camera.far) / (camera.near - camera.far) );
+    bottom_right.unproject(camera);
+    var pixel_scale = 20.0; // we don't actually have pixels here so this is for illustration
+    var pixel_width = pixel_scale * (bottom_right.x - top_left.x) / width;
+    var pixel_height = pixel_scale * (top_left.y - bottom_right.y) / height;
+    mouse_line_segments = [[],[]];
+    // define a square around the current mouse location
+    var quad = [];
+    var num_quad_points = 10;
+    var p = new THREE.Vector3(mouse_pos.x - pixel_width / 2.0, mouse_pos.y + pixel_width / 2.0, 0); // start at top-left
+    quad.push(p);
+    for(var i=0; i < num_quad_points; i++) { p.x += pixel_width / num_quad_points; quad.push( new THREE.Vector3(p.x, p.y, 0)); } // move right
+    for(var i=0; i < num_quad_points; i++) { p.y -= pixel_width / num_quad_points; quad.push( new THREE.Vector3(p.x, p.y, 0)); } // move down
+    for(var i=0; i < num_quad_points; i++) { p.x -= pixel_width / num_quad_points; quad.push( new THREE.Vector3(p.x, p.y, 0)); } // move left
+    for(var i=0; i < num_quad_points; i++) { p.y += pixel_width / num_quad_points; quad.push( new THREE.Vector3(p.x, p.y, 0)); } // move up
+    // then for each transform:
+    for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
+        if(! plot_solution[which_solution] ) { continue; }
+        // draw the square around the current pixel
+        for(var i=0; i < quad.length-1; i++) {
+            mouse_line_segments[which_solution].push(quad[i].x);
+            mouse_line_segments[which_solution].push(quad[i].y);
+            mouse_line_segments[which_solution].push(0);
+            mouse_line_segments[which_solution].push(quad[i+1].x);
+            mouse_line_segments[which_solution].push(quad[i+1].y);
+            mouse_line_segments[which_solution].push(0);
+        }
+        for( var transform_idx = 0; transform_idx < transforms[which_solution].length; transform_idx++ ) {
+            var m = transforms[which_solution][transform_idx];
+            // draw a line from the center of this pixel
+            var transformed_mouse_pos = mobius_on_point(m, mouse_pos);
+            mouse_line_segments[which_solution].push(mouse_pos.x);
+            mouse_line_segments[which_solution].push(mouse_pos.y);
+            mouse_line_segments[which_solution].push(0);
+            mouse_line_segments[which_solution].push(transformed_mouse_pos.x);
+            mouse_line_segments[which_solution].push(transformed_mouse_pos.y);
+            mouse_line_segments[which_solution].push(0);
+            // draw a box around the edges of the transformed pixel
+            for(var i=0; i < quad.length-1; i++) {
+                var transformed_p = mobius_on_point(m, quad[i]);
+                mouse_line_segments[which_solution].push(transformed_p.x);
+                mouse_line_segments[which_solution].push(transformed_p.y);
+                mouse_line_segments[which_solution].push(0);
+                var transformed_p = mobius_on_point(m, quad[i+1]);
+                mouse_line_segments[which_solution].push(transformed_p.x);
+                mouse_line_segments[which_solution].push(transformed_p.y);
+                mouse_line_segments[which_solution].push(0);
+            }
+        }
+    }
+
+    updateScene();
 }
 
 function onDragControlPoint( e ) {
@@ -278,8 +360,10 @@ function updateScene() {
     for( var i = 0; i < 2; i++ ) {
         line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[i], 3 ) );
         point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( points[i], 3 ) );
+        mouse_line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( mouse_line_segments[i], 3 ) );
         line_geometry[i].computeBoundingSphere()
         point_geometry[i].computeBoundingSphere()
+        mouse_line_geometry[i].computeBoundingSphere()
     }
     render();
 }
@@ -294,6 +378,8 @@ function onDrawControlPointsButton(element) {
     line_meshes[1].visible = draw_control_points;
     points_meshes[0].visible = draw_control_points;
     points_meshes[1].visible = draw_control_points;
+    mouse_line_meshes[0].visible = draw_control_points;
+    mouse_line_meshes[1].visible = draw_control_points;
     if( draw_control_points ) { drag_controls.activate(); } else { drag_controls.deactivate(); }
     axes.visible = draw_control_points;
     render();
