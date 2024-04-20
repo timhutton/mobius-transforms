@@ -235,16 +235,55 @@ function onMouseMove( e ) {
     mouse_pos.unproject(camera);
 
     // show where the mouse location gets transformed to
+    var top_left = new THREE.Vector3();
+    top_left.set(-1, 1, (camera.near + camera.far) / (camera.near - camera.far) );
+    top_left.unproject(camera);
+    var bottom_right = new THREE.Vector3();
+    bottom_right.set(1, -1, (camera.near + camera.far) / (camera.near - camera.far) );
+    bottom_right.unproject(camera);
+    var pixel_width = (bottom_right.x - top_left.x) / width;
+    var pixel_height = (top_left.y - bottom_right.y) / height;
     mouse_line_segments = [[],[]];
     for( var which_solution = 0; which_solution < recipes[ iRecipe ].num_solutions; which_solution++ ) {
         if(! plot_solution[which_solution] ) { continue; }
         for( var transform_idx = 0; transform_idx < transforms[which_solution].length; transform_idx++ ) {
-            var transformed_mouse_pos = mobius_on_point(transforms[which_solution][transform_idx], mouse_pos);
+            var m = transforms[which_solution][transform_idx];
+            // draw a line from the center of this pixel
+            var transformed_mouse_pos = mobius_on_point(m, mouse_pos);
             mouse_line_segments[which_solution].push(mouse_pos.x);
             mouse_line_segments[which_solution].push(mouse_pos.y);
             mouse_line_segments[which_solution].push(0);
             mouse_line_segments[which_solution].push(transformed_mouse_pos.x);
             mouse_line_segments[which_solution].push(transformed_mouse_pos.y);
+            mouse_line_segments[which_solution].push(0);
+            // draw a box around the edges of the transformed pixel
+            var transformed_top_left = mobius_on_point(m, new THREE.Vector3(mouse_pos.x - pixel_width / 2.0, mouse_pos.y + pixel_width / 2.0, 0));
+            var transformed_top_right = mobius_on_point(m, new THREE.Vector3(mouse_pos.x + pixel_width / 2.0, mouse_pos.y + pixel_width / 2.0, 0));
+            var transformed_bottom_right = mobius_on_point(m, new THREE.Vector3(mouse_pos.x + pixel_width / 2.0, mouse_pos.y - pixel_width / 2.0, 0));
+            var transformed_bottom_left = mobius_on_point(m, new THREE.Vector3(mouse_pos.x - pixel_width / 2.0, mouse_pos.y - pixel_width / 2.0, 0));
+            mouse_line_segments[which_solution].push(transformed_top_left.x);
+            mouse_line_segments[which_solution].push(transformed_top_left.y);
+            mouse_line_segments[which_solution].push(0);
+            mouse_line_segments[which_solution].push(transformed_top_right.x);
+            mouse_line_segments[which_solution].push(transformed_top_right.y);
+            mouse_line_segments[which_solution].push(0);
+            mouse_line_segments[which_solution].push(transformed_top_right.x);
+            mouse_line_segments[which_solution].push(transformed_top_right.y);
+            mouse_line_segments[which_solution].push(0);
+            mouse_line_segments[which_solution].push(transformed_bottom_right.x);
+            mouse_line_segments[which_solution].push(transformed_bottom_right.y);
+            mouse_line_segments[which_solution].push(0);
+            mouse_line_segments[which_solution].push(transformed_bottom_right.x);
+            mouse_line_segments[which_solution].push(transformed_bottom_right.y);
+            mouse_line_segments[which_solution].push(0);
+            mouse_line_segments[which_solution].push(transformed_bottom_left.x);
+            mouse_line_segments[which_solution].push(transformed_bottom_left.y);
+            mouse_line_segments[which_solution].push(0);
+            mouse_line_segments[which_solution].push(transformed_bottom_left.x);
+            mouse_line_segments[which_solution].push(transformed_bottom_left.y);
+            mouse_line_segments[which_solution].push(0);
+            mouse_line_segments[which_solution].push(transformed_top_left.x);
+            mouse_line_segments[which_solution].push(transformed_top_left.y);
             mouse_line_segments[which_solution].push(0);
         }
     }
