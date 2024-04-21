@@ -59,6 +59,9 @@ function init() {
         init3js();
         compute_and_redraw();
     });
+
+    test_canvas = document.getElementById('test_canvas');
+    test_ctx = test_canvas.getContext('2d');
 }
 
 function setURLParams() {
@@ -758,7 +761,62 @@ function compute() {
         }
     }
 
+    draw_test_scene();
+
     return [total_pts_plotted, description];
+}
+
+function draw_test_scene() {
+    console.log(transforms);
+    var width = test_canvas.getBoundingClientRect().width;
+    var height = test_canvas.getBoundingClientRect().height;
+    var world_width = 8;
+    var world_height = 8;
+    var world_offset_x = -4;
+    var world_offset_y = -4;
+    var which_solution = 0;
+    var num_iterations = 4;
+    var new_pixels = [];
+    var old_pixels = [];
+    for(var y=0;y<height;y++) {
+        new_pixels[y] = [];
+        old_pixels[y] = [];
+        for(var x=0;x<width;x++) {
+            new_pixels[y][x] = 255;
+            old_pixels[y][x] = 255;
+        }
+    }
+    for(var it=0;it<num_iterations;it++) {
+        var temp=old_pixels; old_pixels=new_pixels; new_pixels=temp;
+        for(var y=0;y<height;y++) {
+            for(var x=0;x<width;x++) {
+                var col = 0;
+                var p = p2(world_width * x / width + world_offset_x, world_height * y / height + world_offset_y);
+                for(var i=0;i<4;i++) {
+                    var tp = mobius_on_point(transforms[which_solution][i], p);
+                    if( tp.x > world_offset_x && tp.x < world_offset_x + world_width && tp.y > world_offset_y && tp.y < world_offset_y + world_height ) {
+                        var sp_x = Math.floor((width-1) * ( tp.x - world_offset_x ) / world_width);
+                        var sp_y = Math.floor((height-1) * ( tp.y - world_offset_y ) / world_height);
+                        if(sp_x < 0 || sp_x >= width || sp_y < 0 || sp_y >= height) {
+                            console.log(sp_x, sp_y);
+                            throw -1;
+                        }
+                        var source_col = old_pixels[sp_y][sp_x];
+                        col += source_col;
+                    }
+                }
+                col /= 4;
+                new_pixels[y][x] = col;
+            }
+        }
+    }
+    for(var y=0;y<height;y++) {
+        for(var x=0;x<width;x++) {
+            var col = new_pixels[y][x];
+            test_ctx.fillStyle = "rgb("+col+","+col+","+col+")";
+            test_ctx.fillRect(x,height-1-y,1,1);
+        }
+    }
 }
 
 function onTransformSliderChanged() {
@@ -828,6 +886,8 @@ div.labelSlider {
 <body>
 
 <table border="0">
+<tr>
+<td><canvas id="test_canvas" width="512" height="512">(Canvas drawing not supported by your browser.)</canvas></td>
 <tr>
 <td><canvas id="canvas" width="600" height="600">(Canvas drawing not supported by your browser.)</canvas></td>
 
