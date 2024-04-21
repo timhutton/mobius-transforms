@@ -774,7 +774,8 @@ function draw_test_scene() {
     var world_offset_x = -4;
     var world_offset_y = -4;
     var which_solution = 0;
-    var num_iterations = 60;
+    var num_iterations = 5;
+    var num_subsample = 1;
     // initialize buffers
     var new_pixels = [];
     var old_pixels = [];
@@ -782,7 +783,7 @@ function draw_test_scene() {
         new_pixels[y] = [];
         old_pixels[y] = [];
         for(var x=0;x<width;x++) {
-            new_pixels[y][x] = 1;
+            new_pixels[y][x] = 255;
         }
     }
     for(var it=0;it<num_iterations;it++) {
@@ -791,35 +792,38 @@ function draw_test_scene() {
         // accumulate into new_pixels
         for(var y=0;y<height;y++) {
             for(var x=0;x<width;x++) {
-                var p = p2(world_width * x / width + world_offset_x, world_height * y / height + world_offset_y);
-                var col = 0;
-                var num_summed = 0;
+                var col = 255;
                 for(var transform_idx=0;transform_idx<4;transform_idx++) {
-                    var tp = mobius_on_point(transforms[which_solution][transform_idx], p);
-                    if( tp.x > world_offset_x && tp.x < world_offset_x + world_width && tp.y > world_offset_y && tp.y < world_offset_y + world_height ) {
-                        var sp_x = Math.floor((width-1) * ( tp.x - world_offset_x ) / world_width);
-                        var sp_y = Math.floor((height-1) * ( tp.y - world_offset_y ) / world_height);
-                        var source_col = old_pixels[sp_y][sp_x];
-                        col += source_col;
+                    // subsample pixel
+                    for(var i=0;i<num_subsample;i++) {
+                        for(var j=0;j<num_subsample;j++) {
+                            var sp;
+                            if(num_subsample==1)
+                                sp = p2(x, y);
+                            else
+                                sp = p2(x - 0.5 + i / (num_subsample-1), y - 0.5 + j / (num_subsample-1));
+                            var p = p2(world_width * sp.x / (width-1) + world_offset_x, world_height * sp.y / (height-1) + world_offset_y);
+                            var tp = mobius_on_point(transforms[which_solution][transform_idx], p);
+                            var source_col = 0;
+                            if( tp.x > world_offset_x && tp.x < world_offset_x + world_width && tp.y > world_offset_y && tp.y < world_offset_y + world_height ) {
+                                var sp_x = Math.round((width-1) * ( tp.x - world_offset_x ) / world_width);
+                                var sp_y = Math.round((height-1) * ( tp.y - world_offset_y ) / world_height);
+                                if(sp_x < 0 || sp_x >= width || sp_y < 0 || sp_y >= height)
+                                    throw -1;
+                                source_col = old_pixels[sp_y][sp_x];
+                            }
+                            col = Math.min(col, source_col); // if any of the subsamples are black then so is this pixel
+                        }
                     }
-                    num_summed++;
                 }
-                col /= num_summed;
                 new_pixels[y][x] = col;
             }
         }
     }
     // draw
-    var power = 300;
-    var maximum = 0;
     for(var y=0;y<height;y++) {
         for(var x=0;x<width;x++) {
-            maximum = Math.max(maximum, Math.pow(new_pixels[y][x],power));
-        }
-    }
-    for(var y=0;y<height;y++) {
-        for(var x=0;x<width;x++) {
-            var col = Math.pow(new_pixels[y][x],power) * 255 / maximum;
+            var col = new_pixels[y][x];
             test_ctx.fillStyle = "rgb("+col+","+col+","+col+")";
             test_ctx.fillRect(x,height-1-y,1,1);
         }
