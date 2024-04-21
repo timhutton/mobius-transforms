@@ -776,6 +776,7 @@ function draw_test_scene() {
     var world_offset_y = -4;
     var which_solution = 0;
     var num_iterations = 4;
+    // initialize buffers
     var new_pixels = [];
     var old_pixels = [];
     for(var y=0;y<height;y++) {
@@ -783,11 +784,12 @@ function draw_test_scene() {
         old_pixels[y] = [];
         for(var x=0;x<width;x++) {
             new_pixels[y][x] = 255;
-            old_pixels[y][x] = 255;
         }
     }
     for(var it=0;it<num_iterations;it++) {
+        // swap buffers
         var temp=old_pixels; old_pixels=new_pixels; new_pixels=temp;
+        // accumulate into new_pixels
         for(var y=0;y<height;y++) {
             for(var x=0;x<width;x++) {
                 var col = 0;
@@ -810,6 +812,7 @@ function draw_test_scene() {
             }
         }
     }
+    // draw
     for(var y=0;y<height;y++) {
         for(var x=0;x<width;x++) {
             var col = new_pixels[y][x];
