@@ -49,6 +49,7 @@ function init() {
 
     plot_ifs = false;
     plot_dfs = true;
+    show_mouse_position_transforms = false; // shows where the mouse position transforms to, which is fun but a bit distracting
 
     hq_mode = false;
     set_quality_parameters( hq_mode );
@@ -173,17 +174,19 @@ function init3js() {
         scene.add( transformed_points_mesh );
     }
 
-    // show where mouse location gets transformed to
-    mouse_line_segments = [[],[]]; // [which_solution]
-    const mouse_line_materials = [ new THREE.LineBasicMaterial({ color: yellow }), new THREE.LineBasicMaterial({ color: orange }) ];
-    mouse_line_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
-    mouse_line_meshes = [];
-    for( var i = 0; i < 2; i++ ) {
-        mouse_line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( mouse_line_segments[i], 3 ) );
-        mouse_line_meshes[i] = new THREE.LineSegments( mouse_line_geometry[i], mouse_line_materials[i] );
-        scene.add( mouse_line_meshes[i] );
+    if( show_mouse_position_transforms ) {
+        // show where mouse location gets transformed to
+        mouse_line_segments = [[],[]]; // [which_solution]
+        const mouse_line_materials = [ new THREE.LineBasicMaterial({ color: yellow }), new THREE.LineBasicMaterial({ color: orange }) ];
+        mouse_line_geometry = [ new THREE.BufferGeometry(), new THREE.BufferGeometry() ];
+        mouse_line_meshes = [];
+        for( var i = 0; i < 2; i++ ) {
+            mouse_line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( mouse_line_segments[i], 3 ) );
+            mouse_line_meshes[i] = new THREE.LineSegments( mouse_line_geometry[i], mouse_line_materials[i] );
+            scene.add( mouse_line_meshes[i] );
+        }
+        mouse_pos = new THREE.Vector3();
     }
-    mouse_pos = new THREE.Vector3();
 
     // add axes
     axes = new THREE.GridHelper( 100, 100, 0x444444, 0x222222 );
@@ -214,7 +217,9 @@ function init3js() {
     drag_controls.addEventListener( 'dragend', () => orbit_controls.enabled = true );
     drag_controls.addEventListener( 'drag', onDragControlPoint, false );
 
-    canvas.addEventListener( 'mousemove', onMouseMove, false );
+    if( show_mouse_position_transforms ) {
+        canvas.addEventListener( 'mousemove', onMouseMove, false );
+    }
     canvas.addEventListener( 'touchmove', render, false );
     canvas.addEventListener( 'mousedown',  render, false );
     canvas.addEventListener( 'touchstart',  render, false );
@@ -360,10 +365,12 @@ function updateScene() {
     for( var i = 0; i < 2; i++ ) {
         line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( line_segments[i], 3 ) );
         point_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( points[i], 3 ) );
-        mouse_line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( mouse_line_segments[i], 3 ) );
-        line_geometry[i].computeBoundingSphere()
-        point_geometry[i].computeBoundingSphere()
-        mouse_line_geometry[i].computeBoundingSphere()
+        line_geometry[i].computeBoundingSphere();
+        point_geometry[i].computeBoundingSphere();
+        if( show_mouse_position_transforms ) {
+            mouse_line_geometry[i].setAttribute( 'position', new THREE.Float32BufferAttribute( mouse_line_segments[i], 3 ) );
+            mouse_line_geometry[i].computeBoundingSphere();
+        }
     }
     render();
 }
@@ -378,8 +385,10 @@ function onDrawControlPointsButton(element) {
     line_meshes[1].visible = draw_control_points;
     points_meshes[0].visible = draw_control_points;
     points_meshes[1].visible = draw_control_points;
-    mouse_line_meshes[0].visible = draw_control_points;
-    mouse_line_meshes[1].visible = draw_control_points;
+    if( show_mouse_position_transforms ) {
+        mouse_line_meshes[0].visible = draw_control_points;
+        mouse_line_meshes[1].visible = draw_control_points;
+    }
     if( draw_control_points ) { drag_controls.activate(); } else { drag_controls.deactivate(); }
     axes.visible = draw_control_points;
     render();
