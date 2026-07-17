@@ -243,5 +243,22 @@ function get_recipes()
         duplicate: 'rot180'
     };
 
-    return [ fuchsian, theta_schottky, kissing_schottky, gasket, modular, maskit, maskit2, maskit3, grandma, riley, jorgensen, special ];
+    var earle = { id: 'earle', label: "Earle's recipe",
+        control_points: [ p2(0.37, 0.5) ], pt_labels: [ 'c' ], num_solutions: 1,
+        make_generators: (which_solution, control_points) => {
+            var c = control_points[0];
+            var m1 = add( c, inv( c ) );
+            var m2 = div_complex( pow_complex( c, 3 ), add( mul( pow_complex( c, 2 ), 2 ), p2( 1, 0 ) ) );
+            var m3 = add( mul( c, 2 ), inv( c ) );
+            var m4 = c;
+
+            var transforms = [];
+            transforms[0] = [ m1, m2, m3, m4 ];
+            transforms[1] = [ m1, negative( m2 ), negative( m3 ), m4 ];
+            var description = "Earle's recipe. With c = " + format_complex(c);
+            return [transforms, description];
+        }
+    };
+
+    return [ fuchsian, theta_schottky, kissing_schottky, gasket, modular, maskit, maskit2, maskit3, grandma, riley, jorgensen, special, earle ];
 }
