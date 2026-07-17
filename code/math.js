@@ -40,6 +40,11 @@ function sphereInversion( p, sphere ) {
     var d2 = dist2( p, sphere.p );
     return add( sphere.p, mul( sub( p, sphere.p ), sphere.r * sphere.r / d2 ) );
 }
+function inv( a ) {
+    const den = a.x * a.x + a.y * a.y;
+    if ( den === 0 ) return p2( 100000, 100000 );
+    return p2( a.x / den, -a.y / den );
+}
 function pow_complex( a, p ) {
     const [ r, theta ] = toPolar( a );
     return fromPolar( Math.pow( r, p ), theta * p );
